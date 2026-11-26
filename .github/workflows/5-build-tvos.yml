@@ -143,6 +143,20 @@ jobs:
             echo "--- codesign"; codesign -dv "$A" 2>&1 | head -5 || true
           } 2>&1 | tee ipa-tvos-verify.txt
           grep -q "arm64" ipa-tvos-verify.txt
+      - name: Name IPA into ipa/ (version, build, commit, platform)
+        run: |
+          A=$(ls -d /tmp/ipachk/Payload/*.app)
+          V=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$A/Info.plist")
+          B=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$A/Info.plist")
+          mkdir -p ipa
+          cp Yingxia-tvOS-unsigned.ipa "ipa/Yingxia-${V}-b${B}-$(echo ${{ github.sha }} | cut -c1-7)-tvos-unsigned.ipa"
+          ls -l ipa; (cd ipa && shasum -a 256 *.ipa) | tee ipa-named.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ipa-named
+          path: |
+            ipa/*.ipa
+            ipa-named.sha256
       - uses: actions/upload-artifact@v4
         if: always()
         with:
