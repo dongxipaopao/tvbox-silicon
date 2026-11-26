@@ -1,0 +1,35 @@
+diff --git a/Tests/TVCoreTests/MusicTests.swift b/Tests/TVCoreTests/MusicTests.swift
+index fb3129e..f52aeab 100644
+--- a/Tests/TVCoreTests/MusicTests.swift
++++ b/Tests/TVCoreTests/MusicTests.swift
+@@ -770,3 +770,30 @@ private struct FakeCatalog: MusicCatalogSource {
+     await health.record(key, error: nil)
+     #expect(await provider.ordered(for: .qq).map(\.info.name) == ["first", "second", "third"])
+ }
++
++@Test func builtInMusicShipsAndOnlyFillsInForSubscriptionsWithoutMusic() throws {
++    // The bundled listing and its script are inside the app, so music works before any subscription is added.
++    let listing = try #require(BuiltInMusic.listing)
++    #expect(listing.api == "assets://music/builtin-music.js")
++    #expect(listing.channels.map(\.id.rawValue) == ["migu", "nianxin", "vkeys", "gdstudio", "xinghai", "hyw"])
++    #expect(!listing.routes.order.isEmpty)
++    #expect(ScriptAssets.bundled("assets://music/builtin-music.js")?.isEmpty == false)
++
++    // No subscription at all: the bundled listing answers.
++    CloudSources.current = nil
++    #expect(CloudSources.music?.api == "assets://music/builtin-music.js")
++
++    // A plain subscription without yingxiaMusic does not hide the bundled channels.
++    let plain = try Subscription.parse(Data(#"{"sites":[]}"#.utf8), origin: URL(string: "https://plain.example/tvbox.json")!)
++    CloudSources.current = plain
++    #expect(CloudSources.music?.api == "assets://music/builtin-music.js")
++
++    // A subscription with its own yingxiaMusic wins over the bundled one.
++    let withMusic = try Subscription.parse(Data(#"""
++    {"yingxia":{"version":1},"sites":[],
++     "yingxiaMusic":{"api":"https://music.example/m.js","channels":[{"id":"sub","name":"Sub","platforms":["qq"]}]}}
++    """#.utf8), origin: URL(string: "https://sub.example/tvbox.json")!)
++    CloudSources.current = withMusic
++    #expect(CloudSources.music?.api == "https://music.example/m.js")
++    CloudSources.current = nil
++}
