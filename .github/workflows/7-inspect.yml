@@ -57,6 +57,14 @@ jobs:
         continue-on-error: true
         run: |
           { echo "## retry-all (iOS run ${{ inputs.ios_run }})"; echo '```'; R=t-full/tests-retry.log; echo "retry runs passed: $(grep -a -c '^✔ Test run with' $R)  failed: $(grep -a -c '^✘ Test run with' $R)"; echo "-- failed test lines"; grep -a '^✘ Test ' $R | grep -a -v 'Test run with' | grep -a 'failed after' | sort | uniq | cut -c1-200; echo "-- issues"; grep -a 'recorded an issue' $R | sort | uniq | cut -c1-300; echo "-- full run failing tests"; grep -a '^✘ Test ' t-full/tests-full.log | grep -a 'failed after' | sort | uniq | cut -c1-200; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish test summary
+        continue-on-error: true
+        run: |
+          mkdir -p pub-tests
+          R=t-full/tests-retry.log
+          { echo "# Test summary (iOS run ${{ inputs.ios_run }}, inspect run ${{ github.run_id }})"; echo; echo "retry runs passed: $(grep -a -c '^✔ Test run with' $R || true)  failed: $(grep -a -c '^✘ Test run with' $R || true)"; echo; echo "## failed test lines (retry)"; grep -a '^✘ Test ' $R | grep -a -v 'Test run with' | grep -a 'failed after' | sort | uniq | cut -c1-200 || true; echo; echo "## issues (retry)"; grep -a 'recorded an issue' $R | sort | uniq | cut -c1-300 || true; echo; echo "## full run failing tests"; grep -a '^✘ Test ' t-full/tests-full.log | grep -a 'failed after' | sort | uniq | cut -c1-200 || true; echo; echo "## full run verdict"; grep -aE 'Test run with [0-9]+ tests' t-full/tests-full.log | tail -2 || true; } > pub-tests/summary.md
+          cat pub-tests/summary.md
+          cd pub-tests && git init -q && git checkout -qb tests-evidence && git config user.name ci && git config user.email ci@users.noreply.github.com && git add -A && git commit -qm "test summary of run ${{ inputs.ios_run }}" && git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" tests-evidence
       - name: Icons actually packed (iOS)
         continue-on-error: true
         run: |
