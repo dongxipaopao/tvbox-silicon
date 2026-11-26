@@ -23,7 +23,7 @@ enum ColorTheme: String, CaseIterable, Identifiable, Sendable {
     case mintLemonade = "MintLemonade", peachSoda = "PeachSoda", neonNight = "NeonNight", aurora = "Aurora"
     case custom = "Custom"
 
-    static let standard = ColorTheme.classic
+    static let standard = ColorTheme.violet
     /// The themes the picker offers here.
     static var choices: [ColorTheme] {
         #if os(tvOS)
