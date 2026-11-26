@@ -275,7 +275,7 @@ import IOKit.pwr_mgt
     /// fails does: a dead IPTV address can keep AVPlayer waiting a minute before it says so.
     private var lineReadyAt: ContinuousClock.Instant?
     private var lineWatch: Task<Void, Never>?
-    static let lineWait: Duration = .seconds(15)
+    static let lineWait: Duration = .seconds(8)
     /// The sound tracks of a file that groups none of them (`UngroupedAudio`), for the player's Audio choice, and the
     /// one playing. Empty when AVFoundation offers the choice itself, or there is none.
     private(set) var audioChoices: [UngroupedAudio.Choice] = []
