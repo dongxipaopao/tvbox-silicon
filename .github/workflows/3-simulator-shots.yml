@@ -141,14 +141,10 @@ jobs:
           shot 14-home-scrolled 30 -qaSection home -qaSeedHistory qa-standard:1,qa-standard:2 -qaScroll continueWatching
           # Music: the app's own search and play hooks against the live public music channels (upstream-dependent). Three captures to see progress.
           shot 15a-music-play 40 -qaSection music -qaQuery 晴天 -qaMusicPlay 1
-          shot 15b-music-play 55 -qaSection music -qaQuery 晴天 -qaMusicPlay 1
-          shot 15c-music-play 75 -qaSection music -qaQuery 晴天 -qaMusicPlay 1
           xcrun simctl terminate "$UDID" $B || true
           # The user's own source address, as a second pass (no fixture server).
           REAL='https://gh-proxy.cc/https://raw.githubusercontent.com/aaaaa2780009/cat-bundle/main/cat/index.js.md5'
           SUB="$REAL"
-          shot 20-real-home 60 -qaSection home
-          shot 21-real-sources 40 -qaSection sites
           ls -l shots
       - name: Publish simulator shots to a branch
         if: always()
