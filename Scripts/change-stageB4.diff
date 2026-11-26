@@ -1,0 +1,13 @@
+diff --git a/App/SettingsView.swift b/App/SettingsView.swift
+index 93ee043..cca3a9c 100644
+--- a/App/SettingsView.swift
++++ b/App/SettingsView.swift
+@@ -716,8 +716,6 @@ struct FormSettingsView: View {
+                 if let message = store.importError ?? store.notice { Text(message) }
+             }
+ 
+-            }
+-
+             if !store.lxSources.isEmpty {
+                 Section(L10n.text("Music")) {
+                     ForEach(store.lxSources.map(SubscriptionExtra.lxSource)) { extraRow($0).settingsAnchor(.extra($0)) }
