@@ -393,6 +393,13 @@ struct DiscoverDetailView: View {
             }
         }
         .onChange(of: catalogSeason) { _, _ in pickedEpisode = nil }
+        #if DEBUG
+        // `-qaPickEpisode N`: the episode card N is tapped a few seconds after the page is up, for screenshots.
+        .task {
+            guard let number = UserDefaults.standard.string(forKey: "qaPickEpisode").flatMap({ Int($0) }) else { return }
+            try? await Task.sleep(for: .seconds(6)); pickedEpisode = number
+        }
+        #endif
     }
 
     private func people(_ people: [TMDBMatch.Person], title: String) -> some View {
@@ -993,6 +1000,19 @@ private struct DiscoverEpisodeSources: View {
     private static let names = ["4K", "1080P", L10n.text("Other")]
 
     var body: some View {
+        content
+        #if DEBUG
+        // `-qaPickSource N`: the first source card is tapped N seconds after the list has one (as a tap would).
+        .task {
+            guard let delay = UserDefaults.standard.string(forKey: "qaPickSource").flatMap({ Int($0) }) else { return }
+            for _ in 0..<80 where matches.isEmpty { try? await Task.sleep(for: .seconds(1)) }
+            try? await Task.sleep(for: .seconds(delay))
+            if let first = matches.first(where: { Self.group($0) == 0 }) ?? matches.first { pick(first) }
+        }
+        #endif
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L10n.text("Sources")).font(.headline)
             ForEach(0..<3, id: \.self) { index in

@@ -52,6 +52,31 @@ class Handler(BaseHTTPRequestHandler):
                 {'name':'空播放列表 / Empty','url':base+'/empty.m3u'},
                 {'name':'不可用播放列表 / Unavailable','url':base+'/failure.m3u'}
             ]})
+        # Python source: a real spider the embedded CPython must run (the name carries the interpreter's version).
+        if path == '/py-config.json': return self.send({'sites': [{'key':'qa-py','name':'Python 源 / Python','type':3,'api':base+'/spider.py'}], 'lives': []})
+        if path == '/spider.py':
+            return self.send("""import sys
+sys.path.append('..')
+from base.spider import Spider
+class Spider(Spider):
+    def init(self, extend=''):
+        pass
+    def getName(self):
+        return 'qa-py'
+    def homeContent(self, filter):
+        return {'class': [{'type_id': 'py', 'type_name': 'Python'}], 'list': []}
+    def homeVideoContent(self):
+        return {'list': []}
+    def categoryContent(self, tid, pg, filter, extend):
+        v = '.'.join(str(x) for x in sys.version_info[:3])
+        return {'page': 1, 'pagecount': 1, 'list': [{'vod_id': 'py%d' % i, 'vod_name': 'Python %s 运行成功 %02d' % (v, i), 'vod_pic': '', 'vod_remarks': 'py'} for i in range(1, 7)]}
+    def searchContent(self, key, quick, pg='1'):
+        return {'list': [{'vod_id': 'pys', 'vod_name': key + ' Python搜索成功', 'vod_pic': '', 'vod_remarks': 'py'}]}
+    def detailContent(self, ids):
+        return {'list': [{'vod_id': ids[0], 'vod_name': 'Python 详情 ' + ids[0], 'vod_play_from': 'py', 'vod_play_url': '第1集$http://127.0.0.1/x'}]}
+    def playerContent(self, flag, id, vipFlags):
+        return {'parse': 0, 'url': id}
+""",mime='text/x-python')
         if path == '/empty-config.json': return self.send({'sites': [], 'lives': [{'name':'测试频道','url':base+'/live.m3u'}]})
         # A source whose video details never arrive, for Back while a page is still loading.
         # Also one whose details fail, and one whose video has no episodes, for Back once the page has given up.
