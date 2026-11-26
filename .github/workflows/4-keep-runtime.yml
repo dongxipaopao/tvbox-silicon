@@ -1,0 +1,30 @@
+name: keep-runtime
+on:
+  workflow_dispatch:
+jobs:
+  keep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime
+          run-id: 45780599022
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: keep-device
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime-sim
+          run-id: 45780843689
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: keep-sim
+      - run: ls -l keep-device keep-sim; sha256sum keep-device/runtime.tar keep-sim/runtime.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime
+          path: keep-device/runtime.tar
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runtime-sim
+          path: keep-sim/runtime.tar
+          retention-days: 90
