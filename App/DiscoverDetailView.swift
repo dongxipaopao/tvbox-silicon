@@ -21,7 +21,7 @@ struct DiscoverDetailView: View {
     @State private var still: DiscoverStill?
     @State private var episode: DiscoverEpisode?
     /// Episode (1-based) the source page should play as soon as it has its list: Play, or a source picked for an episode.
-    @State private var playEpisode: Int?
+    @State private var playEpisode: EpisodePlayRequest?
     /// The episode whose sources show under the episode row (iOS and Mac); changing the season clears it.
     @State private var pickedEpisode: Int?
     /// The latest season's air dates while it airs (#1186).
@@ -256,7 +256,7 @@ struct DiscoverDetailView: View {
             episode = nil
             if store.subscription == nil { store.section = .settings }
             else if let sources, sources.finished, sources.matches.isEmpty { store.searchVideos(item.name) }
-            else { playEpisode = 1 }
+            else { playEpisode = EpisodePlayRequest(number: 1) }
         } label: {
             Label(L10n.text(store.subscription == nil ? "Add Subscription" : "Play"), systemImage: store.subscription == nil ? "plus" : "play.fill")
                 .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 54)
@@ -271,7 +271,7 @@ struct DiscoverDetailView: View {
             DiscoverEpisodeSources(sources: sources, season: seasons.isEmpty ? nil : catalogSeason) { match in
                 sources.choose(match)
                 if !seasons.isEmpty { seasonNumber = SeasonTitles.parse(match.video.name).season ?? 1 }
-                playEpisode = value.number
+                playEpisode = EpisodePlayRequest(number: value.number)
                 episode = nil; pickedEpisode = nil
             }
         } else {
@@ -794,7 +794,7 @@ private struct DiscoverSourceEpisodes<CatalogEpisodes: View>: View {
     let item: TMDBCatalog.Item
     let appColorScheme: ColorScheme
     @Binding var selectedSeason: Int?
-    @Binding var playEpisode: Int?
+    @Binding var playEpisode: EpisodePlayRequest?
     let seasonControl: (Int) -> AnyView?
     @ViewBuilder let catalogEpisodes: (Int?) -> CatalogEpisodes
     @State private var changing = false

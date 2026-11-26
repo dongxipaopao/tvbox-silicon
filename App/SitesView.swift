@@ -3819,11 +3819,11 @@ extension VideoDetailView {
     /// as on iPad, and plays as on this page: history, resume, lines, quality and the source's sign-ins are the same.
     /// A Play or a picked source asked for an episode: start it once the list is in.
     private func playRequested(_ embed: DetailEmbed) async {
-        guard let request = embed.playEpisode, let number = request.wrappedValue, detail != nil, !busy else { return }
+        guard let request = embed.playEpisode, let asked = request.wrappedValue, detail != nil, !busy else { return }
         let list = activeEpisodes
         guard !list.isEmpty else { return }
         request.wrappedValue = nil
-        await play(list[min(max(number, 1), list.count) - 1])
+        await play(list[min(max(asked.number, 1), list.count) - 1])
     }
 
     @ViewBuilder func embedded(_ embed: DetailEmbed) -> some View {
@@ -3869,7 +3869,8 @@ extension VideoDetailView {
         .environment(\.glassControls, true)
         .task { if detail == nil { await loadDetail() } }
         .task(id: detail?.id) { await embeddedTMDB(embed) }
-        .task(id: "\(detail?.id ?? "")|\(embed.playEpisode?.wrappedValue ?? 0)|\(busy)") { await playRequested(embed) }
+        // The episode count re-runs an early request that found no list yet; the request id makes every tap one.
+        .task(id: "\(detail?.id ?? "")|\(embed.playEpisode?.wrappedValue?.id.uuidString ?? "-")|\(busy)|\(activeEpisodes.count)") { await playRequested(embed) }
         .onDisappear { requestTask?.cancel() }
         #if os(tvOS)
         .fullScreenCover(item: $bundleSignIn) { pending in
@@ -3987,8 +3988,17 @@ struct DetailEmbed {
     var markFailed: ((String) -> Void)? = nil
     /// A stand-in source (`AlternateSource.id`) played the episode: the page switches to it.
     var adopt: ((String) -> Void)? = nil
-    /// Episode (1-based) to play as soon as the page has its list; cleared once started.
-    var playEpisode: Binding<Int?>? = nil
+    /// Episode to play as soon as the page has its list; cleared once started.
+    var playEpisode: Binding<EpisodePlayRequest?>? = nil
+}
+
+/// One tap's ask to play an episode. Every tap is a new request, even for the episode already asked for: an early
+/// Play (before the episode list was in) used to leave the same number sitting there, and a later tap changed
+/// nothing, so Play stayed dead until a source switch rebuilt the page.
+struct EpisodePlayRequest: Equatable {
+    let number: Int
+    let id = UUID()
+    static func == (a: Self, b: Self) -> Bool { a.id == b.id }
 }
 
 /// A source that can stand in for the one showing: its id, its result for the title and the client to ask it.
