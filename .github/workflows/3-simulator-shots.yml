@@ -1,6 +1,8 @@
 name: simulator-shots
 on:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   runtime-sim:
     runs-on: macos-15
@@ -137,6 +139,18 @@ jobs:
           shot 20-real-home 60 -qaSection home
           shot 21-real-sources 40 -qaSection sites
           ls -l shots
+      - name: Publish simulator shots to a branch
+        if: always()
+        run: |
+          rm -rf /tmp/pub && mkdir /tmp/pub
+          cp shots/0*.png shots/1*.png /tmp/pub/ || true
+          cp qa-server.log /tmp/pub/ || true
+          tail -300 sim-build.log > /tmp/pub/sim-build-tail.log || true
+          cd /tmp/pub
+          git init -q && git checkout -qb shots-evidence
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          git add -A && git commit -qm "simulator shots for ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" shots-evidence
       - uses: actions/upload-artifact@v4
         if: always()
         with:
