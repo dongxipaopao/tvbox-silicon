@@ -716,8 +716,6 @@ struct FormSettingsView: View {
                 if let message = store.importError ?? store.notice { Text(message) }
             }
 
-            }
-
             if !store.lxSources.isEmpty {
                 Section(L10n.text("Music")) {
                     ForEach(store.lxSources.map(SubscriptionExtra.lxSource)) { extraRow($0).settingsAnchor(.extra($0)) }
