@@ -8,10 +8,10 @@ on:
         default: "45833587041"
 permissions:
   actions: read
-  contents: read
+  contents: write
 jobs:
   inspect:
-    runs-on: ubuntu-latest
+    runs-on: macos-15
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -32,6 +32,21 @@ jobs:
           github-token: ${{ github.token }}
           path: v-py
         continue-on-error: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: ipa-named
+          run-id: ${{ inputs.ios_run }}
+          github-token: ${{ github.token }}
+          path: named-ios
+        continue-on-error: true
+      - name: Icons actually packed (iOS)
+        continue-on-error: true
+        run: |
+          rm -rf x && mkdir x && unzip -q named-ios/*.ipa -d x
+          A=$(ls -d x/Payload/*.app)
+          mkdir -p pub && cp "$A"/AppIcon*.png pub/ || true
+          { echo "## iOS packed icons"; echo '```'; ls -l "$A"/AppIcon*.png; sips -g pixelWidth -g pixelHeight "$A"/AppIcon*.png; xcrun assetutil --info "$A/Assets.car" 2>/dev/null | grep -E '"Name" : "(AppIcon|App Icon)' | sort | uniq -c | head; /usr/libexec/PlistBuddy -c "Print :CFBundleIcons" "$A/Info.plist" | head -12; /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$A/Info.plist" | head -12; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          cd pub && git init -q && git checkout -qb icons-evidence && git config user.name ci && git config user.email ci@users.noreply.github.com && git add -A && git commit -qm "packed icons of run ${{ inputs.ios_run }}" && git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" icons-evidence
       - name: Show
         run: |
           {
