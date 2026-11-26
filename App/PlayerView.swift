@@ -2214,6 +2214,10 @@ extension Store {
         store.selectEpisode(other, from: channel) { session?.lineSwitchFailed($0) }
         return other.flag
     }
+    session.onSourceExhausted = { [weak store, weak session] in
+        guard let store else { return false }
+        return store.failoverFromPlayer(channel) { session?.lineSwitchFailed($0) }
+    }
     if let context = channel.historyContext, let next = store.nextEpisode(after: channel),
        let catalog = store.catalog(for: channel) {
         session.catalogDanmaku.prefetch(PlaybackHistoryContext(origin: context.origin, site: catalog.client.site,
