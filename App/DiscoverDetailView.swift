@@ -720,10 +720,14 @@ private struct DiscoverMacSeasonButton: View {
 
     func choose(_ candidate: SourceTitleMatch.Candidate) {
         grace?.cancel(); grace = nil
+        // Picking a source by hand, or the player landing on one that plays, trusts it again: a later automatic
+        // switch may try it once more. Only the automatic search keeps the mark, so it still cannot loop.
+        failedIDs.remove(candidate.id)
         chosen = candidate
     }
 
-    /// Sources that couldn't play an episode of this title this session: never tried again by a quick switch.
+    /// Sources that couldn't play an episode of this title since the page opened: the automatic switch skips them.
+    /// Choosing one by hand (or one that ends up playing) un-marks it; leaving the page forgets them all.
     @ObservationIgnored private var failedIDs: Set<String> = []
 
     private static func entry(_ candidate: SourceTitleMatch.Candidate) -> SourceFailover.Entry {
