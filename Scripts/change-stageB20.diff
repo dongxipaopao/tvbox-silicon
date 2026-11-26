@@ -1,0 +1,74 @@
+diff --git a/App/DiscoverDetailView.swift b/App/DiscoverDetailView.swift
+index f120653..ce290ec 100644
+--- a/App/DiscoverDetailView.swift
++++ b/App/DiscoverDetailView.swift
+@@ -393,6 +393,13 @@ struct DiscoverDetailView: View {
+             }
+         }
+         .onChange(of: catalogSeason) { _, _ in pickedEpisode = nil }
++        #if DEBUG
++        // `-qaPickEpisode N`: the episode card N is tapped a few seconds after the page is up, for screenshots.
++        .task {
++            guard let number = UserDefaults.standard.string(forKey: "qaPickEpisode").flatMap({ Int($0) }) else { return }
++            try? await Task.sleep(for: .seconds(6)); pickedEpisode = number
++        }
++        #endif
+     }
+ 
+     private func people(_ people: [TMDBMatch.Person], title: String) -> some View {
+@@ -993,6 +1000,19 @@ private struct DiscoverEpisodeSources: View {
+     private static let names = ["4K", "1080P", L10n.text("Other")]
+ 
+     var body: some View {
++        content
++        #if DEBUG
++        // `-qaPickSource N`: the first source card is tapped N seconds after the list has one (as a tap would).
++        .task {
++            guard let delay = UserDefaults.standard.string(forKey: "qaPickSource").flatMap({ Int($0) }) else { return }
++            for _ in 0..<80 where matches.isEmpty { try? await Task.sleep(for: .seconds(1)) }
++            try? await Task.sleep(for: .seconds(delay))
++            if let first = matches.first(where: { Self.group($0) == 0 }) ?? matches.first { pick(first) }
++        }
++        #endif
++    }
++
++    private var content: some View {
+         VStack(alignment: .leading, spacing: 12) {
+             Text(L10n.text("Sources")).font(.headline)
+             ForEach(0..<3, id: \.self) { index in
+diff --git a/Scripts/qa-server.py b/Scripts/qa-server.py
+index ab7dfef..fb48993 100644
+--- a/Scripts/qa-server.py
++++ b/Scripts/qa-server.py
+@@ -52,6 +52,31 @@ class Handler(BaseHTTPRequestHandler):
+                 {'name':'空播放列表 / Empty','url':base+'/empty.m3u'},
+                 {'name':'不可用播放列表 / Unavailable','url':base+'/failure.m3u'}
+             ]})
++        # Python source: a real spider the embedded CPython must run (the name carries the interpreter's version).
++        if path == '/py-config.json': return self.send({'sites': [{'key':'qa-py','name':'Python 源 / Python','type':3,'api':base+'/spider.py'}], 'lives': []})
++        if path == '/spider.py':
++            return self.send("""import sys
++sys.path.append('..')
++from base.spider import Spider
++class Spider(Spider):
++    def init(self, extend=''):
++        pass
++    def getName(self):
++        return 'qa-py'
++    def homeContent(self, filter):
++        return {'class': [{'type_id': 'py', 'type_name': 'Python'}], 'list': []}
++    def homeVideoContent(self):
++        return {'list': []}
++    def categoryContent(self, tid, pg, filter, extend):
++        v = '.'.join(str(x) for x in sys.version_info[:3])
++        return {'page': 1, 'pagecount': 1, 'list': [{'vod_id': 'py%d' % i, 'vod_name': 'Python %s 运行成功 %02d' % (v, i), 'vod_pic': '', 'vod_remarks': 'py'} for i in range(1, 7)]}
++    def searchContent(self, key, quick, pg='1'):
++        return {'list': [{'vod_id': 'pys', 'vod_name': key + ' Python搜索成功', 'vod_pic': '', 'vod_remarks': 'py'}]}
++    def detailContent(self, ids):
++        return {'list': [{'vod_id': ids[0], 'vod_name': 'Python 详情 ' + ids[0], 'vod_play_from': 'py', 'vod_play_url': '第1集$http://127.0.0.1/x'}]}
++    def playerContent(self, flag, id, vipFlags):
++        return {'parse': 0, 'url': id}
++""",mime='text/x-python')
+         if path == '/empty-config.json': return self.send({'sites': [], 'lives': [{'name':'测试频道','url':base+'/live.m3u'}]})
+         # A source whose video details never arrive, for Back while a page is still loading.
+         # Also one whose details fail, and one whose video has no episodes, for Back once the page has given up.
