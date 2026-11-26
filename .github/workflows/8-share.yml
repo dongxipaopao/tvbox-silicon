@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       ios_run:
-        default: "45855635820"
+        default: "45855741799"
 permissions:
   actions: read
   contents: read
@@ -24,10 +24,4 @@ jobs:
           { echo "## share-ipa"; echo "file: $(basename $IPA)"; echo "bytes: $(stat -c %s $IPA)"; echo "sha256: $S"; } >> "$GITHUB_STEP_SUMMARY"
           # gofile
           GF=$(curl -s --max-time 900 -F "file=@$IPA" https://upload.gofile.io/uploadfile || true)
-          echo "gofile raw: $(echo "$GF" | head -c 400)" >> "$GITHUB_STEP_SUMMARY"
-          # catbox
-          CB=$(curl -s --max-time 900 -F "reqtype=fileupload" -F "fileToUpload=@$IPA" https://catbox.moe/user/api.php || true)
-          echo "catbox: $CB" >> "$GITHUB_STEP_SUMMARY"
-          if echo "$CB" | grep -q '^https://'; then
-            curl -sL --max-time 600 -o back.ipa "$CB"; echo "catbox re-download sha256: $(sha256sum back.ipa | cut -d' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          echo "gofile: $(echo "$GF" | python3 -c "import json,sys;d=json.load(sys.stdin)[\"data\"];print(d[\"downloadPage\"],d[\"id\"],d[\"name\"],d[\"md5\"],d[\"guestToken\"])")" >> "$GITHUB_STEP_SUMMARY"
