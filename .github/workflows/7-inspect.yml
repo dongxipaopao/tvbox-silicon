@@ -45,12 +45,7 @@ jobs:
           ls -R named-ios | head -20; IPA=$(find named-ios -name "*.ipa" | head -1); echo "ipa=$IPA"; rm -rf x && mkdir x && unzip -q "$IPA" -d x
           A=$(ls -d x/Payload/*.app)
           mkdir -p pub && cp "$A"/AppIcon*.png pub/ || true
-          { echo "## iOS packed icons"; echo '```'; ls -l "$A"/AppIcon*.png; file "$A"/AppIcon*.png; python3 - "$A/Info.plist" <<'PY'
-import plistlib,sys
-p=plistlib.load(open(sys.argv[1],'rb'))
-for k in ['CFBundleIdentifier','CFBundleDisplayName','CFBundleIcons','CFBundleIcons~ipad','CFBundleURLTypes']:
-    print(k,'=',p.get(k))
-PY
+          { echo "## iOS packed icons"; echo '```'; ls -l "$A"/AppIcon*.png; file "$A"/AppIcon*.png; python3 -c "import plistlib,sys;p=plistlib.load(open(sys.argv[1],'rb'));[print(k,'=',p.get(k)) for k in ['CFBundleIdentifier','CFBundleDisplayName','CFBundleIcons','CFBundleIcons~ipad','CFBundleURLTypes']]" "$A/Info.plist"
           echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           cd pub && git init -q && git checkout -qb icons-evidence && git config user.name ci && git config user.email ci@users.noreply.github.com && git add -A && git commit -qm "packed icons of run ${{ inputs.ios_run }}" && git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" icons-evidence
       - name: Show
