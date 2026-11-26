@@ -1,0 +1,42 @@
+name: inspect-artifacts
+on:
+  workflow_dispatch:
+    inputs:
+      ios_run:
+        default: "45839030522"
+      tvos_run:
+        default: "45833587041"
+permissions:
+  actions: read
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ipa-verify
+          run-id: ${{ inputs.ios_run }}
+          github-token: ${{ github.token }}
+          path: v-ios
+      - uses: actions/download-artifact@v4
+        with:
+          name: ipa-tvos-verify
+          run-id: ${{ inputs.tvos_run }}
+          github-token: ${{ github.token }}
+          path: v-tvos
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-log
+          run-id: ${{ inputs.ios_run }}
+          github-token: ${{ github.token }}
+          path: v-py
+        continue-on-error: true
+      - name: Show
+        run: |
+          {
+            echo "## iOS verify (run ${{ inputs.ios_run }})"; echo '```'; head -c 6000 v-ios/*.txt; echo '```'
+            echo "## tvOS verify (run ${{ inputs.tvos_run }})"; echo '```'; head -c 6000 v-tvos/*.txt; echo '```'
+            echo "## python-log"; echo '```'; head -c 1500 v-py/* 2>/dev/null; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          ls -R v-ios v-tvos v-py | head -20
