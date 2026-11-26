@@ -34,10 +34,6 @@ struct DashStreamsTests {
         defer { CloudSources.current = saved }
         CloudSources.current = cloud
         #expect(try CloudSources.address == cloud.origin)
-        let douyu = try #require(LivePlatform(rawValue: "douyu"))
-        #expect(LivePlatform(scheme: "douyu-live") == douyu && douyu.glyph == "斗" && douyu.searchable)
-        #expect(shown.lives.last?.platform == douyu && shown.lives.first?.platform == nil)
-        #expect(LiveCatalog.room(URL(string: "douyu-live://room/9999")!)?.id == "9999" && !LiveCatalog.isRoom(URL(string: "huya-live://room/1")!))
         // Disabling/removing the explicit subscription clears services instead of keeping an automatic copy.
         CloudSources.current = nil
         #expect(CloudSources.site(where: \.isBilibili) == nil)

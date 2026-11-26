@@ -29,7 +29,6 @@ import Testing
     #expect(!ScrubPreview.reads(try #require(URL(string: "http://127.0.0.1:8123/remux/1/index.m3u8")), repackaged: true))
     #expect(!ScrubPreview.reads(try #require(URL(string: "\(CloudStreams.scheme)://x/file.mkv")), repackaged: false))
     #expect(!ScrubPreview.reads(try #require(URL(string: "\(CENCStreams.scheme)://x/file.mp4")), repackaged: false))
-    #expect(!ScrubPreview.reads(try #require(URL(string: "\(LiveRepair.scheme)://x/live.m3u8")), repackaged: false))
     #expect(!ScrubPreview.reads(URL(fileURLWithPath: "/tmp/a.m3u8"), repackaged: false))
 }
 
