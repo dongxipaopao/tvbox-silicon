@@ -51,7 +51,7 @@ import UIKit
             let result = await DLNADiscovery.search(seconds: 3, forceUnicast: unicast)
             guard let self else { return }
             // Yingxia on a Mac or Apple TV also takes DLNA casts (for Bilibili), and Play On already lists it with more.
-            devices = result.devices.filter { device in !["映匣 · ", "Yingxia · "].contains { device.name.hasPrefix($0) } }
+            devices = result.devices.filter { device in !["XiPlayer · ", "映匣 · ", "Yingxia · "].contains { device.name.hasPrefix($0) } }
             multicastBlocked = result.multicastBlocked
             searchedAt = .now
             searching = false

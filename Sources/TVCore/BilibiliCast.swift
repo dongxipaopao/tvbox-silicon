@@ -35,7 +35,7 @@ public final class BilibiliCastReceiver: @unchecked Sendable {
     /// Called on a background queue.
     public var onEvent: (@Sendable (Event) -> Void)?
     /// The name phones list this device under.
-    public var name = "Yingxia"
+    public var name = "XiPlayer"
 
     private static let group = "239.255.255.250"
     private static let ssdpPort: UInt16 = 1900

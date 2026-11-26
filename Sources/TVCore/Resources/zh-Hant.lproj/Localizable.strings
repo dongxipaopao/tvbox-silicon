@@ -2,8 +2,8 @@
 "%@ hasn't turned on search. Its administrator can build the search index in AList's settings." = "%@ 未開啟搜尋。管理員可在 AList 設定中建立搜尋索引。";
 "My %@" = "我的%@";
 "This folder has no videos Apple devices can play." = "此資料夾中沒有 Apple 裝置可以播放的影片。";
-"Yingxia" = "映匣";
-"Yingxia / TVBOX" = "映匣 / TVBOX";
+"Yingxia" = "XiPlayer";
+"Yingxia / TVBOX" = "XiPlayer / TVBOX";
 "Watch Now" = "立即觀看";
 "Live TV" = "直播";
 "Sources" = "隨選來源";
@@ -36,7 +36,7 @@
 "URL Playback" = "連結播放";
 "Plugins" = "外掛";
 "JAR Runtime and Compatibility" = "JAR 執行環境與相容性檢測";
-"About Yingxia" = "關於映匣";
+"About Yingxia" = "關於XiPlayer";
 "macOS · iOS · tvOS / Native SwiftUI + AVPlayer" = "macOS · iOS · tvOS / 原生 SwiftUI + AVPlayer";
 "Open Source Licenses" = "開放原始碼授權";
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "支援 TVBox JSON 訂閱、M3U / TXT 直播清單與 type 1 / type 4 標準 JSON 介面。媒體格式依裝置而異。Mac 版提供實驗性本機 JavaScript 和 Python 外掛支援，所有平台皆提供實驗性 JAR 外掛支援，相容情況依來源而異。";
@@ -349,8 +349,8 @@
 "About" = "關於";
 "Version %@" = "版本 %@";
 "Paste Credentials Manually" = "手動貼上憑證";
-"Sign in on the provider's official page. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "在官方頁面登入。映匣會將登入資訊儲存在這台 Mac 上，並提供給你執行的外掛。";
-"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "用網盤的手機 App 掃碼登入。映匣會將登入資訊儲存在這台裝置上，並提供給你執行的外掛。";
+"Sign in on the provider's official page. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "在官方頁面登入。XiPlayer會將登入資訊儲存在這台 Mac 上，並提供給你執行的外掛。";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "用網盤的手機 App 掃碼登入。XiPlayer會將登入資訊儲存在這台裝置上，並提供給你執行的外掛。";
 "Sources: %lld · Live playlists: %lld" = "來源：%lld · 直播清單：%lld";
 "Last updated %@" = "上次更新 %@";
 "Run Test" = "執行測試";
@@ -389,7 +389,7 @@
 "%lld of %lld sources responded" = "%lld / %lld 個來源已回應";
 "First-time setup can take a few minutes. Keep the app open." = "首次準備可能需要幾分鐘，請保持 App 開啟。";
 "This source requires Android features that the plugin runtime does not support yet." = "此來源依賴外掛執行環境尚未支援的 Android 功能。";
-"This entry opens the source's own settings or sign-in screen (such as a QR code), which Yingxia can't show. Sign in under Settings → Cloud Drive Accounts instead." = "此項目會開啟來源自帶的設定或登入畫面（例如 QR 碼），映匣無法顯示。請改在「設定 → 網盤帳號」中登入。";
+"This entry opens the source's own settings or sign-in screen (such as a QR code), which Yingxia can't show. Sign in under Settings → Cloud Drive Accounts instead." = "此項目會開啟來源自帶的設定或登入畫面（例如 QR 碼），XiPlayer無法顯示。請改在「設定 → 網盤帳號」中登入。";
 "This source needs an Android feature that isn't supported yet: %@." = "此來源需要尚未支援的 Android 功能：%@。";
 "This plugin couldn't be prepared on this device (missing %@)." = "無法在本機準備此外掛（缺少 %@）。";
 "This plugin couldn't be prepared on this device (%@ could not be converted)." = "無法在本機準備此外掛（%@ 轉換失敗）。";
@@ -436,16 +436,16 @@
 "Check Now" = "立即檢查";
 "Checking…" = "正在檢查…";
 "Last checked %@" = "上次檢查：%@";
-"Yingxia is up to date" = "映匣已是最新版本";
-"Yingxia %@ is the latest version." = "映匣 %@ 已是最新版本。";
+"Yingxia is up to date" = "XiPlayer已是最新版本";
+"Yingxia %@ is the latest version." = "XiPlayer %@ 已是最新版本。";
 "Couldn't check for updates: %@" = "無法檢查更新：%@";
-"Yingxia %@ is available" = "映匣 %@ 已推出";
+"Yingxia %@ is available" = "XiPlayer %@ 已推出";
 "New features are waiting for you." = "新功能正等你來體驗。";
 "See What's New" = "看看有什麼新功能";
 "What's New in Version %@" = "%@ 版本新功能";
-"What's New in Yingxia" = "映匣新功能";
+"What's New in Yingxia" = "XiPlayer新功能";
 "Something New Is Here" = "有新東西來了";
-"Yingxia %@ is ready with new features." = "映匣 %@ 已就緒，帶來了新功能。";
+"Yingxia %@ is ready with new features." = "XiPlayer %@ 已就緒，帶來了新功能。";
 "Get the Update" = "取得更新";
 "Not Now" = "以後再說";
 "Install and Relaunch" = "安裝並重新開啟";
@@ -456,21 +456,21 @@
 "Relaunching…" = "正在重新開啟…";
 "Download Manually" = "手動下載";
 "The update couldn't be installed: %@" = "無法安裝更新：%@";
-"This update can't be installed from within Yingxia yet. Download it instead." = "暫時無法在映匣內安裝此更新，請手動下載。";
-"Yingxia couldn't relaunch to finish the update. Quit Yingxia and open it again." = "映匣未能重新開啟以完成更新。請結束映匣後再開啟。";
+"This update can't be installed from within Yingxia yet. Download it instead." = "暫時無法在XiPlayer內安裝此更新，請手動下載。";
+"Yingxia couldn't relaunch to finish the update. Quit Yingxia and open it again." = "XiPlayer未能重新開啟以完成更新。請結束XiPlayer後再開啟。";
 "Install Updates Automatically" = "自動安裝更新";
-"Yingxia downloads updates in the background and installs them the next time it quits." = "映匣會在背景下載更新，並在下次結束時安裝。";
+"Yingxia downloads updates in the background and installs them the next time it quits." = "XiPlayer會在背景下載更新，並在下次結束時安裝。";
 "Continue" = "繼續";
 "New" = "新";
 "Scan with your iPhone to get the update." = "用 iPhone 掃描取得更新。";
-"Yingxia %@" = "映匣 %@";
+"Yingxia %@" = "XiPlayer %@";
 "What's New" = "新功能";
 "Now Available" = "現已推出";
 "New build (%@) in TestFlight" = "TestFlight 新版本 (%@) 已上架";
 "In TestFlight" = "TestFlight 已上架";
 "Open TestFlight" = "打開 TestFlight";
-"Yingxia %@ is ready in TestFlight. Open TestFlight and tap Update to get these features." = "映匣 %@ 已在 TestFlight 上架。打開 TestFlight 並點一下「更新」即可取得這些新功能。";
-"Yingxia %@ is ready in TestFlight. Open TestFlight on this Apple TV and update Yingxia to get these features." = "映匣 %@ 已在 TestFlight 上架。在這台 Apple TV 上打開 TestFlight 並更新映匣，即可取得這些新功能。";
+"Yingxia %@ is ready in TestFlight. Open TestFlight and tap Update to get these features." = "XiPlayer %@ 已在 TestFlight 上架。打開 TestFlight 並點一下「更新」即可取得這些新功能。";
+"Yingxia %@ is ready in TestFlight. Open TestFlight on this Apple TV and update Yingxia to get these features." = "XiPlayer %@ 已在 TestFlight 上架。在這台 Apple TV 上打開 TestFlight 並更新XiPlayer，即可取得這些新功能。";
 "Here's what's new in version %@." = "看看 %@ 版本帶來了什麼。";
 "Bilibili" = "嗶哩嗶哩";
 "Bilibili Account" = "嗶哩嗶哩帳號";
@@ -701,7 +701,7 @@
 "Subscriptions" = "訂閱";
 "Add Subscription" = "新增訂閱";
 "Add This Subscription?" = "加入這個訂閱？";
-"A page can only ask: Yingxia adds this subscription after you agree, never on its own." = "網頁只能提出請求：確認後映匣才會加入這個訂閱，不會自行加入。";
+"A page can only ask: Yingxia adds this subscription after you agree, never on its own." = "網頁只能提出請求：確認後XiPlayer才會加入這個訂閱，不會自行加入。";
 "Refresh All" = "全部更新";
 "Move Up" = "上移";
 "Move Down" = "下移";
@@ -732,9 +732,9 @@
 "Signing In on Apple TV" = "在 Apple TV 上登入";
 "Apple TV can't show Douyin's sign-in page. Sign in here first, then open Settings > Douyin on the Apple TV and scan its code with this iPhone's Camera." = "Apple TV 無法顯示抖音登入頁面。請先在這裡登入，然後在 Apple TV 上打開「設定 > 抖音」，用這支 iPhone 的相機掃描螢幕上的條碼。";
 "Sign In to Douyin" = "登入抖音";
-"Douyin signs in only on its own web page, which Apple TV can't show. Sign in with Yingxia on your iPhone instead:" = "抖音只能在它自己的網頁上登入，而 Apple TV 無法顯示該頁面。請改用 iPhone 上的映匣登入：";
-"On your iPhone, open Yingxia, go to Settings > Douyin, and sign in." = "在 iPhone 上打開映匣，進入「設定 > 抖音」並登入。";
-"Scan this code with the iPhone's Camera and open it in Yingxia." = "用 iPhone 的相機掃描此條碼，並在映匣中打開。";
+"Douyin signs in only on its own web page, which Apple TV can't show. Sign in with Yingxia on your iPhone instead:" = "抖音只能在它自己的網頁上登入，而 Apple TV 無法顯示該頁面。請改用 iPhone 上的XiPlayer登入：";
+"On your iPhone, open Yingxia, go to Settings > Douyin, and sign in." = "在 iPhone 上打開XiPlayer，進入「設定 > 抖音」並登入。";
+"Scan this code with the iPhone's Camera and open it in Yingxia." = "用 iPhone 的相機掃描此條碼，並在XiPlayer中打開。";
 "Tap Send to Apple TV." = "點一下「傳送到 Apple TV」。";
 "Waiting for your iPhone…" = "正在等待你的 iPhone…";
 "Douyin answers live searches only for signed-in accounts." = "抖音只為已登入帳號提供直播搜尋。";
@@ -752,7 +752,7 @@
 "Use This Subscription" = "使用此訂閱";
 "Order" = "順序";
 "Not set" = "未設定";
-"The source took too long to respond, so Yingxia stopped waiting. Try another line, or try again later." = "這個來源太久沒有回應，映匣已停止等待。請換一條線路，或稍後再試。";
+"The source took too long to respond, so Yingxia stopped waiting. Try another line, or try again later." = "這個來源太久沒有回應，XiPlayer已停止等待。請換一條線路，或稍後再試。";
 "This line plays from %@, but its sign-in code couldn't be shown. Choose another line." = "這條線路來自%@，但無法顯示它的登入 QR 碼。請換一條線路。";
 "This source needs your %@ account for this line. Sign in with its code, and the episode plays." = "這個來源的這條線路需要你的%@帳號。用它提供的 QR 碼登入後，即可播放這一集。";
 "Baidu Netdisk" = "百度網盤";
@@ -764,7 +764,7 @@
 "The original file is MKV, which Apple devices can't play, so the %@ line is playing instead." = "原畫檔案是 MKV 格式，Apple 裝置無法播放，已改為播放%@線路。";
 "Sign In to %@" = "登入%@";
 "%@ needs this account for the line you chose. The video plays once you confirm." = "「%@」的這條線路需要該帳號。確認登入後即可播放。";
-"Sign in to Quark and UC on their official page, and to Baidu and Aliyun by scanning a code with their phone app. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "夸克和 UC 在官方頁面登入，百度網盤和阿里雲盤用手機 App 掃碼登入。映匣會將登入資訊儲存在這台 Mac 上，並提供給你執行的外掛。";
+"Sign in to Quark and UC on their official page, and to Baidu and Aliyun by scanning a code with their phone app. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "夸克和 UC 在官方頁面登入，百度網盤和阿里雲盤用手機 App 掃碼登入。XiPlayer會將登入資訊儲存在這台 Mac 上，並提供給你執行的外掛。";
 "Baidu Cookie (BDUSS, STOKEN)" = "百度網盤 Cookie（BDUSS、STOKEN）";
 "115 Cookie (UID, CID, SEID)" = "115 Cookie（UID、CID、SEID）";
 
@@ -773,7 +773,7 @@
 "Song, or song and artist" = "歌名，或歌名加歌手";
 "Music Settings" = "音樂設定";
 "Search for a Song" = "搜尋歌曲";
-"Type a song's name, or its name and the artist. Yingxia finds the recording and plays it from the best channel available, lossless first." = "輸入歌名，或歌名加歌手。映匣會找到這首歌的錄音，並從目前最好的渠道播放，優先無損。";
+"Type a song's name, or its name and the artist. Yingxia finds the recording and plays it from the best channel available, lossless first." = "輸入歌名，或歌名加歌手。XiPlayer會找到這首歌的錄音，並從目前最好的渠道播放，優先無損。";
 "Unable to Search Music" = "無法搜尋音樂";
 "Check your network connection and try again." = "請檢查網路連線後重試。";
 "No Matching Songs" = "沒有相符的歌曲";
@@ -920,17 +920,17 @@
 "Today's feedback from everyone has reached its limit. You can send yours after %@." = "今天所有人的意見總數已達上限。%@ 之後可以傳送。";
 "Today's feedback from everyone has reached its limit. Please try again later." = "今天所有人的意見總數已達上限，請稍後再試。";
 "Couldn't send feedback. Please try again later." = "無法傳送意見，請稍後再試。";
-"Help Make Yingxia Better" = "幫助映匣變得更好";
+"Help Make Yingxia Better" = "幫助XiPlayer變得更好";
 "Report a problem or share an idea. It goes straight to the developer." = "回報問題或分享你的想法，會直接送到開發者手中。";
 "Report a problem or share an idea" = "回報問題或分享想法";
 "Something isn't working" = "有功能不正常";
 "An idea or a wish" = "想法或願望";
 "Anything else" = "其他任何事";
 "What happened? What did you expect instead?" = "發生了什麼？你原本期望怎樣？";
-"What would make Yingxia better for you?" = "怎樣能讓映匣更好用？";
+"What would make Yingxia better for you?" = "怎樣能讓XiPlayer更好用？";
 "What's on your mind?" = "想說點什麼？";
 "Sent with your message" = "隨訊息一起傳送";
-"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model, the language and the included details. Please don't include accounts or passwords." = "你的意見會作為公開問題發佈在映匣的 GitHub 頁面上，並附帶 App 與系統版本、裝置型號、語言和附帶資訊。請勿填寫帳號或密碼。";
+"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model, the language and the included details. Please don't include accounts or passwords." = "你的意見會作為公開問題發佈在XiPlayer的 GitHub 頁面上，並附帶 App 與系統版本、裝置型號、語言和附帶資訊。請勿填寫帳號或密碼。";
 "Included Details" = "附帶資訊";
 "Include Details" = "附帶資訊";
 "Add Photos or Videos" = "加入照片或影片";
@@ -972,10 +972,10 @@
 "Saved to Photos" = "已儲存到照片";
 "Save Code to Photos" = "將 QR 碼儲存到照片";
 "In the %@ app, tap Scan, then choose this photo." = "在%@ App 中點一下「掃一掃」，然後選擇這張照片。";
-"Allow Yingxia to add photos in Settings, then try again." = "請在「設定」中允許映匣加入照片，然後再試一次。";
+"Allow Yingxia to add photos in Settings, then try again." = "請在「設定」中允許XiPlayer加入照片，然後再試一次。";
 "Sign in on Bilibili's page with a text-message code or your password, or scan a code with the Bilibili app on another phone. Without signing in, videos play at up to 1080P and anime and films at 480P." = "在嗶哩嗶哩官方頁面用簡訊驗證碼或密碼登入，或用另一支手機上的嗶哩嗶哩 App 掃碼登入。未登入時，影片最高 1080P，番劇和影視最高 480P。";
 "Sign in for your feed, favorites and higher quality." = "登入後可查看關注動態、收藏，並取得更高畫質。";
-"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "在網盤官方頁面登入，或用另一支手機上的網盤 App 掃碼登入。映匣會將登入資訊儲存在這台裝置上，並提供給你執行的外掛。";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "在網盤官方頁面登入，或用另一支手機上的網盤 App 掃碼登入。XiPlayer會將登入資訊儲存在這台裝置上，並提供給你執行的外掛。";
 "Open the %@ app on another phone, scan this code, and confirm the sign-in." = "在另一支手機上開啟%@ App，掃描此 QR 碼並確認登入。";
 "Or scan this code with the %@ app on another phone." = "也可以用另一支手機上的%@ App 掃描此 QR 碼。";
 "Sign In on This iPhone" = "在這支 iPhone 上登入";
@@ -1016,9 +1016,9 @@
 "Password (Optional)" = "密碼（選填）";
 "No AList, WebDAV, Emby, Jellyfin or fnOS server answered at this address." = "此網址上沒有回應的 AList、WebDAV、Emby、Jellyfin 或飛牛 fnOS 伺服器。";
 "This server doesn't let guests browse. Enter a user name and password." = "此伺服器不允許訪客瀏覽，請輸入使用者名稱和密碼。";
-"Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "夸克和 UC 在官方頁面登入。映匣會將登入資訊儲存在這台 Mac 上。";
-"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "在網盤官方頁面登入，或用另一支手機上的網盤 App 掃碼登入。映匣會將登入資訊儲存在這台裝置上。";
-"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "用網盤的手機 App 掃碼登入。映匣會將登入資訊儲存在這台裝置上。";
+"Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "夸克和 UC 在官方頁面登入。XiPlayer會將登入資訊儲存在這台 Mac 上。";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "在網盤官方頁面登入，或用另一支手機上的網盤 App 掃碼登入。XiPlayer會將登入資訊儲存在這台裝置上。";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "用網盤的手機 App 掃碼登入。XiPlayer會將登入資訊儲存在這台裝置上。";
 "Picture in Picture" = "子母畫面";
 "Playing in Picture in Picture" = "正在以子母畫面播放";
 "Audio" = "音訊";
@@ -1039,22 +1039,22 @@
 "Learn More" = "了解更多";
 "Messages" = "訊息";
 "No Messages" = "沒有訊息";
-"News and notices from Yingxia appear here." = "映匣的公告和通知會顯示在這裡。";
-"%@ didn't answer. Make sure Yingxia is open on it and both devices are on the same network." = "%@ 沒有回應。請確認它已打開映匣，而且兩部裝置在同一個網路中。";
-"Turn on Local Network for Yingxia in the Settings app, then try again." = "請在「設定」App 中為映匣開啟「區域網路」，然後再試一次。";
+"News and notices from Yingxia appear here." = "XiPlayer的公告和通知會顯示在這裡。";
+"%@ didn't answer. Make sure Yingxia is open on it and both devices are on the same network." = "%@ 沒有回應。請確認它已打開XiPlayer，而且兩部裝置在同一個網路中。";
+"Turn on Local Network for Yingxia in the Settings app, then try again." = "請在「設定」App 中為XiPlayer開啟「區域網路」，然後再試一次。";
 "This file's drive isn't in Cloud Files on %@. Add it there, then try again." = "這個檔案所在的網盤不在 %@ 的「網盤檔案」中。請先在那裡加入，然後再試一次。";
-"Yingxia on %@ doesn't have the source %@. Add the same subscription there, then try again." = "%@ 上的映匣沒有隨選來源「%@」。請在那裡加入相同的訂閱，然後再試一次。";
+"Yingxia on %@ doesn't have the source %@. Add the same subscription there, then try again." = "%@ 上的XiPlayer沒有隨選來源「%@」。請在那裡加入相同的訂閱，然後再試一次。";
 "Couldn't play what %@ sent: %@" = "無法播放 %@ 傳來的內容：%@";
 "From %@" = "來自 %@";
 "%@ couldn't play this video." = "%@ 無法播放這部影片。";
 "Playing on %@" = "正在 %@ 上播放";
 "Play Here" = "在這裡播放";
-"This video plays from inside Yingxia on this device, so %@ can't open it." = "這部影片是在這部裝置的映匣內部播放的，%@ 無法開啟。";
+"This video plays from inside Yingxia on this device, so %@ can't open it." = "這部影片是在這部裝置的XiPlayer內部播放的，%@ 無法開啟。";
 "Play On" = "在其他裝置上播放";
 "Play on Another Device" = "在其他裝置上播放";
 "Couldn't Play on %@" = "無法在 %@ 上播放";
 "Play from Other Devices" = "接收其他裝置的播放";
-"With Yingxia open here, your other devices on the same network can send it what they play: tap Play On in their player." = "在這裡打開映匣後，同一個網路中你的其他裝置可以把正在播放的內容傳到這裡：在它們的播放器中點一下「在其他裝置上播放」。";
+"With Yingxia open here, your other devices on the same network can send it what they play: tap Play On in their player." = "在這裡打開XiPlayer後，同一個網路中你的其他裝置可以把正在播放的內容傳到這裡：在它們的播放器中點一下「在其他裝置上播放」。";
 "Touch and Hold Speed" = "長按倍速";
 "Start Speed" = "預設倍速";
 "Each new title starts at this speed. A speed you pick in the player stays for that title's next episodes." = "每部新的影片都以此倍速開始播放。在播放器中選的倍速會沿用到這部影片的後續集數。";
@@ -1071,7 +1071,7 @@
 "Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "在影片左側上下滑動調整亮度，在右側上下滑動調整音量。";
 "Custom Search Order" = "自訂搜尋順序";
 "Sources at the top are searched first, and their results are listed first." = "排在前面的來源優先搜尋，結果也排在前面。";
-"Yingxia searches quick, reliable sources first." = "映匣會優先搜尋快速、穩定的來源。";
+"Yingxia searches quick, reliable sources first." = "XiPlayer會優先搜尋快速、穩定的來源。";
 "Arrange" = "排序";
 "Arrange Sources" = "調整來源順序";
 "Drag sources to reorder them. Sources at the top are searched first, and their results are listed first." = "拖曳來源即可調整順序。排在前面的來源優先搜尋，結果也排在前面。";
@@ -1131,7 +1131,7 @@
 "TMDB" = "TMDB";
 "Search TMDB" = "搜尋 TMDB";
 "Look Up Titles on TMDB" = "在 TMDB 上查找作品";
-"Shows cast, artwork and episode details from TMDB on video pages. Sends the video's title, its details from the source and the source's name to Yingxia's lookup service, never your accounts or subscription addresses." = "在影片頁面顯示來自 TMDB 的演員、海報和劇集資訊。會把影片的標題、來源提供的簡介和劇集名稱，以及來源的名稱傳送給映匣的查找服務，絕不傳送你的帳號或訂閱地址。";
+"Shows cast, artwork and episode details from TMDB on video pages. Sends the video's title, its details from the source and the source's name to Yingxia's lookup service, never your accounts or subscription addresses." = "在影片頁面顯示來自 TMDB 的演員、海報和劇集資訊。會把影片的標題、來源提供的簡介和劇集名稱，以及來源的名稱傳送給XiPlayer的查找服務，絕不傳送你的帳號或訂閱地址。";
 "You May Like" = "猜你喜歡";
 
 /* Short-drama sources */
@@ -1399,9 +1399,9 @@
 "LX Music Sources" = "洛雪音樂自訂源";
 "LX Music Source" = "洛雪音源";
 "This file is not an LX Music source." = "這不是洛雪音樂的自訂源腳本。";
-"This source plays none of the catalogs Yingxia searches (QQ Music, NetEase Cloud Music, Kuwo, Migu)." = "這個音源不支援映匣搜尋的任何曲庫（QQ 音樂、網易雲音樂、酷我、咪咕）。";
+"This source plays none of the catalogs Yingxia searches (QQ Music, NetEase Cloud Music, Kuwo, Migu)." = "這個音源不支援XiPlayer搜尋的任何曲庫（QQ 音樂、網易雲音樂、酷我、咪咕）。";
 "The LX Music source did not start: %@" = "洛雪音源無法啟動：%@";
-"Scripts made for LX Music's custom sources. They are asked for a song's audio after the channels above, for QQ Music, NetEase Cloud Music, Kuwo and Migu songs. Yingxia includes none: add only sources you trust." = "為洛雪音樂「自訂源」編寫的腳本。上方的通道之後才會向它們取得歌曲音訊，適用於 QQ 音樂、網易雲音樂、酷我和咪咕的歌曲。映匣不內建任何音源，請只加入你信任的音源。";
+"Scripts made for LX Music's custom sources. They are asked for a song's audio after the channels above, for QQ Music, NetEase Cloud Music, Kuwo and Migu songs. Yingxia includes none: add only sources you trust." = "為洛雪音樂「自訂源」編寫的腳本。上方的通道之後才會向它們取得歌曲音訊，適用於 QQ 音樂、網易雲音樂、酷我和咪咕的歌曲。XiPlayer不內建任何音源，請只加入你信任的音源。";
 "Added “%@”." = "已加入「%@」。";
 "Remove “%@”" = "移除「%@」";
 "Add from Address" = "從網址加入";
@@ -1415,8 +1415,8 @@
 "This extension plays songs through an LX Music source." = "這個擴充需要透過洛雪音源播放歌曲。";
 "This extension plays songs through an LX Music source. Add one in Music Settings." = "這個擴充需要透過洛雪音源播放歌曲。請在音樂設定中加入一個。";
 "None of your LX Music sources plays this song's catalog." = "你加入的洛雪音源都不支援這首歌所在的曲庫。";
-"This extension asks an LX Music source for something Yingxia doesn't support." = "這個擴充向洛雪音源請求的內容映匣尚不支援。";
-"Scripts in the Listenify music extension format. Their charts and playlists show on the Music page and their songs in Music search; songs play from what the extension gives, or through your LX Music sources when it asks for one. Yingxia includes none: add only extensions you trust." = "Listenify 格式的音樂擴充腳本。它們的榜單和歌單顯示在音樂頁，歌曲出現在音樂搜尋中；歌曲從擴充給出的位址播放，擴充需要時也會透過你的洛雪音源播放。映匣不內建任何擴充：只加入你信任的擴充。";
+"This extension asks an LX Music source for something Yingxia doesn't support." = "這個擴充向洛雪音源請求的內容XiPlayer尚不支援。";
+"Scripts in the Listenify music extension format. Their charts and playlists show on the Music page and their songs in Music search; songs play from what the extension gives, or through your LX Music sources when it asks for one. Yingxia includes none: add only extensions you trust." = "Listenify 格式的音樂擴充腳本。它們的榜單和歌單顯示在音樂頁，歌曲出現在音樂搜尋中；歌曲從擴充給出的位址播放，擴充需要時也會透過你的洛雪音源播放。XiPlayer不內建任何擴充：只加入你信任的擴充。";
 "Douban Hot Lists" = "豆瓣熱門";
 "Douban Hot Movies" = "豆瓣熱門電影";
 "Douban Hot Series" = "豆瓣熱門劇集";
@@ -1673,7 +1673,7 @@
 
 /* Subtitle sources (#576 M2) */
 "It uses manifest format %@." = "它使用的清單格式為 %@。";
-"It needs a newer version of Yingxia." = "需要更新版本的影匣。";
+"It needs a newer version of Yingxia." = "需要更新版本的XiPlayer。";
 "Its identifier is not valid." = "它的識別碼無效。";
 "It doesn't list the sites it uses." = "它沒有列出要存取的網站。";
 "Its settings repeat a name." = "它的設定項名稱重複。";
@@ -1687,7 +1687,7 @@
 "No subtitles found." = "找不到字幕。";
 "Add your key for it in Settings › Subtitle Sources." = "請在「設定 › 字幕來源」中填寫它的金鑰。";
 "Your key or sign-in no longer works. Check it in Settings › Subtitle Sources." = "金鑰或登入已失效，請在「設定 › 字幕來源」中檢查。";
-"This source doesn't work with this version of Yingxia. %@" = "此來源無法在目前版本的影匣中使用。%@";
+"This source doesn't work with this version of Yingxia. %@" = "此來源無法在目前版本的XiPlayer中使用。%@";
 "The file didn't download. %@" = "檔案未能下載。%@";
 "The source tried to reach a site it didn't list (%@)." = "此來源試圖存取未列出的網站（%@）。";
 "The source failed." = "此來源出錯了。";
@@ -1793,8 +1793,8 @@
 "No results match these filters. Only songs QQ Music lists have a year, genre and language." = "沒有符合這些篩選條件的結果。只有 QQ 音樂收錄的歌曲帶有年份、曲風和語言資訊。";
 "%@ views" = "%@ 次播放";
 "%@ danmaku" = "%@ 條彈幕";
-"Add to Yingxia Favorites" = "加入映匣收藏";
-"Remove from Yingxia Favorites" = "移出映匣收藏";
+"Add to Yingxia Favorites" = "加入XiPlayer收藏";
+"Remove from Yingxia Favorites" = "移出XiPlayer收藏";
 "Chapter %lld" = "第 %lld 章";
 "All Comments" = "全部評論";
 "Start Over" = "從頭開始";
@@ -1820,13 +1820,13 @@
 "Douban" = "豆瓣";
 "System Language" = "系統語言";
 "Restart Now" = "立即重新啟動";
-"Restart Yingxia to use the new language." = "重新啟動映匣後即可使用新語言。";
+"Restart Yingxia to use the new language." = "重新啟動XiPlayer後即可使用新語言。";
 
 /* Live plugins */
 "%@ couldn't be downloaded." = "無法下載 %@。";
 "%@ didn't match its checksum, so it wasn't installed." = "%@ 的校驗值不符，未安裝。";
 "%@ wasn't updated. %@" = "%@ 未更新。%@";
-"A plugin's scripts run inside Yingxia and reach only the internet. Add sources you trust." = "外掛的腳本在映匣內執行，只能存取網路。請只加入你信任的外掛來源。";
+"A plugin's scripts run inside Yingxia and reach only the internet. Add sources you trust." = "外掛的腳本在XiPlayer內執行，只能存取網路。請只加入你信任的外掛來源。";
 "In Settings, add a TVBox subscription with live playlists, an M3U or TXT live playlist, or live plugins." = "請在設定中加入含直播源的 TVBox 訂閱、M3U 或 TXT 直播清單，或直播外掛。";
 "Install All (%lld)" = "全部安裝（%lld）";
 "Live Plugins" = "直播外掛";
@@ -1846,13 +1846,13 @@
 "The plugin %@ defines no LiveParsePlugin." = "外掛 %@ 沒有定義 LiveParsePlugin。";
 "The plugin %@ is missing its script %@." = "外掛 %@ 缺少腳本 %@。";
 "The plugin %@ isn't installed." = "外掛 %@ 未安裝。";
-"The plugin %@ needs a newer version of Yingxia." = "外掛 %@ 需要更新版本的映匣。";
+"The plugin %@ needs a newer version of Yingxia." = "外掛 %@ 需要更新版本的XiPlayer。";
 "The plugin has no manifest.json." = "外掛缺少 manifest.json。";
 "The streamer isn't live now." = "主播目前未開播。";
 "This address isn't a live plugin source." = "此網址不是直播外掛來源。";
 "This live stream isn't FLV." = "此直播串流不是 FLV 格式。";
 "This platform's plugin can't do this." = "此平台的外掛不支援此操作。";
-"This video is encrypted, and Yingxia can't play it yet." = "此影片已加密，映匣暫時無法播放。";
+"This video is encrypted, and Yingxia can't play it yet." = "此影片已加密，XiPlayer暫時無法播放。";
 "Update All (%lld)" = "全部更新（%lld）";
 "Update to %@" = "更新到 %@";
 "Cookie" = "Cookie";
@@ -1967,10 +1967,10 @@
 // Novels: book source runtime errors
 "The book source returned nothing." = "書源沒有回傳內容。";
 "The book source took too long to answer." = "書源回應逾時。";
-"This source needs a web view, which Yingxia does not have." = "此書源需要網頁檢視，映匣暫不支援。";
-"This source needs a web view (@webjs), which Yingxia does not have." = "此書源需要網頁檢視（@webjs），映匣暫不支援。";
-"This source needs a verification code, which Yingxia cannot show." = "此書源需要驗證碼，映匣無法顯示。";
-"This source needs a browser, which Yingxia does not offer." = "此書源需要瀏覽器，映匣暫不提供。";
+"This source needs a web view, which Yingxia does not have." = "此書源需要網頁檢視，XiPlayer暫不支援。";
+"This source needs a web view (@webjs), which Yingxia does not have." = "此書源需要網頁檢視（@webjs），XiPlayer暫不支援。";
+"This source needs a verification code, which Yingxia cannot show." = "此書源需要驗證碼，XiPlayer無法顯示。";
+"This source needs a browser, which Yingxia does not offer." = "此書源需要瀏覽器，XiPlayer暫不提供。";
 "This source made too many requests." = "此書源發出的請求過多。";
 "This source cannot search." = "此書源不支援搜尋。";
 "This is not a text book source." = "這不是文字書源。";
@@ -2067,10 +2067,10 @@
 "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is." = "方形圖片效果最好。四角透明的圖片（例如為 Mac 製作的圖像）會按原樣顯示。";
 "Choose Picture…" = "選擇圖片…";
 "Remove Custom Picture" = "移除自訂圖片";
-"The Dock and Finder show the icon you pick, also while Yingxia is closed." = "你選的圖像會顯示在 Dock 和 Finder 中，映匣關閉後也不變。";
-"Yingxia can't change its own icon where it's installed, so the Dock shows this icon only while Yingxia is open." = "映匣無法更改安裝位置中自己的圖像，因此只在映匣開啟時，Dock 才顯示這個圖像。";
+"The Dock and Finder show the icon you pick, also while Yingxia is closed." = "你選的圖像會顯示在 Dock 和 Finder 中，XiPlayer關閉後也不變。";
+"Yingxia can't change its own icon where it's installed, so the Dock shows this icon only while Yingxia is open." = "XiPlayer無法更改安裝位置中自己的圖像，因此只在XiPlayer開啟時，Dock 才顯示這個圖像。";
 "The icon on your Home Screen. The system confirms the change with a short message." = "主畫面上的圖像。更換後，系統會顯示一則簡短提示。";
-"The icon on the Home Screen. When Yingxia sits in the top row, the picture above it stays Pocket." = "主畫面上的圖像。映匣放在第一排時，上方顯示的大圖仍是「口袋」。";
+"The icon on the Home Screen. When Yingxia sits in the top row, the picture above it stays Pocket." = "主畫面上的圖像。XiPlayer放在第一排時，上方顯示的大圖仍是「口袋」。";
 
 /* Settings › Color Theme */
 "Violet" = "紫羅蘭";
@@ -2114,7 +2114,7 @@
 "Couldn't load this address: %@" = "無法載入此網址：%@";
 "Use New Address" = "改用新網址";
 "File" = "檔案";
-"Yingxia keeps its own copy of this file. Later changes to the original don't reach the app; open it again to update it." = "映匣會保存這個檔案的副本。之後修改原檔案不會同步到映匣；需要更新時，請再次用映匣打開它。";
+"Yingxia keeps its own copy of this file. Later changes to the original don't reach the app; open it again to update it." = "XiPlayer會保存這個檔案的副本。之後修改原檔案不會同步到XiPlayer；需要更新時，請再次用XiPlayer打開它。";
 "Added the LX Music source “%@”. Music plays songs through it; manage it in Music Settings › LX Music Sources." = "已新增洛雪音源「%@」，音樂會透過它播放歌曲。可在「音樂設定 › 洛雪音樂自訂源」中管理。";
 "This address is now an LX Music source. Add it again to play music through it." = "此網址現在是洛雪音源。重新新增即可透過它播放音樂。";
 "Use This Source" = "使用此音源";
@@ -2177,14 +2177,14 @@
 
 // Settings › Account (App/AccountView.swift)
 "How Points Work" = "積分規則";
-"Points reward feedback and code that really help Yingxia." = "積分獎勵真正幫到映匣的意見和程式碼。";
-"Open Yingxia while signed in, once a day. Each device counts for one account a day." = "登入後每天打開映匣即可獲得。每台裝置每天只給一個帳戶計分。";
+"Points reward feedback and code that really help Yingxia." = "積分獎勵真正幫到XiPlayer的意見和程式碼。";
+"Open Yingxia while signed in, once a day. Each device counts for one account a day." = "登入後每天打開XiPlayer即可獲得。每台裝置每天只給一個帳戶計分。";
 "Each message sent from Settings › Send Feedback, or with /feedback in the Telegram group (sign in with that Telegram account). Up to %lld a day; duplicates and invalid ones don't count." = "透過「設定 › 意見回饋」傳送的每則意見，或在 Telegram 群組裡用 /feedback 傳送的意見（用同一個 Telegram 帳戶登入）。每天最多 %lld 則，重複或無效的不計分。";
 "When the developer fixes a problem you reported. The clearer the report, the likelier: your device, the build, the source, the steps, and a screenshot or video." = "當開發者修好你回報的問題時獲得。寫得越清楚越容易被修復：裝置、build 號、用的源、重現步驟，再附上截圖或影片。";
 "When the developer builds a feature you suggested." = "當開發者做出你建議的功能時獲得。";
 "Bug Fixed" = "問題被修復";
 "Idea Adopted" = "建議被採納";
-"Yingxia's code is on GitHub. Put this line in your pull request's description; each merged pull request counts once." = "映匣的程式碼在 GitHub 上。在 PR 描述裡寫上這一行，每個合併的 PR 計一次。";
+"Yingxia's code is on GitHub. Put this line in your pull request's description; each merged pull request counts once." = "XiPlayer的程式碼在 GitHub 上。在 PR 描述裡寫上這一行，每個合併的 PR 計一次。";
 "Sign in to get the account ID for your pull requests." = "登入後即可取得用於 PR 的帳戶 ID。";
 "Fair Play" = "公平規則";
 "Points are counted again from the records every time. Duplicates, spam or several accounts on one device earn nothing more, and points gained unfairly are taken away." = "積分每次都依紀錄重新計算。重複、洗版或一台裝置多個帳戶都不會多得分，不正當獲得的積分會被扣除。";
@@ -2198,7 +2198,7 @@
 "Feedback #%lld" = "意見 #%lld";
 "Total Points" = "總積分";
 "Daily Use" = "每天使用";
-"+%lld a day you open Yingxia · %lld days" = "每天打開映匣 +%lld · 已 %lld 天";
+"+%lld a day you open Yingxia · %lld days" = "每天打開XiPlayer +%lld · 已 %lld 天";
 "Feedback Sent" = "傳送意見";
 "+%lld each, up to %lld a day · %lld counted" = "每則 +%lld，每天最多 %lld 則 · 已計 %lld 則";
 "Feedback Adopted" = "意見被採納";
@@ -2229,7 +2229,7 @@
 "Couldn't redeem this code." = "無法兌換此兌換碼。";
 "Couldn't sign in. Please try again." = "登入失敗，請再試一次。";
 "Delete Account" = "刪除帳戶";
-"Delete your Yingxia account?" = "要刪除你的映匣帳戶嗎？";
+"Delete your Yingxia account?" = "要刪除你的XiPlayer帳戶嗎？";
 "Duplicate" = "重複";
 "Each message the developer adopts also gives %lld days of Pro." = "每則被開發者採納的意見還會贈送 %lld 天 Pro。";
 "Enter a code" = "輸入兌換碼";
@@ -2259,11 +2259,11 @@
 "There's no such code. Check it and try again." = "沒有這個兌換碼，請檢查後再試一次。";
 "This code has already been used." = "此兌換碼已被使用。";
 "This code has been withdrawn." = "此兌換碼已被撤銷。";
-"This sign-in already belongs to another Yingxia account." = "此登入方式已連結另一個映匣帳戶。";
+"This sign-in already belongs to another Yingxia account." = "此登入方式已連結另一個XiPlayer帳戶。";
 "This sign-in link has expired. Start again." = "此登入連結已過期，請重新開始。";
 "Too many tries. Wait a minute and try again." = "嘗試次數過多，請等一分鐘後再試。";
 "Waiting for Telegram…" = "正在等待 Telegram…";
-"Yingxia Pro" = "映匣 Pro";
+"Yingxia Pro" = "XiPlayer Pro";
 "Your feedback points and Pro time are deleted with it, and can't be brought back." = "意見積分和 Pro 時長會一併刪除，且無法復原。";
 "You've already redeemed this code." = "你已兌換過此兌換碼。";
 "You've been signed out. Sign in again." = "你已登出，請重新登入。";
@@ -2327,7 +2327,7 @@
 "Forward 10 Seconds" = "快轉 10 秒";
 "Volume Down" = "調低音量";
 "Volume Up" = "調高音量";
-"Keep Yingxia open while the TV plays this video." = "電視播放期間請保持映匣開啟。";
+"Keep Yingxia open while the TV plays this video." = "電視播放期間請保持XiPlayer開啟。";
 "%@ refused the video." = "%@ 拒絕播放這部影片。";
 "%@ refused the video (%@)." = "%@ 拒絕播放這部影片（%@）。";
 "%@ didn't respond. Make sure it is on and on the same network." = "%@ 沒有回應。請確認它已開機，而且與本裝置在同一個網路中。";
@@ -2344,7 +2344,7 @@
 "Each series and audiobook keeps its own times. While one plays, open the menu in the playback controls, choose Skip intro / outro, and pick Intro Ends Here when the intro ends." = "每部劇和每本有聲書各自記住時間。播放時打開播放控制裡的選單，選擇「跳過片頭片尾」，在片頭結束時選「片頭到此結束」。";
 "Each series and audiobook keeps its own times. While one plays, choose Skip intro / outro in the player's settings menu, or in an audiobook's More menu." = "每部劇和每本有聲書各自記住時間。播放時在播放器的設定選單裡選擇「跳過片頭片尾」；有聲書在「更多」選單裡。";
 "The drive plays only a compressed copy of this video for this account, without its own subtitles. Use Search Online to add some." = "網盤只給這個帳號播放這部影片的壓縮副本，不含影片自帶的字幕。可以用「線上搜尋」加入字幕。";
-"Telegram returned a page Yingxia can't read." = "Telegram 回傳了映匣無法讀取的頁面。";
+"Telegram returned a page Yingxia can't read." = "Telegram 回傳了XiPlayer無法讀取的頁面。";
 "This Telegram post is no longer in the channel's public preview." = "這則 Telegram 貼文已不在頻道的公開預覽中。";
 "This Telegram post has no playable video." = "這則 Telegram 貼文沒有可播放的影片。";
 "Telegram post" = "Telegram 貼文";

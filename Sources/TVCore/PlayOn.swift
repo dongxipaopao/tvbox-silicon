@@ -102,7 +102,7 @@ public final class PlayOnReceiver: @unchecked Sendable {
     private let queue = DispatchQueue(label: "tvbox.play-on.receiver")
     private var listener: NWListener?
     private var running = false
-    private var registered = "Yingxia"
+    private var registered = "XiPlayer"
 
     public func start() { queue.async { self.running = true; self.listen() } }
     public func stop() {

@@ -2,8 +2,8 @@
 "%@ hasn't turned on search. Its administrator can build the search index in AList's settings." = "%@ は検索が有効になっていません。管理者は AList の設定で検索インデックスを作成できます。";
 "My %@" = "マイ%@";
 "This folder has no videos Apple devices can play." = "このフォルダには Apple デバイスで再生できるビデオがありません。";
-"Yingxia" = "映匣";
-"Yingxia / TVBOX" = "映匣 / TVBOX";
+"Yingxia" = "XiPlayer";
+"Yingxia / TVBOX" = "XiPlayer / TVBOX";
 "Watch Now" = "今すぐ観る";
 "Live TV" = "ライブ TV";
 "Sources" = "配信ソース";
@@ -36,7 +36,7 @@
 "URL Playback" = "URL の再生";
 "Plugins" = "プラグイン";
 "JAR Runtime and Compatibility" = "JAR 実行環境と互換性";
-"About Yingxia" = "映匣について";
+"About Yingxia" = "XiPlayerについて";
 "macOS · iOS · tvOS / Native SwiftUI + AVPlayer" = "macOS · iOS · tvOS / ネイティブ SwiftUI + AVPlayer";
 "Open Source Licenses" = "オープンソースライセンス";
 "Supports TVBox JSON subscriptions, M3U / TXT live playlists, and standard type 1 / type 4 JSON APIs. Media formats depend on the device. Local JavaScript and Python plugins are experimental on Mac, and JAR plugins are experimental on every platform; compatibility varies by source." = "TVBox JSON 配信設定、M3U / TXT ライブ再生リスト、type 1 / type 4 の標準 JSON API に対応しています。メディア形式はデバイスによって異なります。Mac のローカル JavaScript と Python プラグイン、およびすべてのプラットフォームの JAR プラグインは試験対応で、互換性は配信元によって異なります。";
@@ -349,8 +349,8 @@
 "About" = "情報";
 "Version %@" = "バージョン %@";
 "Paste Credentials Manually" = "認証情報を手動で貼り付け";
-"Sign in on the provider's official page. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "公式ページでサインインしてください。映匣はログイン情報をこの Mac に保存し、実行するプラグインに渡します。";
-"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "ドライブのスマートフォンアプリでコードをスキャンしてサインインします。映匣はログイン情報をこのデバイスに保存し、実行するプラグインに渡します。";
+"Sign in on the provider's official page. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "公式ページでサインインしてください。XiPlayerはログイン情報をこの Mac に保存し、実行するプラグインに渡します。";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "ドライブのスマートフォンアプリでコードをスキャンしてサインインします。XiPlayerはログイン情報をこのデバイスに保存し、実行するプラグインに渡します。";
 "Sources: %lld · Live playlists: %lld" = "ソース：%lld · ライブプレイリスト：%lld";
 "Last updated %@" = "最終更新 %@";
 "Run Test" = "テストを実行";
@@ -389,7 +389,7 @@
 "%lld of %lld sources responded" = "%lld / %lld ソースが応答";
 "First-time setup can take a few minutes. Keep the app open." = "初回の準備には数分かかることがあります。アプリを開いたままにしてください。";
 "This source requires Android features that the plugin runtime does not support yet." = "この配信ソースは、プラグイン実行環境で未対応のAndroid機能を必要とします。";
-"This entry opens the source's own settings or sign-in screen (such as a QR code), which Yingxia can't show. Sign in under Settings → Cloud Drive Accounts instead." = "この項目はソース独自の設定画面またはサインイン画面（QRコードなど）を開きますが、映匣では表示できません。代わりに「設定 → クラウドドライブのアカウント」でサインインしてください。";
+"This entry opens the source's own settings or sign-in screen (such as a QR code), which Yingxia can't show. Sign in under Settings → Cloud Drive Accounts instead." = "この項目はソース独自の設定画面またはサインイン画面（QRコードなど）を開きますが、XiPlayerでは表示できません。代わりに「設定 → クラウドドライブのアカウント」でサインインしてください。";
 "This source needs an Android feature that isn't supported yet: %@." = "このソースには未対応のAndroid機能が必要です：%@。";
 "This plugin couldn't be prepared on this device (missing %@)." = "この端末でプラグインを準備できませんでした（%@ がありません）。";
 "This plugin couldn't be prepared on this device (%@ could not be converted)." = "この端末でプラグインを準備できませんでした（%@ を変換できませんでした）。";
@@ -436,16 +436,16 @@
 "Check Now" = "今すぐ確認";
 "Checking…" = "確認中…";
 "Last checked %@" = "前回の確認：%@";
-"Yingxia is up to date" = "映匣は最新です";
-"Yingxia %@ is the latest version." = "映匣 %@ は最新バージョンです。";
+"Yingxia is up to date" = "XiPlayerは最新です";
+"Yingxia %@ is the latest version." = "XiPlayer %@ は最新バージョンです。";
 "Couldn't check for updates: %@" = "アップデートを確認できませんでした：%@";
-"Yingxia %@ is available" = "映匣 %@ が公開されました";
+"Yingxia %@ is available" = "XiPlayer %@ が公開されました";
 "New features are waiting for you." = "新しい機能が待っています。";
 "See What's New" = "新機能を見る";
 "What's New in Version %@" = "バージョン %@ の新機能";
-"What's New in Yingxia" = "映匣の新機能";
+"What's New in Yingxia" = "XiPlayerの新機能";
 "Something New Is Here" = "新しい機能が登場";
-"Yingxia %@ is ready with new features." = "新機能を搭載した映匣 %@ が登場しました。";
+"Yingxia %@ is ready with new features." = "新機能を搭載したXiPlayer %@ が登場しました。";
 "Get the Update" = "アップデートを入手";
 "Not Now" = "今はしない";
 "Install and Relaunch" = "インストールして再起動";
@@ -456,21 +456,21 @@
 "Relaunching…" = "再起動中…";
 "Download Manually" = "手動でダウンロード";
 "The update couldn't be installed: %@" = "アップデートをインストールできませんでした：%@";
-"This update can't be installed from within Yingxia yet. Download it instead." = "このアップデートはまだ映匣内からインストールできません。ダウンロードしてください。";
-"Yingxia couldn't relaunch to finish the update. Quit Yingxia and open it again." = "アップデートを完了するために映匣を再起動できませんでした。映匣を終了してから、もう一度開いてください。";
+"This update can't be installed from within Yingxia yet. Download it instead." = "このアップデートはまだXiPlayer内からインストールできません。ダウンロードしてください。";
+"Yingxia couldn't relaunch to finish the update. Quit Yingxia and open it again." = "アップデートを完了するためにXiPlayerを再起動できませんでした。XiPlayerを終了してから、もう一度開いてください。";
 "Install Updates Automatically" = "アップデートを自動的にインストール";
-"Yingxia downloads updates in the background and installs them the next time it quits." = "映匣はアップデートをバックグラウンドでダウンロードし、次に終了したときにインストールします。";
+"Yingxia downloads updates in the background and installs them the next time it quits." = "XiPlayerはアップデートをバックグラウンドでダウンロードし、次に終了したときにインストールします。";
 "Continue" = "続ける";
 "New" = "NEW";
 "Scan with your iPhone to get the update." = "iPhone でスキャンしてアップデートを入手します。";
-"Yingxia %@" = "映匣 %@";
+"Yingxia %@" = "XiPlayer %@";
 "What's New" = "新機能";
 "Now Available" = "配信開始";
 "New build (%@) in TestFlight" = "TestFlight に新しいビルド (%@)";
 "In TestFlight" = "TestFlight で配信中";
 "Open TestFlight" = "TestFlight を開く";
-"Yingxia %@ is ready in TestFlight. Open TestFlight and tap Update to get these features." = "映匣 %@ を TestFlight で配信中です。TestFlight を開いて「アップデート」をタップすると、これらの新機能を使えます。";
-"Yingxia %@ is ready in TestFlight. Open TestFlight on this Apple TV and update Yingxia to get these features." = "映匣 %@ を TestFlight で配信中です。この Apple TV で TestFlight を開いて映匣をアップデートすると、これらの新機能を使えます。";
+"Yingxia %@ is ready in TestFlight. Open TestFlight and tap Update to get these features." = "XiPlayer %@ を TestFlight で配信中です。TestFlight を開いて「アップデート」をタップすると、これらの新機能を使えます。";
+"Yingxia %@ is ready in TestFlight. Open TestFlight on this Apple TV and update Yingxia to get these features." = "XiPlayer %@ を TestFlight で配信中です。この Apple TV で TestFlight を開いてXiPlayerをアップデートすると、これらの新機能を使えます。";
 "Here's what's new in version %@." = "バージョン %@ の新しいところをご紹介します。";
 "Bilibili" = "ビリビリ";
 "Bilibili Account" = "ビリビリのアカウント";
@@ -732,9 +732,9 @@
 "Signing In on Apple TV" = "Apple TVでサインイン";
 "Apple TV can't show Douyin's sign-in page. Sign in here first, then open Settings > Douyin on the Apple TV and scan its code with this iPhone's Camera." = "Apple TVではDouyinのサインインページを表示できません。先にここでサインインし、Apple TVで「設定 > Douyin」を開いて、そのコードをこのiPhoneのカメラでスキャンしてください。";
 "Sign In to Douyin" = "Douyinにサインイン";
-"Douyin signs in only on its own web page, which Apple TV can't show. Sign in with Yingxia on your iPhone instead:" = "Douyinは自社のWebページでしかサインインできず、Apple TVではそのページを表示できません。代わりにiPhoneの映匣でサインインしてください：";
-"On your iPhone, open Yingxia, go to Settings > Douyin, and sign in." = "iPhoneで映匣を開き、「設定 > Douyin」でサインインします。";
-"Scan this code with the iPhone's Camera and open it in Yingxia." = "iPhoneのカメラでこのコードをスキャンし、映匣で開きます。";
+"Douyin signs in only on its own web page, which Apple TV can't show. Sign in with Yingxia on your iPhone instead:" = "Douyinは自社のWebページでしかサインインできず、Apple TVではそのページを表示できません。代わりにiPhoneのXiPlayerでサインインしてください：";
+"On your iPhone, open Yingxia, go to Settings > Douyin, and sign in." = "iPhoneでXiPlayerを開き、「設定 > Douyin」でサインインします。";
+"Scan this code with the iPhone's Camera and open it in Yingxia." = "iPhoneのカメラでこのコードをスキャンし、XiPlayerで開きます。";
 "Tap Send to Apple TV." = "「Apple TVに送信」をタップします。";
 "Waiting for your iPhone…" = "iPhoneを待っています…";
 "Douyin answers live searches only for signed-in accounts." = "Douyinはサインイン中のアカウントにだけライブ検索を提供します。";
@@ -764,7 +764,7 @@
 "The original file is MKV, which Apple devices can't play, so the %@ line is playing instead." = "元のファイルは Apple デバイスで再生できない MKV 形式のため、%@回線で再生しています。";
 "Sign In to %@" = "%@にサインイン";
 "%@ needs this account for the line you chose. The video plays once you confirm." = "「%@」のこの回線にはこのアカウントが必要です。確認すると再生が始まります。";
-"Sign in to Quark and UC on their official page, and to Baidu and Aliyun by scanning a code with their phone app. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "Quark と UC は公式ページで、Baidu と Aliyun はスマートフォンのアプリでコードをスキャンしてサインインします。映匣はログイン情報をこの Mac に保存し、実行するプラグインに渡します。";
+"Sign in to Quark and UC on their official page, and to Baidu and Aliyun by scanning a code with their phone app. Yingxia stores the login on this Mac and supplies it to the plugins you run." = "Quark と UC は公式ページで、Baidu と Aliyun はスマートフォンのアプリでコードをスキャンしてサインインします。XiPlayerはログイン情報をこの Mac に保存し、実行するプラグインに渡します。";
 "Baidu Cookie (BDUSS, STOKEN)" = "Baidu の Cookie（BDUSS、STOKEN）";
 "115 Cookie (UID, CID, SEID)" = "115 Cookie（UID、CID、SEID）";
 
@@ -773,7 +773,7 @@
 "Song, or song and artist" = "曲名、または曲名とアーティスト";
 "Music Settings" = "ミュージック設定";
 "Search for a Song" = "曲を検索";
-"Type a song's name, or its name and the artist. Yingxia finds the recording and plays it from the best channel available, lossless first." = "曲名、または曲名とアーティストを入力してください。映匣がその曲の録音を見つけ、今使える最良のチャンネルからロスレス優先で再生します。";
+"Type a song's name, or its name and the artist. Yingxia finds the recording and plays it from the best channel available, lossless first." = "曲名、または曲名とアーティストを入力してください。XiPlayerがその曲の録音を見つけ、今使える最良のチャンネルからロスレス優先で再生します。";
 "Unable to Search Music" = "音楽を検索できません";
 "Check your network connection and try again." = "ネットワーク接続を確認して、もう一度お試しください。";
 "No Matching Songs" = "一致する曲はありません";
@@ -920,17 +920,17 @@
 "Today's feedback from everyone has reached its limit. You can send yours after %@." = "本日のフィードバックは全体の上限に達しました。%@ 以降に送信できます。";
 "Today's feedback from everyone has reached its limit. Please try again later." = "本日のフィードバックは全体の上限に達しました。しばらくしてからもう一度お試しください。";
 "Couldn't send feedback. Please try again later." = "フィードバックを送信できませんでした。しばらくしてからもう一度お試しください。";
-"Help Make Yingxia Better" = "映匣をもっと良くするために";
+"Help Make Yingxia Better" = "XiPlayerをもっと良くするために";
 "Report a problem or share an idea. It goes straight to the developer." = "不具合の報告やアイデアをお寄せください。開発者に直接届きます。";
 "Report a problem or share an idea" = "不具合の報告やアイデアの提案";
 "Something isn't working" = "うまく動かない";
 "An idea or a wish" = "アイデアや要望";
 "Anything else" = "その他";
 "What happened? What did you expect instead?" = "何が起きましたか？本来はどうなるはずでしたか？";
-"What would make Yingxia better for you?" = "映匣のどこを良くしたいですか？";
+"What would make Yingxia better for you?" = "XiPlayerのどこを良くしたいですか？";
 "What's on your mind?" = "どんなことでもどうぞ";
 "Sent with your message" = "メッセージと一緒に送信される情報";
-"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model, the language and the included details. Please don't include accounts or passwords." = "フィードバックは、App とシステムのバージョン、デバイスのモデル、言語、添付情報とともに、映匣の GitHub ページで公開の Issue として掲載されます。アカウントやパスワードは書かないでください。";
+"Your feedback becomes a public issue on Yingxia's GitHub page, with the app and system versions, the device model, the language and the included details. Please don't include accounts or passwords." = "フィードバックは、App とシステムのバージョン、デバイスのモデル、言語、添付情報とともに、XiPlayerの GitHub ページで公開の Issue として掲載されます。アカウントやパスワードは書かないでください。";
 "Included Details" = "添付情報";
 "Include Details" = "情報を添付";
 "Add Photos or Videos" = "写真またはビデオを追加";
@@ -972,10 +972,10 @@
 "Saved to Photos" = "写真に保存しました";
 "Save Code to Photos" = "コードを写真に保存";
 "In the %@ app, tap Scan, then choose this photo." = "%@アプリで「スキャン」をタップし、この写真を選んでください。";
-"Allow Yingxia to add photos in Settings, then try again." = "「設定」で映匣に写真の追加を許可してから、もう一度お試しください。";
+"Allow Yingxia to add photos in Settings, then try again." = "「設定」でXiPlayerに写真の追加を許可してから、もう一度お試しください。";
 "Sign in on Bilibili's page with a text-message code or your password, or scan a code with the Bilibili app on another phone. Without signing in, videos play at up to 1080P and anime and films at 480P." = "ビリビリのページでSMS認証コードまたはパスワードを使うか、別のスマートフォンのビリビリアプリでコードをスキャンしてサインインします。ログインしない場合、動画は最大 1080P、アニメと映画は 480P で再生されます。";
 "Sign in for your feed, favorites and higher quality." = "サインインすると、フォロー中のフィード、お気に入り、より高い画質を利用できます。";
-"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "ドライブの公式ページでサインインするか、別のスマートフォンのドライブアプリでコードをスキャンします。映匣はログイン情報をこのデバイスに保存し、実行するプラグインに渡します。";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device and supplies it to the plugins you run." = "ドライブの公式ページでサインインするか、別のスマートフォンのドライブアプリでコードをスキャンします。XiPlayerはログイン情報をこのデバイスに保存し、実行するプラグインに渡します。";
 "Open the %@ app on another phone, scan this code, and confirm the sign-in." = "別のスマートフォンで%@アプリを開き、このコードをスキャンしてログインを確認してください。";
 "Or scan this code with the %@ app on another phone." = "または、別のスマートフォンの%@アプリでこのコードをスキャンします。";
 "Sign In on This iPhone" = "このiPhoneでサインイン";
@@ -1016,9 +1016,9 @@
 "Password (Optional)" = "パスワード（省略可）";
 "No AList, WebDAV, Emby, Jellyfin or fnOS server answered at this address." = "このアドレスで応答する AList、WebDAV、Emby、Jellyfin、飛牛 fnOS サーバがありません。";
 "This server doesn't let guests browse. Enter a user name and password." = "このサーバはゲストの閲覧を許可していません。ユーザ名とパスワードを入力してください。";
-"Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "Quark と UC は公式ページでサインインします。映匣はログイン情報をこの Mac に保存します。";
-"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "ドライブの公式ページでサインインするか、別のスマートフォンのドライブアプリでコードをスキャンします。映匣はログイン情報をこのデバイスに保存します。";
-"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "ドライブのスマートフォンアプリでコードをスキャンしてサインインします。映匣はログイン情報をこのデバイスに保存します。";
+"Sign in to Quark and UC on their official page. Yingxia stores the login on this Mac." = "Quark と UC は公式ページでサインインします。XiPlayerはログイン情報をこの Mac に保存します。";
+"Sign in on the drive's own page, or scan a code with the drive's app on another phone. Yingxia keeps the sign-in on this device." = "ドライブの公式ページでサインインするか、別のスマートフォンのドライブアプリでコードをスキャンします。XiPlayerはログイン情報をこのデバイスに保存します。";
+"Sign in by scanning a code with the drive's phone app. Yingxia keeps the sign-in on this device." = "ドライブのスマートフォンアプリでコードをスキャンしてサインインします。XiPlayerはログイン情報をこのデバイスに保存します。";
 "Picture in Picture" = "ピクチャ・イン・ピクチャ";
 "Playing in Picture in Picture" = "ピクチャ・イン・ピクチャで再生中";
 "Audio" = "オーディオ";
@@ -1039,22 +1039,22 @@
 "Learn More" = "詳しく見る";
 "Messages" = "メッセージ";
 "No Messages" = "メッセージはありません";
-"News and notices from Yingxia appear here." = "映匣からのお知らせがここに表示されます。";
-"%@ didn't answer. Make sure Yingxia is open on it and both devices are on the same network." = "%@ から応答がありません。映匣が開いていて、両方のデバイスが同じネットワークにあることを確認してください。";
-"Turn on Local Network for Yingxia in the Settings app, then try again." = "「設定」App で映匣の「ローカルネットワーク」をオンにしてから、もう一度お試しください。";
+"News and notices from Yingxia appear here." = "XiPlayerからのお知らせがここに表示されます。";
+"%@ didn't answer. Make sure Yingxia is open on it and both devices are on the same network." = "%@ から応答がありません。XiPlayerが開いていて、両方のデバイスが同じネットワークにあることを確認してください。";
+"Turn on Local Network for Yingxia in the Settings app, then try again." = "「設定」App でXiPlayerの「ローカルネットワーク」をオンにしてから、もう一度お試しください。";
 "This file's drive isn't in Cloud Files on %@. Add it there, then try again." = "このファイルのドライブが %@ のクラウドファイルにありません。そちらで追加してから、もう一度お試しください。";
-"Yingxia on %@ doesn't have the source %@. Add the same subscription there, then try again." = "%@ の映匣に配信ソース「%@」がありません。同じ配信設定を追加してから、もう一度お試しください。";
+"Yingxia on %@ doesn't have the source %@. Add the same subscription there, then try again." = "%@ のXiPlayerに配信ソース「%@」がありません。同じ配信設定を追加してから、もう一度お試しください。";
 "Couldn't play what %@ sent: %@" = "%@ から送られたものを再生できませんでした：%@";
 "From %@" = "%@ から";
 "%@ couldn't play this video." = "%@ はこのビデオを再生できませんでした。";
 "Playing on %@" = "%@ で再生中";
 "Play Here" = "ここで再生";
-"This video plays from inside Yingxia on this device, so %@ can't open it." = "このビデオはこのデバイスの映匣の中で再生されているため、%@ では開けません。";
+"This video plays from inside Yingxia on this device, so %@ can't open it." = "このビデオはこのデバイスのXiPlayerの中で再生されているため、%@ では開けません。";
 "Play On" = "ほかのデバイスで再生";
 "Play on Another Device" = "ほかのデバイスで再生";
 "Couldn't Play on %@" = "%@ で再生できませんでした";
 "Play from Other Devices" = "ほかのデバイスからの再生を受け付ける";
-"With Yingxia open here, your other devices on the same network can send it what they play: tap Play On in their player." = "ここで映匣を開いているあいだ、同じネットワークにあるほかのデバイスから再生中のものを送れます。そのプレーヤーで「ほかのデバイスで再生」をタップしてください。";
+"With Yingxia open here, your other devices on the same network can send it what they play: tap Play On in their player." = "ここでXiPlayerを開いているあいだ、同じネットワークにあるほかのデバイスから再生中のものを送れます。そのプレーヤーで「ほかのデバイスで再生」をタップしてください。";
 "Touch and Hold Speed" = "長押しの再生速度";
 "Start Speed" = "再生開始速度";
 "Each new title starts at this speed. A speed you pick in the player stays for that title's next episodes." = "新しい作品はこの速度で再生を始めます。プレーヤーで選んだ速度は、その作品の次のエピソードにも引き継がれます。";
@@ -1071,7 +1071,7 @@
 "Slide up or down on the left of the video to change the brightness, or on the right to change the volume." = "動画の左側を上下にスライドすると明るさ、右側では音量を調整できます。";
 "Custom Search Order" = "カスタム検索順";
 "Sources at the top are searched first, and their results are listed first." = "上にあるソースから先に検索し、その結果を先に表示します。";
-"Yingxia searches quick, reliable sources first." = "映匣は速くて安定したソースから先に検索します。";
+"Yingxia searches quick, reliable sources first." = "XiPlayerは速くて安定したソースから先に検索します。";
 "Arrange" = "並べ替え";
 "Arrange Sources" = "ソースを並べ替え";
 "Drag sources to reorder them. Sources at the top are searched first, and their results are listed first." = "ドラッグしてソースを並べ替えます。上にあるソースから先に検索し、その結果を先に表示します。";
@@ -1131,7 +1131,7 @@
 "TMDB" = "TMDB";
 "Search TMDB" = "TMDB を検索";
 "Look Up Titles on TMDB" = "TMDB で作品を検索";
-"Shows cast, artwork and episode details from TMDB on video pages. Sends the video's title, its details from the source and the source's name to Yingxia's lookup service, never your accounts or subscription addresses." = "動画のページに TMDB のキャスト、アートワーク、エピソード情報を表示します。動画のタイトル、ソースの説明とエピソード名、ソース名を映匣の検索サービスに送信します。アカウントや購読先アドレスは送信しません。";
+"Shows cast, artwork and episode details from TMDB on video pages. Sends the video's title, its details from the source and the source's name to Yingxia's lookup service, never your accounts or subscription addresses." = "動画のページに TMDB のキャスト、アートワーク、エピソード情報を表示します。動画のタイトル、ソースの説明とエピソード名、ソース名をXiPlayerの検索サービスに送信します。アカウントや購読先アドレスは送信しません。";
 "You May Like" = "あなたへのおすすめ";
 
 /* Short-drama sources */
@@ -1399,9 +1399,9 @@
 "LX Music Sources" = "LX Music カスタムソース";
 "LX Music Source" = "LX Music ソース";
 "This file is not an LX Music source." = "このファイルは LX Music のカスタムソースではありません。";
-"This source plays none of the catalogs Yingxia searches (QQ Music, NetEase Cloud Music, Kuwo, Migu)." = "このソースは映匣が検索するカタログ（QQ Music、NetEase Cloud Music、Kuwo、Migu）のどれにも対応していません。";
+"This source plays none of the catalogs Yingxia searches (QQ Music, NetEase Cloud Music, Kuwo, Migu)." = "このソースはXiPlayerが検索するカタログ（QQ Music、NetEase Cloud Music、Kuwo、Migu）のどれにも対応していません。";
 "The LX Music source did not start: %@" = "LX Music ソースを開始できませんでした: %@";
-"Scripts made for LX Music's custom sources. They are asked for a song's audio after the channels above, for QQ Music, NetEase Cloud Music, Kuwo and Migu songs. Yingxia includes none: add only sources you trust." = "LX Music のカスタムソース用のスクリプトです。QQ Music、NetEase Cloud Music、Kuwo、Migu の曲について、上のチャンネルのあとで音声を問い合わせます。映匣には付属しません。信頼できるソースだけを追加してください。";
+"Scripts made for LX Music's custom sources. They are asked for a song's audio after the channels above, for QQ Music, NetEase Cloud Music, Kuwo and Migu songs. Yingxia includes none: add only sources you trust." = "LX Music のカスタムソース用のスクリプトです。QQ Music、NetEase Cloud Music、Kuwo、Migu の曲について、上のチャンネルのあとで音声を問い合わせます。XiPlayerには付属しません。信頼できるソースだけを追加してください。";
 "Added “%@”." = "「%@」を追加しました。";
 "Remove “%@”" = "「%@」を削除";
 "Add from Address" = "アドレスから追加";
@@ -1415,8 +1415,8 @@
 "This extension plays songs through an LX Music source." = "この拡張機能は LX Music の音源で曲を再生します。";
 "This extension plays songs through an LX Music source. Add one in Music Settings." = "この拡張機能は LX Music の音源で曲を再生します。音楽設定で追加してください。";
 "None of your LX Music sources plays this song's catalog." = "追加した LX Music の音源はどれもこの曲のカタログに対応していません。";
-"This extension asks an LX Music source for something Yingxia doesn't support." = "この拡張機能が LX Music の音源に求める内容には、映匣はまだ対応していません。";
-"Scripts in the Listenify music extension format. Their charts and playlists show on the Music page and their songs in Music search; songs play from what the extension gives, or through your LX Music sources when it asks for one. Yingxia includes none: add only extensions you trust." = "Listenify 形式の音楽拡張機能スクリプトです。チャートとプレイリストはミュージックページに、曲はミュージック検索に表示されます。曲は拡張機能が示すアドレスから、または必要なとき LX Music の音源を通して再生されます。映匣には拡張機能は含まれていません。信頼できるものだけを追加してください。";
+"This extension asks an LX Music source for something Yingxia doesn't support." = "この拡張機能が LX Music の音源に求める内容には、XiPlayerはまだ対応していません。";
+"Scripts in the Listenify music extension format. Their charts and playlists show on the Music page and their songs in Music search; songs play from what the extension gives, or through your LX Music sources when it asks for one. Yingxia includes none: add only extensions you trust." = "Listenify 形式の音楽拡張機能スクリプトです。チャートとプレイリストはミュージックページに、曲はミュージック検索に表示されます。曲は拡張機能が示すアドレスから、または必要なとき LX Music の音源を通して再生されます。XiPlayerには拡張機能は含まれていません。信頼できるものだけを追加してください。";
 "Douban Hot Lists" = "Douban 人気リスト";
 "Douban Hot Movies" = "Douban 人気映画";
 "Douban Hot Series" = "Douban 人気ドラマ";
@@ -1673,7 +1673,7 @@
 
 /* Subtitle sources (#576 M2) */
 "It uses manifest format %@." = "マニフェストの形式が %@ です。";
-"It needs a newer version of Yingxia." = "新しいバージョンの影匣が必要です。";
+"It needs a newer version of Yingxia." = "新しいバージョンのXiPlayerが必要です。";
 "Its identifier is not valid." = "識別子が無効です。";
 "It doesn't list the sites it uses." = "使うサイトが示されていません。";
 "Its settings repeat a name." = "設定の名前が重複しています。";
@@ -1687,7 +1687,7 @@
 "No subtitles found." = "字幕が見つかりません。";
 "Add your key for it in Settings › Subtitle Sources." = "「設定 › 字幕ソース」でキーを入力してください。";
 "Your key or sign-in no longer works. Check it in Settings › Subtitle Sources." = "キーまたはサインインが無効になりました。「設定 › 字幕ソース」で確認してください。";
-"This source doesn't work with this version of Yingxia. %@" = "このソースはこのバージョンの影匣では使えません。%@";
+"This source doesn't work with this version of Yingxia. %@" = "このソースはこのバージョンのXiPlayerでは使えません。%@";
 "The file didn't download. %@" = "ファイルをダウンロードできませんでした。%@";
 "The source tried to reach a site it didn't list (%@)." = "このソースが示していないサイト（%@）にアクセスしようとしました。";
 "The source failed." = "ソースでエラーが起きました。";
@@ -1793,8 +1793,8 @@
 "No results match these filters. Only songs QQ Music lists have a year, genre and language." = "この絞り込みに一致する結果はありません。年、ジャンル、言語の情報があるのは QQ Music の曲だけです。";
 "%@ views" = "%@ 回再生";
 "%@ danmaku" = "弾幕 %@ 件";
-"Add to Yingxia Favorites" = "映匣のお気に入りに追加";
-"Remove from Yingxia Favorites" = "映匣のお気に入りから削除";
+"Add to Yingxia Favorites" = "XiPlayerのお気に入りに追加";
+"Remove from Yingxia Favorites" = "XiPlayerのお気に入りから削除";
 "Chapter %lld" = "チャプター %lld";
 "All Comments" = "すべてのコメント";
 "Start Over" = "最初から";
@@ -1820,13 +1820,13 @@
 "Douban" = "豆瓣";
 "System Language" = "システム言語";
 "Restart Now" = "今すぐ再起動";
-"Restart Yingxia to use the new language." = "新しい言語は映匣を再起動すると反映されます。";
+"Restart Yingxia to use the new language." = "新しい言語はXiPlayerを再起動すると反映されます。";
 
 /* Live plugins */
 "%@ couldn't be downloaded." = "%@ をダウンロードできませんでした。";
 "%@ didn't match its checksum, so it wasn't installed." = "%@ はチェックサムが一致しないため、インストールしませんでした。";
 "%@ wasn't updated. %@" = "%@ は更新されませんでした。%@";
-"A plugin's scripts run inside Yingxia and reach only the internet. Add sources you trust." = "プラグインのスクリプトは映匣の中で動き、インターネットにだけアクセスします。信頼できるソースだけを追加してください。";
+"A plugin's scripts run inside Yingxia and reach only the internet. Add sources you trust." = "プラグインのスクリプトはXiPlayerの中で動き、インターネットにだけアクセスします。信頼できるソースだけを追加してください。";
 "In Settings, add a TVBox subscription with live playlists, an M3U or TXT live playlist, or live plugins." = "設定で、ライブ再生リストを含む TVBox サブスクリプション、M3U・TXT のライブ再生リスト、またはライブプラグインを追加してください。";
 "Install All (%lld)" = "すべてインストール（%lld）";
 "Live Plugins" = "ライブプラグイン";
@@ -1846,13 +1846,13 @@
 "The plugin %@ defines no LiveParsePlugin." = "プラグイン %@ には LiveParsePlugin がありません。";
 "The plugin %@ is missing its script %@." = "プラグイン %@ にスクリプト %@ がありません。";
 "The plugin %@ isn't installed." = "プラグイン %@ はインストールされていません。";
-"The plugin %@ needs a newer version of Yingxia." = "プラグイン %@ には新しいバージョンの映匣が必要です。";
+"The plugin %@ needs a newer version of Yingxia." = "プラグイン %@ には新しいバージョンのXiPlayerが必要です。";
 "The plugin has no manifest.json." = "プラグインに manifest.json がありません。";
 "The streamer isn't live now." = "配信者は現在配信していません。";
 "This address isn't a live plugin source." = "このアドレスはライブプラグインのソースではありません。";
 "This live stream isn't FLV." = "このライブ配信は FLV ではありません。";
 "This platform's plugin can't do this." = "このサービスのプラグインではこの操作はできません。";
-"This video is encrypted, and Yingxia can't play it yet." = "この動画は暗号化されているため、映匣ではまだ再生できません。";
+"This video is encrypted, and Yingxia can't play it yet." = "この動画は暗号化されているため、XiPlayerではまだ再生できません。";
 "Update All (%lld)" = "すべてアップデート（%lld）";
 "Update to %@" = "%@ にアップデート";
 "Cookie" = "Cookie";
@@ -1967,10 +1967,10 @@
 // Novels: book source runtime errors
 "The book source returned nothing." = "書籍ソースから何も返ってきませんでした。";
 "The book source took too long to answer." = "書籍ソースの応答に時間がかかりすぎました。";
-"This source needs a web view, which Yingxia does not have." = "このソースには Web ビューが必要ですが、映匣では使用できません。";
-"This source needs a web view (@webjs), which Yingxia does not have." = "このソースには Web ビュー（@webjs）が必要ですが、映匣では使用できません。";
-"This source needs a verification code, which Yingxia cannot show." = "このソースには認証コードが必要ですが、映匣では表示できません。";
-"This source needs a browser, which Yingxia does not offer." = "このソースにはブラウザが必要ですが、映匣では利用できません。";
+"This source needs a web view, which Yingxia does not have." = "このソースには Web ビューが必要ですが、XiPlayerでは使用できません。";
+"This source needs a web view (@webjs), which Yingxia does not have." = "このソースには Web ビュー（@webjs）が必要ですが、XiPlayerでは使用できません。";
+"This source needs a verification code, which Yingxia cannot show." = "このソースには認証コードが必要ですが、XiPlayerでは表示できません。";
+"This source needs a browser, which Yingxia does not offer." = "このソースにはブラウザが必要ですが、XiPlayerでは利用できません。";
 "This source made too many requests." = "このソースのリクエストが多すぎます。";
 "This source cannot search." = "このソースは検索に対応していません。";
 "This is not a text book source." = "これはテキストの書籍ソースではありません。";
@@ -2067,10 +2067,10 @@
 "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is." = "正方形の画像がおすすめです。Mac 用アイコンのように四隅が透明な画像は、そのまま表示されます。";
 "Choose Picture…" = "画像を選択…";
 "Remove Custom Picture" = "カスタム画像を削除";
-"The Dock and Finder show the icon you pick, also while Yingxia is closed." = "選んだアイコンは、映匣を閉じている間も Dock と Finder に表示されます。";
-"Yingxia can't change its own icon where it's installed, so the Dock shows this icon only while Yingxia is open." = "映匣はインストール先で自分のアイコンを変更できないため、このアイコンは映匣を開いている間だけ Dock に表示されます。";
+"The Dock and Finder show the icon you pick, also while Yingxia is closed." = "選んだアイコンは、XiPlayerを閉じている間も Dock と Finder に表示されます。";
+"Yingxia can't change its own icon where it's installed, so the Dock shows this icon only while Yingxia is open." = "XiPlayerはインストール先で自分のアイコンを変更できないため、このアイコンはXiPlayerを開いている間だけ Dock に表示されます。";
 "The icon on your Home Screen. The system confirms the change with a short message." = "ホーム画面のアイコンです。変更すると、システムが短いメッセージで知らせます。";
-"The icon on the Home Screen. When Yingxia sits in the top row, the picture above it stays Pocket." = "ホーム画面のアイコンです。映匣を一番上の列に置いたとき、その上に表示される画像は「ポケット」のままです。";
+"The icon on the Home Screen. When Yingxia sits in the top row, the picture above it stays Pocket." = "ホーム画面のアイコンです。XiPlayerを一番上の列に置いたとき、その上に表示される画像は「ポケット」のままです。";
 
 /* Settings › Color Theme */
 "Violet" = "バイオレット";
@@ -2114,7 +2114,7 @@
 "Couldn't load this address: %@" = "このアドレスを読み込めません：%@";
 "Use New Address" = "新しいアドレスを使う";
 "File" = "ファイル";
-"Yingxia keeps its own copy of this file. Later changes to the original don't reach the app; open it again to update it." = "映匣はこのファイルのコピーを保存します。元のファイルを後で変更しても映匣には反映されません。更新するには、もう一度映匣で開いてください。";
+"Yingxia keeps its own copy of this file. Later changes to the original don't reach the app; open it again to update it." = "XiPlayerはこのファイルのコピーを保存します。元のファイルを後で変更してもXiPlayerには反映されません。更新するには、もう一度XiPlayerで開いてください。";
 "Added the LX Music source “%@”. Music plays songs through it; manage it in Music Settings › LX Music Sources." = "LX Music ソース「%@」を追加しました。ミュージックはこのソースで曲を再生します。ミュージック設定 › LX Music カスタムソースで管理できます。";
 "This address is now an LX Music source. Add it again to play music through it." = "このアドレスは現在 LX Music ソースです。追加し直すとこのソースで音楽を再生できます。";
 "Use This Source" = "このソースを使用";
@@ -2177,14 +2177,14 @@
 
 // Settings › Account (App/AccountView.swift)
 "How Points Work" = "ポイントの仕組み";
-"Points reward feedback and code that really help Yingxia." = "映匣の役に立つフィードバックとコードにポイントが付きます。";
-"Open Yingxia while signed in, once a day. Each device counts for one account a day." = "サインインして映匣を開くと、1日1回もらえます。1台のデバイスで数えられるのは1日1アカウントだけです。";
+"Points reward feedback and code that really help Yingxia." = "XiPlayerの役に立つフィードバックとコードにポイントが付きます。";
+"Open Yingxia while signed in, once a day. Each device counts for one account a day." = "サインインしてXiPlayerを開くと、1日1回もらえます。1台のデバイスで数えられるのは1日1アカウントだけです。";
 "Each message sent from Settings › Send Feedback, or with /feedback in the Telegram group (sign in with that Telegram account). Up to %lld a day; duplicates and invalid ones don't count." = "「設定 › フィードバックを送信」から送ったメッセージ、またはTelegramグループで /feedback を使って送ったもの（そのTelegramアカウントでサインイン）。1日%lld件まで。重複や無効なものは数えられません。";
 "When the developer fixes a problem you reported. The clearer the report, the likelier: your device, the build, the source, the steps, and a screenshot or video." = "報告した問題を開発者が直したときにもらえます。デバイス、ビルド、ソース、手順、スクリーンショットや動画があるほど直してもらいやすくなります。";
 "When the developer builds a feature you suggested." = "提案した機能を開発者が実装したときにもらえます。";
 "Bug Fixed" = "不具合の修正";
 "Idea Adopted" = "アイデアの採用";
-"Yingxia's code is on GitHub. Put this line in your pull request's description; each merged pull request counts once." = "映匣のコードは GitHub にあります。プルリクエストの説明にこの行を書いてください。マージされたプルリクエストごとに1回数えられます。";
+"Yingxia's code is on GitHub. Put this line in your pull request's description; each merged pull request counts once." = "XiPlayerのコードは GitHub にあります。プルリクエストの説明にこの行を書いてください。マージされたプルリクエストごとに1回数えられます。";
 "Sign in to get the account ID for your pull requests." = "サインインすると、プルリクエストに書くアカウントIDがわかります。";
 "Fair Play" = "公正なルール";
 "Points are counted again from the records every time. Duplicates, spam or several accounts on one device earn nothing more, and points gained unfairly are taken away." = "ポイントは毎回記録から数え直されます。重複やスパム、1台で複数のアカウントを使っても増えず、不正に得たポイントは取り消されます。";
@@ -2198,7 +2198,7 @@
 "Feedback #%lld" = "フィードバック #%lld";
 "Total Points" = "合計ポイント";
 "Daily Use" = "毎日の利用";
-"+%lld a day you open Yingxia · %lld days" = "映匣を開いた日ごとに +%lld · %lld日";
+"+%lld a day you open Yingxia · %lld days" = "XiPlayerを開いた日ごとに +%lld · %lld日";
 "Feedback Sent" = "送ったフィードバック";
 "+%lld each, up to %lld a day · %lld counted" = "1件 +%lld、1日 %lld 件まで · %lld 件";
 "Feedback Adopted" = "採用されたフィードバック";
@@ -2229,7 +2229,7 @@
 "Couldn't redeem this code." = "このコードを引き換えられませんでした。";
 "Couldn't sign in. Please try again." = "サインインできませんでした。もう一度お試しください。";
 "Delete Account" = "アカウントを削除";
-"Delete your Yingxia account?" = "映匣アカウントを削除しますか？";
+"Delete your Yingxia account?" = "XiPlayerアカウントを削除しますか？";
 "Duplicate" = "重複";
 "Each message the developer adopts also gives %lld days of Pro." = "開発者に採用されたメッセージごとに、Proが%lld日付与されます。";
 "Enter a code" = "コードを入力";
@@ -2259,11 +2259,11 @@
 "There's no such code. Check it and try again." = "そのコードはありません。確認してもう一度お試しください。";
 "This code has already been used." = "このコードはすでに使用されています。";
 "This code has been withdrawn." = "このコードは取り消されました。";
-"This sign-in already belongs to another Yingxia account." = "このサインイン方法はすでに別の映匣アカウントで使われています。";
+"This sign-in already belongs to another Yingxia account." = "このサインイン方法はすでに別のXiPlayerアカウントで使われています。";
 "This sign-in link has expired. Start again." = "このサインインリンクは期限切れです。もう一度お試しください。";
 "Too many tries. Wait a minute and try again." = "試行回数が多すぎます。1分待ってからもう一度お試しください。";
 "Waiting for Telegram…" = "Telegramを待っています…";
-"Yingxia Pro" = "映匣 Pro";
+"Yingxia Pro" = "XiPlayer Pro";
 "Your feedback points and Pro time are deleted with it, and can't be brought back." = "フィードバックポイントとProの期間も削除され、元に戻せません。";
 "You've already redeemed this code." = "このコードはすでに引き換え済みです。";
 "You've been signed out. Sign in again." = "サインアウトされました。もう一度サインインしてください。";
@@ -2327,7 +2327,7 @@
 "Forward 10 Seconds" = "10秒進む";
 "Volume Down" = "音量を下げる";
 "Volume Up" = "音量を上げる";
-"Keep Yingxia open while the TV plays this video." = "テレビで再生している間は映匣を開いたままにしてください。";
+"Keep Yingxia open while the TV plays this video." = "テレビで再生している間はXiPlayerを開いたままにしてください。";
 "%@ refused the video." = "%@ がビデオの再生を拒否しました。";
 "%@ refused the video (%@)." = "%@ がビデオの再生を拒否しました（%@）。";
 "%@ didn't respond. Make sure it is on and on the same network." = "%@ から応答がありません。電源が入っていて、同じネットワークにあることを確認してください。";

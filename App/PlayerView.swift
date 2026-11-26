@@ -2666,10 +2666,10 @@ struct PlayerChaptersView: View {
     /// `Title 12.34.heic`: the video's name and where in it the frame is.
     private static func fileName(_ title: String, at seconds: Double, type: String) -> String {
         let name = title.components(separatedBy: CharacterSet(charactersIn: "/:\\")).joined(separator: " ").trimmingCharacters(in: .whitespaces)
-        guard seconds.isFinite, seconds >= 0 else { return "\(name.isEmpty ? "Yingxia" : name).\(type)" }
+        guard seconds.isFinite, seconds >= 0 else { return "\(name.isEmpty ? "XiPlayer" : name).\(type)" }
         let whole = Int(seconds)
         let time = whole >= 3600 ? String(format: "%d.%02d.%02d", whole / 3600, whole / 60 % 60, whole % 60) : String(format: "%d.%02d", whole / 60, whole % 60)
-        return "\(name.isEmpty ? "Yingxia" : name) \(time).\(type)"
+        return "\(name.isEmpty ? "XiPlayer" : name) \(time).\(type)"
     }
 
     #if os(iOS)
