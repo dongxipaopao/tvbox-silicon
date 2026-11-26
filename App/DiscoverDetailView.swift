@@ -668,6 +668,17 @@ private struct DiscoverMacSeasonButton: View {
         chosen = candidate
     }
 
+    /// Moves to the next-best source for the same title when the one showing can't play (custom: quick source switch).
+    /// Returns false when there is no other source, in the same season, to go to.
+    @discardableResult func advance() -> Bool {
+        guard let current = chosen else { return false }
+        let season = SeasonTitles.parse(current.video.name).season ?? 1
+        let others = matches.filter { $0.id != current.id && (SeasonTitles.parse($0.video.name).season ?? 1) == season }
+        guard let next = others.first(where: { $0.site.key != current.site.key }) ?? others.first else { return false }
+        choose(next)
+        return true
+    }
+
     private func absorb(_ result: SearchSourceResult) {
         guard let videos = result.page?.videos, !videos.isEmpty else { settle(); return }
         let site = result.site, wanted = wanted, generation = generation
@@ -730,7 +741,8 @@ private struct DiscoverSourceEpisodes<CatalogEpisodes: View>: View {
                 VideoDetailView(video: chosen.video, client: CatalogClient(site: chosen.site, origin: config.origin, jarURL: config.spiderURL),
                                 embed: DetailEmbed(work: item, season: number, seasonControl: seasonControl(number),
                                                    catalogFallback: { AnyView(catalogEpisodes(number)) },
-                                                   changeSource: { changing = true }, appColorScheme: appColorScheme))
+                                                   changeSource: { changing = true }, appColorScheme: appColorScheme,
+                                                   nextSource: { sources.advance() }))
                     .id(chosen.id)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
