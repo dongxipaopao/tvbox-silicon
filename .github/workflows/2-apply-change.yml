@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       name:
-        description: 'Change name: Scripts/change-NAME.diff and Scripts/change-NAME.txt'
+        description: 'Change name: change-NAME.diff and change-NAME.txt at the repo root (numeric prefixes tolerated)'
         required: true
 permissions:
   contents: write
@@ -16,9 +16,12 @@ jobs:
         run: |
           set -euo pipefail
           n="${{ inputs.name }}"
-          git apply --index "Scripts/change-$n.diff"
-          while IFS= read -r p; do [ -n "$p" ] && git rm -r -q -- "$p"; done < "Scripts/change-$n.txt"
-          git rm -q -- "Scripts/change-$n.diff" "Scripts/change-$n.txt"
+          d="$(ls *change-"$n".diff 2>/dev/null | head -1)"
+          t="$(ls *change-"$n".txt 2>/dev/null | head -1)"
+          [ -n "$d" ] && [ -n "$t" ]
+          git apply --index "$d"
+          while IFS= read -r p; do [ -n "$p" ] && git rm -r -q -- "$p"; done < "$t"
+          git rm -q -- "$d" "$t"
           git -c user.name="build-bot" -c user.email="build-bot@users.noreply.github.com" commit -q -m "Apply change $n"
           git push
           git log --oneline -1
