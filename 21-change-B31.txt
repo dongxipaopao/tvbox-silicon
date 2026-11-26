@@ -1,0 +1,1 @@
+Un-mark a failover-failed source when the viewer chooses it manually (task agent B31, main review of B30: avoid permanent per-page blacklisting). DiscoverSources.choose now removes the candidate from failedIDs; the automatic chain never clears marks (termination preserved), leaving the page still resets everything.
