@@ -122,7 +122,7 @@ jobs:
             sleep "$wait"
             xcrun simctl io "$UDID" screenshot "shots/$name.png" || true
           }
-          shot 01-home 25 -qaSection home
+          shot 01-home 30 -qaSection home -qaSeedHistory qa-standard:1,qa-standard:2
           shot 02-discover 25 -qaSection discover
           shot 03-music 15 -qaSection music
           shot 04-sources 20 -qaSection sites
@@ -137,6 +137,7 @@ jobs:
           shot 11c-playback 36 -qaSection home -qaPage play-source:qa-standard
           ls -l ~/Library/Logs/DiagnosticReports > crash-list.txt 2>&1 || true
           shot 12-more 12 -qaSection more
+          shot 13-home-after-play 30 -qaSection home
           xcrun simctl terminate "$UDID" $B || true
           # The user's own source address, as a second pass (no fixture server).
           REAL='https://gh-proxy.cc/https://raw.githubusercontent.com/aaaaa2780009/cat-bundle/main/cat/index.js.md5'
@@ -148,7 +149,7 @@ jobs:
         if: always()
         run: |
           rm -rf /tmp/pub && mkdir /tmp/pub
-          cp shots/0*.png shots/1*.png /tmp/pub/ || true
+          cp shots/0*.png shots/1[0-3]*.png /tmp/pub/ || true
           cp qa-server.log crash-list.txt /tmp/pub/ || true
           tail -300 sim-build.log > /tmp/pub/sim-build-tail.log || true
           cd /tmp/pub
