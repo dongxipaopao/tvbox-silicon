@@ -3817,6 +3817,15 @@ struct EpisodeDropdownLabel: View {
 extension VideoDetailView {
     /// Discover's title page (`DetailEmbed`): the source's episodes in the page's own rows. An episode opens the player,
     /// as on iPad, and plays as on this page: history, resume, lines, quality and the source's sign-ins are the same.
+    /// A Play or a picked source asked for an episode: start it once the list is in.
+    private func playRequested(_ embed: DetailEmbed) async {
+        guard let request = embed.playEpisode, let number = request.wrappedValue, detail != nil, !busy else { return }
+        let list = activeEpisodes
+        guard !list.isEmpty else { return }
+        request.wrappedValue = nil
+        await play(list[min(max(number, 1), list.count) - 1])
+    }
+
     @ViewBuilder func embedded(_ embed: DetailEmbed) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             #if os(tvOS)
@@ -3860,6 +3869,7 @@ extension VideoDetailView {
         .environment(\.glassControls, true)
         .task { if detail == nil { await loadDetail() } }
         .task(id: detail?.id) { await embeddedTMDB(embed) }
+        .task(id: "\(detail?.id ?? "")|\(embed.playEpisode?.wrappedValue ?? 0)|\(busy)") { await playRequested(embed) }
         .onDisappear { requestTask?.cancel() }
         #if os(tvOS)
         .fullScreenCover(item: $bundleSignIn) { pending in
@@ -3977,6 +3987,8 @@ struct DetailEmbed {
     var markFailed: ((String) -> Void)? = nil
     /// A stand-in source (`AlternateSource.id`) played the episode: the page switches to it.
     var adopt: ((String) -> Void)? = nil
+    /// Episode (1-based) to play as soon as the page has its list; cleared once started.
+    var playEpisode: Binding<Int?>? = nil
 }
 
 /// A source that can stand in for the one showing: its id, its result for the title and the client to ask it.

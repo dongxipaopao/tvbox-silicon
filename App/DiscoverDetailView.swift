@@ -20,6 +20,8 @@ struct DiscoverDetailView: View {
     @State private var searchShown = false
     @State private var still: DiscoverStill?
     @State private var episode: DiscoverEpisode?
+    /// Episode (1-based) the source page should play as soon as it has its list: Play, or a source picked for an episode.
+    @State private var playEpisode: Int?
     /// The latest season's air dates while it airs (#1186).
     @State private var airing: AirSchedule?
     @State private var airCalendarShown = false
@@ -86,7 +88,7 @@ struct DiscoverDetailView: View {
                         PosterImage(url: selection.value.still ?? details?.backdrop).aspectRatio(16.0 / 9, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 16))
                         Text(selection.value.name).font(.title2.bold())
                         Text(selection.value.overview).lineSpacing(4)
-                        sourceButton
+                        episodeSources(selection.value)
                     }.padding(20)
                 }.navigationTitle(selection.value.name)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { episode = nil } } }
@@ -196,7 +198,7 @@ struct DiscoverDetailView: View {
             }
             Text(metadata).font(.system(size: 13)).multilineTextAlignment(.center).opacity(0.88)
             HStack(spacing: 12) {
-                sourceButton
+                playButton
                 if let trailer = details?.trailer, trailer.site == "IMDb" {
                     Button { trailerShown = true } label: {
                         Image(systemName: "play.rectangle").font(.system(size: 21)).frame(width: 54, height: 54)
@@ -234,6 +236,36 @@ struct DiscoverDetailView: View {
             if let runtime = details.runtime, runtime > 0 { values.append("\(Int(runtime)) " + L10n.text("min")) }
         } else { values.append(item.genreNames) }
         return values.filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    /// Play: the title's first episode on its best source, as soon as one is found; when none of the sources has it,
+    /// the old source search.
+    private var playButton: some View {
+        Button {
+            episode = nil
+            if store.subscription == nil { store.section = .settings }
+            else if let sources, sources.finished, sources.matches.isEmpty { store.searchVideos(item.name) }
+            else { playEpisode = 1 }
+        } label: {
+            Label(L10n.text(store.subscription == nil ? "Add Subscription" : "Play"), systemImage: store.subscription == nil ? "plus" : "play.fill")
+                .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 54)
+                .foregroundStyle(dark ? Color.black : Color.white)
+                .background(dark ? Color.white : Color.black, in: Capsule())
+        }.buttonStyle(.plain).accessibilityIdentifier("discover.play")
+    }
+
+    /// Under an episode: the sources that have it, listed as each answers. Tapping one plays the episode on it.
+    @ViewBuilder private func episodeSources(_ value: TMDBMatch.EpisodeInfo) -> some View {
+        if store.subscription != nil, let sources {
+            DiscoverEpisodeSources(sources: sources, season: seasons.isEmpty ? nil : catalogSeason) { match in
+                sources.choose(match)
+                if !seasons.isEmpty { seasonNumber = SeasonTitles.parse(match.video.name).season ?? 1 }
+                playEpisode = value.number
+                episode = nil
+            }
+        } else {
+            sourceButton
+        }
     }
 
     private var sourceButton: some View {
@@ -276,7 +308,7 @@ struct DiscoverDetailView: View {
         }
         #endif
         if let sources {
-            DiscoverSourceEpisodes(sources: sources, item: followItem, appColorScheme: appColorScheme, selectedSeason: $seasonNumber,
+            DiscoverSourceEpisodes(sources: sources, item: followItem, appColorScheme: appColorScheme, selectedSeason: $seasonNumber, playEpisode: $playEpisode,
                                    seasonControl: { number in seasons.isEmpty ? nil : AnyView(catalogSeasonMenu(number)) }) { number in
                 if number == nil || number == catalogSeason {
                     catalogEpisodes(showsSeasonControl: number == nil)
@@ -739,6 +771,7 @@ private struct DiscoverSourceEpisodes<CatalogEpisodes: View>: View {
     let item: TMDBCatalog.Item
     let appColorScheme: ColorScheme
     @Binding var selectedSeason: Int?
+    @Binding var playEpisode: Int?
     let seasonControl: (Int) -> AnyView?
     @ViewBuilder let catalogEpisodes: (Int?) -> CatalogEpisodes
     @State private var changing = false
@@ -770,7 +803,8 @@ private struct DiscoverSourceEpisodes<CatalogEpisodes: View>: View {
                                                    },
                                                    failCurrent: { sources.markFailed(chosen) },
                                                    markFailed: { sources.markFailed(id: $0) },
-                                                   adopt: { sources.adopt(id: $0) }))
+                                                   adopt: { sources.adopt(id: $0) },
+                                                   playEpisode: $playEpisode))
                     .id(chosen.id)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
@@ -926,6 +960,42 @@ private struct DiscoverSourcePicker: View {
             }
         } else if sources.matches.isEmpty {
             Text(L10n.text("None of your sources has this title.")).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// The sources that have one episode, shown as they arrive (`DiscoverSources.matches`), with the search's progress.
+private struct DiscoverEpisodeSources: View {
+    let sources: DiscoverSources
+    let season: Int?
+    let pick: (SourceTitleMatch.Candidate) -> Void
+
+    private var matches: [SourceTitleMatch.Candidate] {
+        guard let season else { return sources.matches }
+        return sources.matches.filter { (SeasonTitles.parse($0.video.name).season ?? 1) == season }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L10n.text("Sources")).font(.headline)
+            ForEach(matches) { match in
+                Button { pick(match) } label: {
+                    InfoRow(symbol: "play.circle.fill", title: SourceLabel(match.site.name).text,
+                            detail: match.video.remarks.isEmpty ? match.video.year ?? "" : match.video.remarks, note: match.video.name)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("discover.episode.source")
+            }
+            if !sources.finished {
+                HStack(spacing: 10) {
+                    ProgressView().appControlSize(.small)
+                    Text(L10n.text("Searched %lld of %lld sources", sources.search.completed, sources.search.total))
+                        .font(.footnote).foregroundStyle(.secondary).monospacedDigit()
+                }
+            } else if matches.isEmpty {
+                Text(L10n.text(season == nil ? "None of your sources has this title." : "None of your sources has this season."))
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
         }
     }
 }
