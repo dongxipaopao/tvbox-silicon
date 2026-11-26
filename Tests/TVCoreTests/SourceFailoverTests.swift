@@ -24,10 +24,39 @@ private func entry(_ id: String, _ site: String, season: Int = 1) -> SourceFailo
     #expect(SourceFailover.order(all, current: current, failed: ["b1"], limit: 3).isEmpty)
 }
 
-@Test func failoverEpisodeListsMustLineUp() {
-    #expect(SourceFailover.listsLineUp(index: 4, currentCount: 30, otherCount: 31))
-    #expect(!SourceFailover.listsLineUp(index: 4, currentCount: 30, otherCount: 12))
-    #expect(!SourceFailover.listsLineUp(index: 30, currentCount: 30, otherCount: 30))
-    #expect(SourceFailover.listsLineUp(index: 0, currentCount: 1, otherCount: 1))
-    #expect(!SourceFailover.listsLineUp(index: 0, currentCount: 1, otherCount: 20))
+@Test func episodeNumbersAreParsed() {
+    #expect(SourceFailover.number(of: "第12集") == 12)
+    #expect(SourceFailover.number(of: "第十二集") == 12)
+    #expect(SourceFailover.number(of: "第二十集") == 20)
+    #expect(SourceFailover.number(of: "EP05") == 5)
+    #expect(SourceFailover.number(of: "05") == 5)
+    #expect(SourceFailover.number(of: "1080P") == nil)
+    #expect(SourceFailover.number(of: "HD国语") == nil)
+}
+
+@Test func extrasAreNeverMatched() {
+    #expect(SourceFailover.isExtra("第3集预告"))
+    #expect(SourceFailover.isExtra("特别篇"))
+    #expect(SourceFailover.isExtra("SP1"))
+    #expect(!SourceFailover.isExtra("第3集"))
+    #expect(SourceFailover.place(current: "第3集预告", currentCount: 10, other: ["第1集", "第2集", "第3集"]) == nil)
+}
+
+@Test func matchPicksTheSameNumberNotTheSameIndex() {
+    // The other source starts with a trailer: index 2 there is episode 2, not episode 3.
+    let other = ["预告", "第1集", "第2集", "第3集", "第4集"]
+    #expect(SourceFailover.place(current: "第3集", currentCount: 4, other: other) == 3)
+}
+
+@Test func matchRefusesWhenItIsNotSure() {
+    // Missing episode, a duplicate number, or a name without a number: no automatic switch.
+    #expect(SourceFailover.place(current: "第5集", currentCount: 6, other: ["第1集", "第2集", "第3集"]) == nil)
+    #expect(SourceFailover.place(current: "第2集", currentCount: 3, other: ["第1集", "第2集", "第2集 加长版"]) == nil)
+    #expect(SourceFailover.place(current: "正片", currentCount: 5, other: ["第1集", "第2集"]) == nil)
+}
+
+@Test func filmMatchesOnlyAFilm() {
+    #expect(SourceFailover.place(current: "正片", currentCount: 1, other: ["HD"]) == 0)
+    #expect(SourceFailover.place(current: "正片", currentCount: 1, other: ["HD", "预告"]) == nil)
+    #expect(SourceFailover.place(current: "正片", currentCount: 1, other: ["预告"]) == nil)
 }
