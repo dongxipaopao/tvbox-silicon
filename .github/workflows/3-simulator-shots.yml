@@ -156,9 +156,9 @@ jobs:
           shot 17-python-search 40 -qaSection search -qaPage search:测试
           SUB=$SUB_SAVE
           # Discover detail: inline sources under the episode row (public TMDB metadata, fixture sources).
-          shot 18a-discover-detail 40 -qaSection discover -qaDiscoverOpen tv:1396
-          shot 18b-episode-picked 55 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2
-          shot 18c-source-tapped 85 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2 -qaPickSource 4
+          shot 18a-discover-detail 40 -qaScrollEpisodes 1 -qaSection discover -qaDiscoverOpen tv:1396
+          shot 18b-episode-picked 55 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2 -qaScrollEpisodes 1
+          shot 18c-source-tapped 85 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2 -qaScrollEpisodes 1 -qaPickSource 4
           xcrun simctl spawn "$UDID" log show --last 3m --predicate 'subsystem CONTAINS "tvbox" OR process == "TVBox-iOS"' --style compact 2>/dev/null | grep -E 'python|play.timing' | sed -E 's#http[^ ]*#URL#g' | head -30 > shots/applog-python-timing.txt || true
           # Music: the app's own search and play hooks against the live public music channels (upstream-dependent). Three captures to see progress.
           shot 15a-music-play 40 -qaSection music -qaQuery 晴天 -qaMusicPlay 1
