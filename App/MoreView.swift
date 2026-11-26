@@ -28,7 +28,7 @@ struct PhoneTabs: Equatable {
     static func slots(horizontal: UserInterfaceSizeClass?, vertical: UserInterfaceSizeClass?) -> Int {
         horizontal == .regular && vertical == .regular ? wideBarSlots : barSlots
     }
-    static let standard = PhoneTabs(bar: [.home, .discover, .music, .search], more: [.sites, .files, .history, .favorites, .downloads, .messages, .settings])
+    static let standard = PhoneTabs(bar: [.home, .discover, .music, .search], more: [.sites, .files, .history, .favorites, .downloads, .settings])
     /// The iPad sidebar's order until the viewer arranges it. Messages is left out: only the phone lists it.
     static let sidebarStandard: [AppSection] = [.home, .discover, .music, .search, .sites, .files, .history, .favorites, .downloads, .settings]
     var bar: [AppSection]

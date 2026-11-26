@@ -33,7 +33,7 @@ import TVCore
         #endif
         build = MessageFeed.Build(appStore: Distribution.isAppStore, version: version, number: number)
         self.address = address
-        feed = defaults.data(forKey: Keys.feed).flatMap { try? JSONDecoder().decode(MessageFeed.self, from: $0) } ?? MessageFeed(messages: [])
+        feed = MessageFeed(messages: [])
         lastChecked = defaults.object(forKey: Keys.checked) as? Date
         refresh()
     }
@@ -41,6 +41,8 @@ import TVCore
     /// Asks whether the feed changed at most every quarter hour (`force`, as pulling to refresh, asks anyway); an
     /// unchanged feed costs a 304 without a body. Between checks the saved copy decides (a message may have started).
     func check(force: Bool = false) async {
+        // This build reads no remote announcements: the upstream project's message feed is not used.
+        if true { return }
         guard !checking else { return }
         if !force, let lastChecked, Date().timeIntervalSince(lastChecked) < Self.interval { refresh(); return }
         checking = true

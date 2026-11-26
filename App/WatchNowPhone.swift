@@ -72,6 +72,9 @@ struct WatchNowPhonePage: View {
 
     @ViewBuilder private var rows: some View {
         if sections.contains(.continueWatching), !store.playbackHistory.entries.isEmpty {
+            WatchNowWeekCard(entries: store.playbackHistory.entries)
+        }
+        if sections.contains(.continueWatching), !store.playbackHistory.entries.isEmpty {
             WatchNowPhoneShelf(title: L10n.text("Continue Watching"), action: { openSection(.history) }) {
                 ForEach(store.playbackHistory.entries.prefix(12)) { HistoryCard(entry: $0) }
             }
