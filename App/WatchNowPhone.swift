@@ -26,6 +26,7 @@ struct WatchNowPhonePage: View {
             ZStack(alignment: .top) {
                 WatchNowPhoneBackdrop(state: hero, width: proxy.size.width, height: heroHeight)
                 ScrollView {
+                    ScrollViewReader { reader in
                     LazyVStack(alignment: .leading, spacing: 30) {
                         if !entries.isEmpty {
                             WatchNowPhoneHero(entries: entries, state: hero, width: proxy.size.width, height: heroHeight)
@@ -33,8 +34,13 @@ struct WatchNowPhonePage: View {
                         }
                         rows
                     }
+                    #if DEBUG
+                    // `-qaScroll continueWatching` scrolls to that shelf's foot, to check the tab bar leaves it clear.
+                    .task { if let target = QALaunch.scrollTarget { try? await Task.sleep(for: .seconds(6)); reader.scrollTo(target, anchor: .bottom) } }
+                    #endif
                     .padding(.top, entries.isEmpty ? 8 : 0)
                     .padding(.bottom, 28)
+                    }
                     .background {
                         GeometryReader { geometry in
                             Color.clear.preference(key: DiscoverScrollKey.self, value: -geometry.frame(in: .named("watchNowScroll")).minY)
@@ -79,6 +85,7 @@ struct WatchNowPhonePage: View {
                 ForEach(store.playbackHistory.entries.prefix(12)) { HistoryCard(entry: $0) }
             }
             .accessibilityIdentifier("home.continueWatching")
+            .id("continueWatching")
         }
         if sections.contains(.pinnedSources) {
             let pinned = store.orderedSites(config).filter { store.pinnedSources.contains($0, origin: config.origin) }
