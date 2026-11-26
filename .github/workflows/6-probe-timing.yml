@@ -46,11 +46,11 @@ jobs:
           SUB: ${{ secrets.TIMING_SUB_A }}
         run: |
           [ -n "$SUB" ] || { echo "TIMING_SUB_A not set"; exit 0; }
-          for i in 1 2 3; do .build/release/TVBoxProbe --timing "$SUB" "${{ inputs.query }}" "A-run$i" 2>&1 | grep '^timing\[' ; done
+          for i in 1 2 3; do .build/release/TVBoxProbe --timing "$SUB" "${{ inputs.query }}" "A-run$i" 2>&1 | grep '^timing\[' | while read -r l; do echo "$l"; echo "::notice title=timing::$l"; done ; done
       - name: Timing, source B
         continue-on-error: true
         env:
           SUB: ${{ secrets.TIMING_SUB_B }}
         run: |
           [ -n "$SUB" ] || { echo "TIMING_SUB_B not set"; exit 0; }
-          for i in 1 2 3; do .build/release/TVBoxProbe --timing "$SUB" "${{ inputs.query }}" "B-run$i" 2>&1 | grep '^timing\[' ; done
+          for i in 1 2 3; do .build/release/TVBoxProbe --timing "$SUB" "${{ inputs.query }}" "B-run$i" 2>&1 | grep '^timing\[' | while read -r l; do echo "$l"; echo "::notice title=timing::$l"; done ; done
