@@ -111,6 +111,36 @@ jobs:
           rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
           zip -qry Yingxia-custom-unsigned.ipa Payload
           ls -l Yingxia-custom-unsigned.ipa
+      - name: Verify IPA contents
+        run: |
+          set -o pipefail
+          rm -rf /tmp/ipachk && mkdir /tmp/ipachk && unzip -q Yingxia-custom-unsigned.ipa -d /tmp/ipachk
+          A=$(ls -d /tmp/ipachk/Payload/*.app)
+          {
+            echo "ipa sha256: $(shasum -a 256 Yingxia-custom-unsigned.ipa | cut -d' ' -f1)"
+            echo "ipa bytes: $(stat -f%z Yingxia-custom-unsigned.ipa)"
+            echo "source commit: ${{ github.sha }}"
+            echo "app: $A"
+            for k in CFBundleIdentifier CFBundleShortVersionString CFBundleVersion MinimumOSVersion UIDeviceFamily DTPlatformName DTSDKName DTPlatformVersion UIRequiredDeviceCapabilities; do
+              echo "$k = $(/usr/libexec/PlistBuddy -c "Print :$k" "$A/Info.plist" 2>&1 | tr '\n' ' ')"
+            done
+            EXE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$A/Info.plist")
+            echo "executable: $EXE"
+            lipo -info "$A/$EXE"
+            vtool -show-build "$A/$EXE" | head -12
+            echo "--- bundle top level"; ls -la "$A" | head -60
+            echo "--- frameworks"; ls "$A/Frameworks" 2>/dev/null | head -40
+            echo "--- biggest files"; find "$A" -type f -exec stat -f '%z %N' {} + | sort -rn | head -25
+            echo "--- file count: $(find "$A" -type f | wc -l)"
+            echo "--- codesign"; codesign -dv "$A" 2>&1 | head -5 || true
+          } 2>&1 | tee ipa-verify.txt
+          grep -q "arm64" ipa-verify.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ipa-verify
+          path: ipa-verify.txt
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: ipa
