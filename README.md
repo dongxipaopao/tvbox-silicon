@@ -1,3 +1,6 @@
+> **IPA downloads (this fork's custom builds):** https://github.com/dongxipaopao/tvbox-ipa-backup/releases
+> Private to the account owner: sign in to GitHub with that account to open it. Each release is one build, named `Yingxia-<version>-b<build>-<commit>-<ios|tvos>-unsigned.ipa`. Older builds are kept. The installers are unsigned: sign them yourself before installing.
+
 <p align="center">
   <a href="https://yingxia.getmegaportal.com"><img src="website/public/assets/icon-rounded-192.png" width="128" height="128" alt="Yingxia app icon"></a>
 </p>
