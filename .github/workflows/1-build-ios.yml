@@ -137,7 +137,7 @@ jobs:
           ls -l Yingxia-custom-unsigned.ipa
       - name: Verify IPA contents
         run: |
-          set -o pipefail
+          set +o pipefail
           rm -rf /tmp/ipachk && mkdir /tmp/ipachk && unzip -q Yingxia-custom-unsigned.ipa -d /tmp/ipachk
           A=$(ls -d /tmp/ipachk/Payload/*.app)
           {
