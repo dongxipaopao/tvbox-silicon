@@ -62,17 +62,38 @@ jobs:
       - run: mkdir -p build && tar -C build -xf runtime.tar
       - name: Tools
         run: brew install xcodegen meson ninja 2>&1 | tail -2 || true
+      - name: Restore FFmpeg cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/tvbox-ffmpeg
+            ~/Library/Caches/tvbox-libass
+          key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
       - name: FFmpeg and libass
         run: |
           Scripts/build-apple-ffmpeg.sh
           Scripts/build-apple-libass.sh
+      - name: Save FFmpeg cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/Library/Caches/tvbox-ffmpeg
+            ~/Library/Caches/tvbox-libass
+          key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
       - name: Generate project
-        run: xcodegen generate
+        run: |
+          mkdir -p build/ScriptHost build/PythonHost
+          xcodegen generate
       - name: Archive unsigned
         run: |
+          set -o pipefail
           xcodebuild -project TVBox.xcodeproj -scheme TVBox-iOS -configuration Release \
             -destination 'generic/platform=iOS' -derivedDataPath build/DD \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee xcodebuild.log | tail -60
+      - name: Show compile errors
+        if: failure()
+        run: grep -E 'error:' xcodebuild.log | sort -u | head -60 || true
       - name: Package IPA
         run: |
           APP=$(find build/DD/Build/Products -maxdepth 2 -name '*.app' | head -1)
@@ -88,4 +109,15 @@ jobs:
         with:
           name: ipa-log
           path: xcodebuild.log
+          if-no-files-found: ignore
+      - name: Logic tests (SourceFailover)
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          swift test --filter SourceFailoverTests 2>&1 | tee tests.log | tail -40
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-log
+          path: tests.log
           if-no-files-found: ignore
