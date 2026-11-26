@@ -1,0 +1,33 @@
+name: share-ipa
+on:
+  workflow_dispatch:
+    inputs:
+      ios_run:
+        default: "45855635820"
+permissions:
+  actions: read
+  contents: read
+jobs:
+  share:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ipa-named
+          run-id: ${{ inputs.ios_run }}
+          github-token: ${{ github.token }}
+          path: named
+      - name: Upload to free hosts and verify
+        run: |
+          IPA=$(find named -name '*.ipa' | head -1); ls -l "$IPA"; sha256sum "$IPA" > sum.txt
+          S=$(cut -d' ' -f1 sum.txt)
+          { echo "## share-ipa"; echo "file: $(basename $IPA)"; echo "bytes: $(stat -c %s $IPA)"; echo "sha256: $S"; } >> "$GITHUB_STEP_SUMMARY"
+          # gofile
+          GF=$(curl -s --max-time 900 -F "file=@$IPA" https://upload.gofile.io/uploadfile || true)
+          echo "gofile raw: $(echo "$GF" | head -c 400)" >> "$GITHUB_STEP_SUMMARY"
+          # catbox
+          CB=$(curl -s --max-time 900 -F "reqtype=fileupload" -F "fileToUpload=@$IPA" https://catbox.moe/user/api.php || true)
+          echo "catbox: $CB" >> "$GITHUB_STEP_SUMMARY"
+          if echo "$CB" | grep -q '^https://'; then
+            curl -sL --max-time 600 -o back.ipa "$CB"; echo "catbox re-download sha256: $(sha256sum back.ipa | cut -d' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
+          fi
