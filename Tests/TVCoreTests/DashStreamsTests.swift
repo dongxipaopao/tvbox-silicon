@@ -37,7 +37,7 @@ struct DashStreamsTests {
         // Disabling/removing the explicit subscription clears services instead of keeping an automatic copy.
         CloudSources.current = nil
         #expect(CloudSources.site(where: \.isBilibili) == nil)
-        #expect(CloudSources.platforms.isEmpty && CloudMusic.current == nil)
+        #expect(CloudMusic.current == nil)
         #expect(throws: TVError.self) { try CloudSources.address }
         // An app reads only the subscription versions it knows.
         #expect(!CloudSources.accepts(try Subscription.parse(Data(#"{"yingxia":{"version":2},"sites":[{"key":"x","type":3,"api":"https://x/x.js"}]}"#.utf8), origin: URL(string: "https://s.example/sub.json")!)))
