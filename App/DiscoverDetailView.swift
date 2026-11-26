@@ -668,15 +668,33 @@ private struct DiscoverMacSeasonButton: View {
         chosen = candidate
     }
 
-    /// Moves to the next-best source for the same title when the one showing can't play (custom: quick source switch).
-    /// Returns false when there is no other source, in the same season, to go to.
+    /// Sources that couldn't play an episode of this title this session: never tried again by a quick switch.
+    @ObservationIgnored private var failedIDs: Set<String> = []
+
+    private static func entry(_ candidate: SourceTitleMatch.Candidate) -> SourceFailover.Entry {
+        SourceFailover.Entry(id: candidate.id, siteKey: candidate.site.key, season: SeasonTitles.parse(candidate.video.name).season ?? 1)
+    }
+
+    /// The sources that could stand in for `current`, in the order to try them (`SourceFailover.order`).
+    func alternatives(to current: SourceTitleMatch.Candidate, limit: Int) -> [SourceTitleMatch.Candidate] {
+        let ids = SourceFailover.order(matches.map(Self.entry), current: Self.entry(current), failed: failedIDs, limit: limit)
+        return ids.compactMap { id in matches.first { $0.id == id } }
+    }
+
+    func markFailed(_ candidate: SourceTitleMatch.Candidate) { failedIDs.insert(candidate.id) }
+
+    /// The viewer asked for another source: the next best one for the same title and season, false when none is left.
     @discardableResult func advance() -> Bool {
         guard let current = chosen else { return false }
-        let season = SeasonTitles.parse(current.video.name).season ?? 1
-        let others = matches.filter { $0.id != current.id && (SeasonTitles.parse($0.video.name).season ?? 1) == season }
-        guard let next = others.first(where: { $0.site.key != current.site.key }) ?? others.first else { return false }
+        markFailed(current)
+        guard let next = alternatives(to: current, limit: 1).first else { return false }
         choose(next)
         return true
+    }
+
+    /// A stand-in source played the episode: the page follows it.
+    func adopt(id: String) {
+        if let match = matches.first(where: { $0.id == id }) { choose(match) }
     }
 
     private func absorb(_ result: SearchSourceResult) {
@@ -742,7 +760,15 @@ private struct DiscoverSourceEpisodes<CatalogEpisodes: View>: View {
                                 embed: DetailEmbed(work: item, season: number, seasonControl: seasonControl(number),
                                                    catalogFallback: { AnyView(catalogEpisodes(number)) },
                                                    changeSource: { changing = true }, appColorScheme: appColorScheme,
-                                                   nextSource: { sources.advance() }))
+                                                   nextSource: { sources.advance() },
+                                                   alternatives: {
+                                                       sources.alternatives(to: chosen, limit: 2).map {
+                                                           AlternateSource(id: $0.id, video: $0.video,
+                                                                           client: CatalogClient(site: $0.site, origin: config.origin, jarURL: config.spiderURL))
+                                                       }
+                                                   },
+                                                   failCurrent: { sources.markFailed(chosen) },
+                                                   adopt: { sources.adopt(id: $0) }))
                     .id(chosen.id)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
