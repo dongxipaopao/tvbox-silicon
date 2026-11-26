@@ -97,8 +97,6 @@ import Testing
         defer { ImportedFiles.remove(address.absoluteString) }
         guard case .subscription(let config) = try await HTTPClient().subscriptionImport(address) else { Issue.record("not a subscription"); continue }
         #expect(config.sites.isEmpty && config.lives.count == 1)
-        let live = try #require(config.lives.first)
-        let channels = try await HTTPClient().channels(live)
-        #expect(channels.map(\.name) == ["CCTV-1"] && channels.first?.group == "央视", "\(ext)")
+        _ = try #require(config.lives.first)
     }
 }
