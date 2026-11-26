@@ -339,15 +339,16 @@ final class NovelHost: ScriptHostExtension, @unchecked Sendable {
             #if canImport(WebKit) && !os(tvOS)
             // The script thread waits while the main thread drives WebKit.
             let semaphore = DispatchSemaphore(value: 0)
-            nonisolated(unsafe) var reply = ""
+            final class ReplyBox: @unchecked Sendable { var text = "" }
+            let box = ReplyBox()
             Task { @MainActor in
                 let options = (try? JSONSerialization.jsonObject(with: Data(argument.utf8))) as? [String: Any] ?? [:]
                 let answer = await NovelWebView.run(options)
-                reply = (try? JSONSerialization.data(withJSONObject: answer)).map { String(decoding: $0, as: UTF8.self) } ?? #"{"failed":"The web view failed."}"#
+                box.text = (try? JSONSerialization.data(withJSONObject: answer)).map { String(decoding: $0, as: UTF8.self) } ?? #"{"failed":"The web view failed."}"#
                 semaphore.signal()
             }
             semaphore.wait()
-            return .some(reply)
+            return .some(box.text)
             #else
             return .some(#"{"failed":"This source checks for a web browser, which Apple TV doesn't have. Read it on iPhone, iPad or Mac."}"#)
             #endif
