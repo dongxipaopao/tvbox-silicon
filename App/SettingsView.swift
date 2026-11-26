@@ -198,18 +198,15 @@ extension Store {
     }
 }
 
-/// What Settings › Subscriptions lists besides the subscriptions: comic and book source lists, LX Music sources and live
+/// What Settings › Subscriptions lists besides the subscriptions: LX Music sources and live
 /// plugins. Add Subscription adds most of them too, so each is managed and removed there as well: its row's menu, its page,
 /// or Remove Subscriptions with the subscriptions.
 enum SubscriptionExtra: Identifiable, Hashable {
-    case manga(URL)
-    case novel(URL)
     case lxSource(LXSource)
     case livePlugin(LivePlugins.Installed)
 
     @MainActor static func all(_ store: Store) -> [SubscriptionExtra] {
-        MangaStore.shared.repositories.map(SubscriptionExtra.manga) + NovelStore.shared.lists.map { .novel($0.address) }
-            + store.lxSources.map(SubscriptionExtra.lxSource) + store.livePlugins.map(SubscriptionExtra.livePlugin)
+        store.lxSources.map(SubscriptionExtra.lxSource) + store.livePlugins.map(SubscriptionExtra.livePlugin)
     }
 
     /// Removes the subscriptions (by address) and the other entries (by `id`) among `keys`.
@@ -221,16 +218,12 @@ enum SubscriptionExtra: Identifiable, Hashable {
 
     var id: String {
         switch self {
-        case .manga(let url): "manga " + url.absoluteString
-        case .novel(let url): "novel " + url.absoluteString
         case .lxSource(let source): "lx " + source.id
         case .livePlugin(let plugin): "plugin " + plugin.pluginId
         }
     }
     @MainActor var title: String {
         switch self {
-        case .manga(let url): MangaSources.title(of: url)
-        case .novel(let url): NovelStore.shared.title(of: url)
         case .lxSource(let source): source.info.name
         case .livePlugin(let plugin): plugin.name
         }
@@ -238,8 +231,6 @@ enum SubscriptionExtra: Identifiable, Hashable {
     /// What it feeds, as a subscription's row shows its count, or Off.
     var value: String {
         switch self {
-        case .manga: L10n.text("Manga")
-        case .novel: L10n.text("Novels")
         case .lxSource(let source): source.enabled ? L10n.text("Music") : L10n.text("Off")
         case .livePlugin: L10n.text("Live Plugins")
         }
@@ -247,23 +238,18 @@ enum SubscriptionExtra: Identifiable, Hashable {
     /// The value in its kind's section, where the kind goes without saying (#1261): a book list's size, or Off.
     @MainActor var sectionValue: String? {
         switch self {
-        case .novel(let url): NovelStore.shared.lists.first { $0.address == url }.map { L10n.text("%lld sources", $0.count) }
         case .lxSource(let source): source.enabled ? nil : L10n.text("Off")
-        case .manga, .livePlugin: nil
+        case .livePlugin: nil
         }
     }
     var symbol: String {
         switch self {
-        case .manga: "books.vertical.fill"
-        case .novel: "text.book.closed.fill"
         case .lxSource: "music.note"
         case .livePlugin: "puzzlepiece.extension.fill"
         }
     }
     var tint: Color {
         switch self {
-        case .manga: .orange
-        case .novel: .green
         case .lxSource(let source): source.enabled ? .pink : .gray
         case .livePlugin: .purple
         }
@@ -278,8 +264,6 @@ enum SubscriptionExtra: Identifiable, Hashable {
 
     @MainActor @ViewBuilder var page: some View {
         switch self {
-        case .manga(let url): MangaRepositoryView(url: url)
-        case .novel(let url): NovelListView(url: url)
         case .lxSource(let source): LXSourcePage(source: source)
         case .livePlugin(let plugin): LivePluginPage(plugin: plugin)
         }
@@ -287,8 +271,6 @@ enum SubscriptionExtra: Identifiable, Hashable {
 
     @MainActor func remove() {
         switch self {
-        case .manga(let url): MangaStore.shared.removeRepository(url)
-        case .novel(let url): NovelStore.shared.removeList(url)
         case .lxSource(let source): LXSourceLibrary.shared.remove(source.id)
         case .livePlugin(let plugin): LivePlugins.shared.uninstall(plugin.pluginId)
         }
@@ -582,7 +564,7 @@ struct FormSettingsView: View {
     /// The row a search result asked for, scrolled to once the page shows again.
     @State private var jumpTarget: String?
 
-    /// A live plugin, LX Music source, or comic or book source list, in its kind's section: its page, and in its menu
+    /// A live plugin, LX Music source, in its kind's section: its page, and in its menu
     /// on or off (music) and Remove.
     private func extraRow(_ extra: SubscriptionExtra) -> some View {
         FormLink(symbol: extra.symbol, tint: extra.tint, title: extra.title, value: extra.sectionValue) { extra.page }
@@ -764,7 +746,7 @@ struct FormSettingsView: View {
                 if let message = store.importError ?? store.notice { Text(message) }
             }
 
-            // Live plugins, music, comic and book source lists are added with Add Subscription too, but each is listed in
+            // Live plugins and music sources are added with Add Subscription too, but each is listed in
             // its own kind's section rather than mixed in with the subscriptions (#1261), and managed and removed there.
             if store.extrasUnlocked || !store.livePlugins.isEmpty {
                 Section {
@@ -781,34 +763,6 @@ struct FormSettingsView: View {
             if !store.lxSources.isEmpty {
                 Section(L10n.text("Music")) {
                     ForEach(store.lxSources.map(SubscriptionExtra.lxSource)) { extraRow($0).settingsAnchor(.extra($0)) }
-                }
-            }
-
-            if !MangaStore.shared.repositories.isEmpty {
-                Section {
-                    ForEach(MangaStore.shared.repositories.map(SubscriptionExtra.manga)) { extraRow($0).settingsAnchor(.extra($0)) }
-                    let sources = MangaStore.shared.sources
-                    FormLink(symbol: "books.vertical.fill", tint: .orange, title: L10n.text("Comic Sources"),
-                             value: sources.isEmpty ? nil : String(sources.count)) { MangaSourcesView() }
-                        .settingsAnchor(.comicSources)
-                } header: {
-                    Text(L10n.text("Manga"))
-                } footer: {
-                    Text(L10n.text("Manga shows while a Venera comic source list is among your subscriptions."))
-                }
-            }
-
-            if !NovelStore.shared.lists.isEmpty || !NovelStore.shared.offers.isEmpty {
-                Section {
-                    ForEach(NovelStore.shared.lists.map { SubscriptionExtra.novel($0.address) }) { extraRow($0).settingsAnchor(.extra($0)) }
-                    let store = NovelStore.shared
-                    FormLink(symbol: "text.book.closed.fill", tint: .green, title: L10n.text("Book Sources"),
-                             value: L10n.text("%lld on", store.enabledKeys.count)) { NovelSourcesView() }
-                        .settingsAnchor(.bookSources)
-                } header: {
-                    Text(L10n.text("Novels"))
-                } footer: {
-                    Text(L10n.text("Novels shows while a Legado book source list is among your subscriptions."))
                 }
             }
 
@@ -1271,8 +1225,6 @@ private enum SettingsSearchTarget: Hashable, Sendable {
     case removeSubscriptions
     case addSubscription
     case livePlugins
-    case comicSources
-    case bookSources
     case extra(SubscriptionExtra)
     case bilibili
     case douyin
@@ -1450,22 +1402,6 @@ private extension FormSettingsView {
         for source in store.lxSources {
             add(.extra(.lxSource(source)), title: source.info.name, section: L10n.text("Music"),
                 keywords: ["music", "lx", "洛雪", "音乐"])
-        }
-        if !MangaStore.shared.repositories.isEmpty {
-            for repo in MangaStore.shared.repositories {
-                add(.extra(.manga(repo)), title: MangaSources.title(of: repo), section: L10n.text("Manga"),
-                    keywords: ["manga", "comic", "漫画"])
-            }
-            add(.comicSources, title: L10n.text("Comic Sources"), section: L10n.text("Manga"),
-                keywords: ["manga", "comic", "venera", "漫画", "书源"])
-        }
-        if !NovelStore.shared.lists.isEmpty || !NovelStore.shared.offers.isEmpty {
-            for list in NovelStore.shared.lists {
-                add(.extra(.novel(list.address)), title: NovelStore.shared.title(of: list.address), section: L10n.text("Novels"),
-                    keywords: ["novel", "book", "小说", "书源"])
-            }
-            add(.bookSources, title: L10n.text("Book Sources"), section: L10n.text("Novels"),
-                keywords: ["novel", "book", "legado", "小说", "书源"])
         }
 
         if store.extrasUnlocked {
@@ -2536,8 +2472,6 @@ struct TVSettingsView: View {
             if !store.lxSources.isEmpty {
                 TVSettingsSection(title: L10n.text("Music")) { extraLinks(store.lxSources.map(SubscriptionExtra.lxSource)) }
             }
-            if !MangaStore.shared.repositories.isEmpty { comicSection }
-            if !NovelStore.shared.lists.isEmpty || !NovelStore.shared.offers.isEmpty { novelSection }
             TVSettingsSection(title: L10n.text("Accounts")) {
                 if store.extrasUnlocked {
                     TVSettingsLink(title: L10n.text("Bilibili"), value: bilibiliSummary) { BilibiliAccountView() }
@@ -2623,25 +2557,10 @@ struct TVSettingsView: View {
         return L10n.text("With your phone on the same network, tap the TV button in a Bilibili video and choose %@.", L10n.text("Yingxia")) + "\n" + phones
     }
 
-    private var novelSection: some View {
-        TVSettingsSection(title: L10n.text("Novels"), footer: L10n.text("Novels shows while a Legado book source list is among your subscriptions.")) {
-            extraLinks(NovelStore.shared.lists.map { SubscriptionExtra.novel($0.address) })
-            TVSettingsLink(title: L10n.text("Book Sources"), value: L10n.text("%lld on", NovelStore.shared.enabledKeys.count)) { NovelSourcesView() }
-        }
-    }
-
-    /// Live plugins, LX Music sources, comic or book source lists: each page removes its own, Remove Subscriptions several.
+    /// Live plugins, LX Music sources: each page removes its own, Remove Subscriptions several.
     private func extraLinks(_ extras: [SubscriptionExtra]) -> some View {
         ForEach(extras) { extra in
             TVSettingsLink(title: extra.title, value: extra.sectionValue) { extra.page }
-        }
-    }
-
-    private var comicSection: some View {
-        TVSettingsSection(title: L10n.text("Manga"), footer: L10n.text("Manga shows while a Venera comic source list is among your subscriptions.")) {
-            extraLinks(MangaStore.shared.repositories.map(SubscriptionExtra.manga))
-            let sources = MangaStore.shared.sources
-            TVSettingsLink(title: L10n.text("Comic Sources"), value: sources.isEmpty ? nil : String(sources.count)) { MangaSourcesView() }
         }
     }
 

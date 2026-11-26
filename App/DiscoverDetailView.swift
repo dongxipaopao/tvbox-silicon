@@ -907,7 +907,7 @@ private struct DiscoverSourcePicker: View {
         ForEach(sources.matches) { match in
             let checked = match.id == selected?.id
             Button { choose(match); dismiss() } label: {
-                NovelRow(symbol: checked ? "checkmark.circle.fill" : "circle", title: SourceLabel(match.site.name).text,
+                InfoRow(symbol: checked ? "checkmark.circle.fill" : "circle", title: SourceLabel(match.site.name).text,
                          detail: match.video.remarks.isEmpty ? match.video.year ?? "" : match.video.remarks, note: match.video.name)
             }
             #if os(tvOS)

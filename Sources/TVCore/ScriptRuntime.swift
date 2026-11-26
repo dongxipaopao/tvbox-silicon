@@ -298,7 +298,7 @@ final class ScriptBridge: @unchecked Sendable {
     }
 }
 
-/// More host operations for one kind of script (MangaHost): an answer, `.some(nil)` for null, or nil when
+/// More host operations for one kind of script: an answer, `.some(nil)` for null, or nil when
 /// the operation isn't one of its own.
 protocol ScriptHostExtension: AnyObject, Sendable {
     func answer(_ operation: String, _ argument: String) throws -> String??

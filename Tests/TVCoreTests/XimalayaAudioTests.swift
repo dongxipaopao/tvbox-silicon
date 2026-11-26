@@ -102,12 +102,6 @@ private let encrypted = "s5hBDAWDgj82X65-VZ-SLlIx-9c7RqeHMSm7FGis8LrJPSTe9rBvclZ
     #expect(throws: TVError.self) { try XimalayaAudio.sound(from: Data(#"{"ret":1001,"msg":"系统繁忙"}"#.utf8)) }
 }
 
-/// The audio player is handed a track page's sound; other sounds go through as they are.
-@Test func audiobookSoundsOtherThanXimalayaPassThrough() async throws {
-    let sound = NovelAudio(url: "https://a.example/1.m4a", headers: ["Referer": "https://a.example"])
-    #expect(try await NovelListening.playable(sound) == sound)
-}
-
 private final class Locked<Value>: @unchecked Sendable {
     private var value: Value
     private let lock = NSLock()

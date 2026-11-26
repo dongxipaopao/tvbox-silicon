@@ -93,8 +93,6 @@ import TVCore
     }
     /// Set while a listening source's episode goes to the video player on purpose.
     @ObservationIgnored private var playsAsVideo = false
-    /// When each audiobook chapter's source was last asked for a new address (`renewAudiobook`).
-    @ObservationIgnored private var audiobookRenewals: [String: Date] = [:]
     /// The channels the live channel playing was picked from, in order (its playlist, or the favorites): the player's
     /// Previous and Next Channel and its channel list go through them (#1010).
     var liveLineup: LiveLineup?
@@ -153,19 +151,16 @@ import TVCore
     /// is resolved 30 seconds before its end for the queue, as before.
     static let nextAheadLength: Double = 10 * 60
     var section: AppSection = .home
-    /// The Mac sidebar folds away while the manga reader fills the window, and comes back when it closes.
-    /// macOS 26 floats the sidebar over the page, so it covered the left part of every comic page.
+    /// The Mac sidebar folds away while a full-window reader is open, and comes back when it closes.
+    /// macOS 26 floats the sidebar over the page, so it covered the left part of the page.
     var hidesSidebar = false
     /// Unlock additional sections once an enabled subscription has sources or live playlists.
     var extrasUnlocked: Bool {
         subscriptions.contains { $0.enabled && documents[$0.address].map { !$0.sites.isEmpty || !$0.lives.isEmpty } == true }
     }
-    /// Sections kept out of the tab bar and sidebar until then; Manga while no Venera comic source list
-    /// is subscribed (one is added with Add Subscription, like any other).
+    /// Sections kept out of the tab bar and sidebar until then.
     var hiddenSections: [AppSection] {
-        var hidden: [AppSection] = extrasUnlocked ? [] : [.music]
-        if MangaStore.shared.repositories.isEmpty { hidden.append(.manga) }
-        if NovelStore.shared.lists.isEmpty { hidden.append(.novels) }
+        let hidden: [AppSection] = extrasUnlocked ? [] : [.music]
         return hidden
     }
     /// The open profile's defaults: the main defaults for the main profile.
@@ -380,17 +375,6 @@ import TVCore
         return AudioSources.queue(video: catalog.video, from: episode, site: catalog.client.site, origin: catalog.client.origin)
     }
 
-    /// Plays an audiobook's chapters from `index` in the music player (#1130), at `seconds` into that chapter.
-    func listen(to book: NovelBook, chapters: [NovelChapter], from index: Int, at seconds: Double?) {
-        let queue = NovelListening.queue(book: book, chapters: chapters, from: index)
-        guard !queue.tracks.isEmpty else { return }
-        Diagnostics.shared.record(.info, "music", "audiobook queue=\(queue.tracks.count)")
-        music.play(queue, at: seconds.flatMap { $0 > 1 ? $0 : nil })
-        #if os(iOS)
-        music.presentsPlayer = true
-        #endif
-    }
-
     /// Plays the queue from the channel's stream, where this chapter stopped last time.
     private func listen(_ queue: MusicQueue, from channel: Channel) {
         var position = channel.resumePosition
@@ -419,15 +403,8 @@ import TVCore
             return try await self.resolveListening(source)
         }
         music.recordSource = { [weak self] source, position, duration in
-            // An audiobook's place goes to the Novels shelf (#1130).
-            if let item = NovelListening.item(source) {
-                NovelStore.shared.record(item.book, chapter: item.chapter, count: item.count,
-                                         position: duration > 0 ? position / duration : 0, seconds: position)
-                return
-            }
             self?.playbackHistory.record(source.context, position: position, duration: duration)
         }
-        music.renewAudiobook = { [weak self] source, position in self?.renewAudiobook(source, at: position) ?? false }
         music.handOffSource = { [weak self] stream, position, picture, covered in
             guard let self, let context = stream.historyContext else { return }
             if picture { AudioSourceVerdicts(defaults: self.playbackDefaults).recordVideo(context) }
@@ -445,31 +422,8 @@ import TVCore
         }
     }
 
-    /// An audiobook chapter that didn't play: its source lists the book's chapters again and listening goes on from them
-    /// when the chapter has a new address there. Some sources put signed sound addresses, which expire, in the table of
-    /// contents, and after the app was closed Continue failed until the book was found again (#1840). Once a chapter in
-    /// five minutes, so an address that fails fresh isn't asked for over and over.
-    private func renewAudiobook(_ source: MusicSourceEpisode, at position: Double) -> Bool {
-        guard let item = NovelListening.item(source) else { return false }
-        let key = item.book.id + "#\(item.chapter.index)"
-        if let last = audiobookRenewals[key], Date().timeIntervalSince(last) < 300 { return false }
-        audiobookRenewals[key] = Date()
-        Task { @MainActor [weak self] in
-            let chapters = try? await NovelBooks.shared.chapters(item.book, refresh: true)
-            guard let self, self.music.queue?.current?.source == source else { return }
-            guard let chapters, let index = NovelListening.renewed(item.chapter, in: chapters) else {
-                Diagnostics.shared.record(.info, "music", "audiobook source gave no new address")
-                self.music.stop()
-                return
-            }
-            self.music.play(NovelListening.queue(book: item.book, chapters: chapters, from: index), at: position > 1 ? position : nil)
-        }
-        return true
-    }
-
     /// A chapter's stream from its source, as Continue Watching gets an episode's.
     private func resolveListening(_ source: MusicSourceEpisode) async throws -> Channel {
-        if let item = NovelListening.item(source) { return try await NovelListening.channel(for: item) }
         let context = source.context
         guard let client = historyClient(PlaybackHistoryEntry(context: context, position: 0, duration: 0, updatedAt: Date())) else {
             throw TVError.unsupported(L10n.text("This history source is no longer in the current subscription. Restore that subscription to continue."))
@@ -552,9 +506,7 @@ import TVCore
         guard !importing else { return }
         importing = true; importError = nil; notice = nil
         defer { importing = false }
-        var typed = (address ?? subscriptionAddress).trimmingCharacters(in: .whitespacesAndNewlines)
-        // Legado's one-tap import links (legado://import/bookSource?src=…) carry the list's address.
-        if let link = URL(string: typed), let inner = NovelSources.importAddress(link) { typed = inner.absoluteString }
+        let typed = (address ?? subscriptionAddress).trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             let url = try WebAddress.resolve(typed: typed)
             switch try await http.subscriptionImport(url, fresh: true) {
@@ -572,19 +524,6 @@ import TVCore
                 let added = entries.filter { entry in !subscriptions.contains { $0.address == entry.address } }
                 subscriptions += added
                 notice = L10n.text("This address lists %lld subscriptions. They were added switched off; turn on the ones you want.", added.count)
-            case .comicSources(let count):
-                // Comic source lists feed Manga (and show it); they are listed under Subscriptions too.
-                MangaStore.shared.addRepository(url)
-                notice = L10n.text("Added a Venera comic source list (%lld sources). Choose the ones to install in Comic Sources.", count)
-            case .novelSources(let count, let data):
-                // Book source lists feed Novels (and show it); they are listed under Subscriptions too.
-                let title = (address == nil ? subscriptionName : (name ?? "")).trimmingCharacters(in: .whitespacesAndNewlines)
-                try NovelStore.shared.addList(url, data: data, name: title)
-                notice = L10n.text("Added a Legado book source list (%lld sources). Search and read in Novels.", count)
-            case .novelIndex(let offers):
-                // A page of lists (or a Legado subscription source that opens one): Book Sources offers them one by one.
-                NovelStore.shared.offer(offers)
-                notice = L10n.text("This page lists %lld Legado book source lists. Choose the ones to add in Settings › Novels › Book Sources.", offers.count)
             case .lxMusicSource(let script):
                 // An LX Music source plays music, so it joins Music's own sources (#1177). A file's copy has no address
                 // to fetch it again from.
@@ -630,7 +569,6 @@ import TVCore
         importing = true; importError = nil; notice = nil
         defer { importing = false }
         await fetch(subscriptions.filter(\.enabled))
-        await NovelStore.shared.refreshLists()
         let failed = subscriptions.filter { $0.enabled && subscriptionErrors[$0.address] != nil && !ImportedFiles.isMissing($0.address) }.count
         if failed > 0 { notice = L10n.text("%lld subscriptions could not be refreshed; their last copies stay in use.", failed) }
     }
@@ -775,12 +713,6 @@ import TVCore
                 guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }) else { continue }
                 let known = Set(subscriptions.map(\.address))
                 subscriptions.replaceSubrange(index...index, with: listed.filter { !known.contains($0.address) })
-            case .success(.comicSources):
-                subscriptionErrors[entry.address] = L10n.text("This address is now a comic source list. Add it again to use it for Manga.")
-            case .success(.novelSources):
-                subscriptionErrors[entry.address] = L10n.text("This address is now a book source list. Add it again to use it for Novels.")
-            case .success(.novelIndex):
-                subscriptionErrors[entry.address] = L10n.text("This address is now a page of book source lists. Add it again to choose from them.")
             case .success(.alist):
                 subscriptionErrors[entry.address] = L10n.text("This address is now an AList server. Add it again to browse it in Cloud Files.")
             case .success(.lxMusicSource):
