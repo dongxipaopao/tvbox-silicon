@@ -1,0 +1,91 @@
+name: build-ios
+on:
+  workflow_dispatch:
+jobs:
+  runtime:
+    runs-on: macos-15
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore runtime cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            build/apple-runtime
+            build/AppleRuntime
+            build/JavaHost
+          key: runtime-v1-${{ github.run_id }}
+          restore-keys: runtime-v1-
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '19'
+      - name: Tools
+        run: brew install xcodegen maven autoconf automake libtool cmake ninja meson 2>&1 | tail -3 || true
+      - name: Java host
+        run: Scripts/build-java-host.sh
+      - name: Apple runtime (iOS device)
+        run: Scripts/package-apple-runtime.sh ios 2>&1 | tee runtime.log | tail -200
+      - name: Save runtime cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            build/apple-runtime
+            build/AppleRuntime
+            build/JavaHost
+          key: runtime-v1-${{ github.run_id }}
+      - name: Pack runtime
+        if: success()
+        run: tar -C build -cf runtime.tar AppleRuntime JavaHost
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: runtime
+          path: runtime.tar
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-log
+          path: runtime.log
+          if-no-files-found: ignore
+  ipa:
+    needs: runtime
+    runs-on: macos-15
+    timeout-minutes: 200
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime
+      - run: mkdir -p build && tar -C build -xf runtime.tar
+      - name: Tools
+        run: brew install xcodegen meson ninja 2>&1 | tail -2 || true
+      - name: FFmpeg and libass
+        run: |
+          Scripts/build-apple-ffmpeg.sh
+          Scripts/build-apple-libass.sh
+      - name: Generate project
+        run: xcodegen generate
+      - name: Archive unsigned
+        run: |
+          xcodebuild -project TVBox.xcodeproj -scheme TVBox-iOS -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath build/DD \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee xcodebuild.log | tail -60
+      - name: Package IPA
+        run: |
+          APP=$(find build/DD/Build/Products -maxdepth 2 -name '*.app' | head -1)
+          rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
+          zip -qry Yingxia-custom-unsigned.ipa Payload
+          ls -l Yingxia-custom-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ipa
+          path: Yingxia-custom-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ipa-log
+          path: xcodebuild.log
+          if-no-files-found: ignore
