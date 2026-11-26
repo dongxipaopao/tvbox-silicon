@@ -66,21 +66,27 @@ import TVCore
     @ObservationIgnored var failoverToken = UUID()
     /// The title page's way to other sources of the video playing, while its episode plays.
     @ObservationIgnored var alternateHooks: AlternateHooks?
-    /// Episodes the player already switched source for: once each, so two bad sources can't bounce forever.
-    @ObservationIgnored private var playerFailovers: Set<String> = []
+    /// A source switch the player asked for that is still resolving: a second failure report rides on it instead
+    /// of starting a competing one. Cleared when the switch finishes, so a later failure fails over again; the
+    /// chain stops only when every source for the episode has been tried (SourceFailoverRunner marks each failed).
+    @ObservationIgnored private var playerFailoverActive = false
 
-    /// The stream of `channel` never played on any of its lines: the same episode of the title's other sources, at most
-    /// two, when its number is found there for sure. False when nothing is tried (no other source, no hooks for this
-    /// video, already switched once for this episode); `failed` then gets the reason when the attempt finds nothing.
+    /// The stream of `channel` never played on any of its lines: the same episode of the title's other sources, two at
+    /// a time, when its number is found there for sure. A switched-to source that also fails to play starts the search
+    /// again, so one bad source after another is tried until one plays or none is left. False when nothing is tried
+    /// (no other source, no hooks for this video); `failed` then gets the reason when the attempt finds nothing.
     func failoverFromPlayer(_ channel: Channel, failed: @escaping (String) -> Void) -> Bool {
         guard playing == channel, let hooks = alternateHooks, let context = channel.historyContext,
               let catalog = catalog(for: channel), hooks.videoID == catalog.video.id,
               let episode = catalog.video.episodes.first(where: { $0.id == context.episodeID }) else { return false }
-        guard playerFailovers.insert(context.id + "\u{1F}" + episode.id).inserted else { return false }
+        // A switch already finding another source covers this failure too.
+        if playerFailoverActive { return true }
+        playerFailoverActive = true
         let list = catalog.video.episodes.filter { $0.flag == episode.flag }
         let token = failoverToken
         Task { @MainActor [weak self] in
             guard let self else { return }
+            defer { self.playerFailoverActive = false }
             let found = await SourceFailoverRunner.run(hooks: hooks, current: episode, currentCount: list.count, token: token, store: self)
             guard self.failoverToken == token, self.playing == channel else { return }
             guard let found else { return failed(L10n.text("No other source could play this episode. Choose a source to try.")) }

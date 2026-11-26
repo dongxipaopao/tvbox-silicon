@@ -828,6 +828,8 @@ import IOKit.pwr_mgt
         if let advanced, advanced == channel { self.advanced = nil; return }
         lines = channel.alternates.isEmpty ? [] : channel.lines
         line = 0; triedLines = [0]
+        // A new channel is another source's try: it earns its own lines and, when they fail, its own source switch.
+        sourceSwitched = false
         open(channel)
     }
 
@@ -845,7 +847,7 @@ import IOKit.pwr_mgt
         if let readyAt = lineReadyAt, readyAt.duration(to: .now) > .seconds(60) { triedLines = [line] }
         guard lines.count > 1,
               let next = (1..<lines.count).map({ (line + $0) % lines.count }).first(where: { !triedLines.contains($0) }) else {
-            // No line left: the title's other sources, once.
+            // No line left: the title's other sources, one after another until one plays or they run out.
             guard !sourceSwitched, lineReadyAt == nil, let switchSource = onSourceExhausted else { return false }
             sourceSwitched = true
             guard switchSource() else { return false }
