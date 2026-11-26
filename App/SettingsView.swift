@@ -1711,12 +1711,17 @@ struct AddSubscriptionSheet: View {
         }
         .presentationDetents([.medium, .large])
         .onAppear { store.importError = nil; focused = true }
-        .fileImporter(isPresented: $choosesFile, allowedContentTypes: SubscriptionFile.types) { result in
-            guard case .success(let file) = result else { return }
-            Task {
-                await store.importSubscriptionFile(file)
-                if store.importError == nil { dismiss() }
-            }
+        // Import (copy) mode, which fileImporter's open-in-place mode does not offer: an in-place pick never
+        // reaches an app inside LiveContainer (its security scope goes to the container), so the picker answered
+        // nothing there and the tap looked dead. A copy lands in the app's own Inbox on any install.
+        .sheet(isPresented: $choosesFile) {
+            CopyingDocumentPicker(types: SubscriptionFile.types) { file in
+                choosesFile = false
+                Task {
+                    await store.importSubscriptionFile(file)
+                    if store.importError == nil { dismiss() }
+                }
+            } onCancel: { choosesFile = false }
         }
     }
 
