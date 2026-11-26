@@ -1,0 +1,25 @@
+diff --git a/Sources/TVCore/Catalog.swift b/Sources/TVCore/Catalog.swift
+index b0aeb6f..6140f0f 100644
+--- a/Sources/TVCore/Catalog.swift
++++ b/Sources/TVCore/Catalog.swift
+@@ -534,6 +534,9 @@ public struct CatalogClient: Sendable {
+     }
+ 
+     public func preparePlayback(_ episode: Episode, forDownload: Bool = false) async throws -> PlaybackPlan {
++        // Timing only (durations, source key and type), kept in the local diagnostics log: no address, title or token.
++        let timingStart = ContinuousClock.now
++        defer { Diagnostics.shared.record(.info, "play.timing", "phase=prepare source=\(site.key) type=\(site.type) duration=\(timingStart.duration(to: .now))") }
+         var headers = site.raw["header"]?.object?.compactMapValues(\.string) ?? [:]
+         if site.type == 4 || site.type == 3 {
+             if !forDownload { CatPawDanmaku.remember(self) }
+@@ -618,6 +621,10 @@ public struct CatalogClient: Sendable {
+     /// Neither exists on Apple TV, which throws the existing web-detection error.
+     /// This does not call a spider `isVideoFormat`.
+     public func resolvePlayback(_ plan: PlaybackPlan, choice: PlaybackChoice) async throws -> Channel {
++        let timingStart = ContinuousClock.now
++        defer {
++            Diagnostics.shared.record(.info, "play.timing", "phase=resolve source=\(site.key) web=\(plan.requiresWebDetection) duration=\(timingStart.duration(to: .now))")
++        }
+         // Addresses the app made itself from the play result: a keyed MP4 or DASH described as HLS.
+         if let url = URL(string: choice.address), url.scheme == CENCStreams.scheme || url.scheme == DashStreams.scheme {
+             return Channel(name: choice.name, group: plan.group, url: url, headers: url.scheme == DashStreams.scheme ? plan.headers : [:],
