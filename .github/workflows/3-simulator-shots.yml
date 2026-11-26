@@ -131,6 +131,8 @@ jobs:
           shot 07-history 25 -qaSection history -qaSeedHistory qa-standard:1,qa-standard:2
           shot 08-settings 12 -qaSection settings
           shot 08b-settings-bottom 14 -qaSection settings -qaScrollBottom 1
+          shot 02b-discover-reordered 25 -qaSection discover -discover.sectionOrder "genres,trending,people"
+          shot 02c-discover-edit-layout 25 -qaSection discover -discover.sectionOrder "genres,trending,people" -qaEditLayout 1
           shot 09-detail-episodes-lines 30 -qaSection sites -qaPage detail:qa-standard:1
           shot 10-source-site 25 -qaSection sites -qaPage site:qa-standard
           shot 11a-playback 14 -qaSection home -qaPage play-source:qa-standard
