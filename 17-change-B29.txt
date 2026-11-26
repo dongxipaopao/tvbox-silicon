@@ -1,1 +1,0 @@
-Add TVCoreTests covering the built-in music bundle (task agent B29, user ask "把音乐做进去"). Assert the bundled listing and script exist, that CloudSources.music falls back to them with no subscription or a plain subscription, and that a subscription with its own yingxiaMusic wins. This is the "existing users keep their channels" check main asked for.
