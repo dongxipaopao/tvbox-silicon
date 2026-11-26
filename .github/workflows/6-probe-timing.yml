@@ -1,0 +1,56 @@
+name: probe-timing
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: a well-known title to search (public title, appears in the log)
+        default: 三体
+jobs:
+  timing:
+    runs-on: xcode-27
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime
+          run-id: 45819094996
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: mkdir -p build && tar -C build -xf runtime.tar
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '19'
+      - name: Select newest Xcode
+        run: |
+          best=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$best/Contents/Developer"
+      - name: Tools
+        run: brew install xcodegen meson ninja 2>&1 | tail -2 || true
+      - name: Restore FFmpeg cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/tvbox-ffmpeg
+            ~/Library/Caches/tvbox-libass
+          key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
+      - name: FFmpeg and libass
+        run: |
+          Scripts/build-apple-ffmpeg.sh
+          Scripts/build-apple-libass.sh
+      - name: Build probe
+        run: swift build -c release --product TVBoxProbe 2>&1 | tail -30
+      - name: Timing, source A
+        continue-on-error: true
+        env:
+          SUB: ${{ secrets.TIMING_SUB_A }}
+        run: |
+          [ -n "$SUB" ] || { echo "TIMING_SUB_A not set"; exit 0; }
+          for i in 1 2 3; do .build/release/TVBoxProbe --timing "$SUB" "${{ inputs.query }}" "A-run$i" 2>&1 | grep '^timing\[' ; done
+      - name: Timing, source B
+        continue-on-error: true
+        env:
+          SUB: ${{ secrets.TIMING_SUB_B }}
+        run: |
+          [ -n "$SUB" ] || { echo "TIMING_SUB_B not set"; exit 0; }
+          for i in 1 2 3; do .build/release/TVBoxProbe --timing "$SUB" "${{ inputs.query }}" "B-run$i" 2>&1 | grep '^timing\[' ; done
