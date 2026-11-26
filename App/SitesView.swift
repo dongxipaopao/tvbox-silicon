@@ -2517,8 +2517,16 @@ struct VideoDetailView: View {
                             .settingsButton(prominent: true)
                             .accessibilityIdentifier("playbackIssue.bundleSignIn")
                         }
+                        if issue.signIn == nil, let nextSource = embed?.nextSource {
+                            Button(L10n.text("Try Next Source")) {
+                                withAnimation(.smooth(duration: 0.2)) { playbackIssue = nil }
+                                _ = nextSource()
+                            }
+                            .settingsButton(prominent: true)
+                            .accessibilityIdentifier("playbackIssue.nextSource")
+                        }
                         Button(L10n.text("Retry")) { startRequest { await play(issue.episode) } }
-                            .settingsButton(prominent: issue.signIn == nil)
+                            .settingsButton(prominent: issue.signIn == nil && embed?.nextSource == nil)
                         #if os(tvOS)
                         // A focusable action instead of the small corner close button.
                         Button(L10n.text("Dismiss")) { withAnimation(.smooth(duration: 0.2)) { playbackIssue = nil } }.settingsButton()
@@ -3931,6 +3939,8 @@ struct DetailEmbed {
     /// The app's light or dark look. The page draws in its art's own (white text on dark art), and its sheets
     /// inherited that while their background follows the app: All Episodes went white on white at full height.
     let appColorScheme: ColorScheme
+    /// Switches the page to the title's next-best source; false when there is none (custom quick source switch).
+    var nextSource: (() -> Bool)? = nil
 }
 
 #if !os(tvOS)
