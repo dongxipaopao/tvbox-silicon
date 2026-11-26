@@ -134,6 +134,10 @@ import TVCore
             print("       TVBoxProbe --subscription-check <URL> [...]")
             return
         }
+        if args[1] == "--timing", args.count >= 5 {
+            try await timing(subscription: args[2], query: args[3], label: args[4])
+            return
+        }
         if args[1] == "--download", args.count >= 4 {
             // --download <media URL | bili:<BV>[:part]> <folder> [pause after seconds]: the download queue end to end,
             // optionally paused and resumed partway, then the result played through AVPlayer.
