@@ -3127,7 +3127,64 @@ struct VideoDetailView: View {
                 try Task.checkCancellation()
                 store.playing = store.catalogChannel(resolved, video: currentVideo(), episode: episode, client: playback, resumePosition: resume)
             }
-        } catch { fail(episode, error) }
+        } catch { await playFailed(episode, error, resume: resume) }
+    }
+
+    /// An episode that can't be resolved on this source is tried on the title's next sources before the error shows:
+    /// at most two other sources, each given 20 seconds, never one that failed already, only the same season and an
+    /// episode list of about the same length, and only for a failure that isn't a sign-in. Playback that fails after
+    /// the address was found is the player's (it switches lines itself), not this.
+    private func playFailed(_ episode: Episode, _ error: Error, resume: Double?) async {
+        guard !Task.isCancelled, !(error is CancellationError) else { return }
+        let needsSignIn = error is CloudDriveLoginRequired
+            || (client.site.isCatPawOpen && CatPawSignIn.provider(for: error.localizedDescription) != nil)
+        if !needsSignIn, let embed, let alternatives = embed.alternatives,
+           let index = activeEpisodes.firstIndex(where: { $0.id == episode.id }) {
+            let count = activeEpisodes.count
+            embed.failCurrent?()
+            for alternate in alternatives() {
+                guard !Task.isCancelled else { return }
+                loadingEpisode = episode.id
+                let applied = store.subscription.map { alternate.client.applying($0) } ?? alternate.client
+                let found = await Self.resolveOnAlternate(alternate, applied: applied, index: index, currentCount: count)
+                guard !Task.isCancelled else { return }
+                if let found {
+                    Diagnostics.shared.record(.info, "catalog", "source failover to \(alternate.client.site.key) episode \(index + 1)")
+                    store.playing = store.catalogChannel(found.channel, video: found.detail, episode: found.episode, client: found.client,
+                                                         resumePosition: resume)
+                    embed.adopt?(alternate.id)
+                    return
+                }
+                Diagnostics.shared.record(.warning, "catalog", "source failover: \(alternate.client.site.key) couldn't play episode \(index + 1)")
+            }
+        }
+        fail(episode, error)
+    }
+
+    private static func resolveOnAlternate(_ alternate: AlternateSource, applied: CatalogClient, index: Int,
+                                           currentCount: Int) async -> AlternateResolution? {
+        await withTaskGroup(of: AlternateResolution?.self) { group in
+            group.addTask {
+                do {
+                    let detail = try await alternate.client.detail(alternate.video.id)
+                    let flag = detail.episodes.first?.flag
+                    let list = detail.episodes.filter { $0.flag == flag }
+                    guard SourceFailover.listsLineUp(index: index, currentCount: currentCount, otherCount: list.count) else { return nil }
+                    let episode = list[index]
+                    let plan = try await applied.preparePlayback(episode)
+                    guard let choice = plan.choices.first else { return nil }
+                    let channel = try await applied.resolvePlayback(plan, choice: choice)
+                    return AlternateResolution(channel: channel, detail: detail, episode: episode, client: applied)
+                } catch { return nil }
+            }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(20))
+                return nil
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
     }
     private func resolve(_ plan: PlaybackPlan, choice: PlaybackChoice, episode: Episode) async {
         busy = true; loadingEpisode = episode.id
@@ -3941,6 +3998,27 @@ struct DetailEmbed {
     let appColorScheme: ColorScheme
     /// Switches the page to the title's next-best source; false when there is none (custom quick source switch).
     var nextSource: (() -> Bool)? = nil
+    /// Other sources of the same title, in the order to try them when this one can't play an episode, at most two.
+    var alternatives: (() -> [AlternateSource])? = nil
+    /// This source failed to play: it is not tried again for the title.
+    var failCurrent: (() -> Void)? = nil
+    /// A stand-in source (`AlternateSource.id`) played the episode: the page switches to it.
+    var adopt: ((String) -> Void)? = nil
+}
+
+/// A source that can stand in for the one showing: its id, its result for the title and the client to ask it.
+struct AlternateSource: Sendable {
+    let id: String
+    let video: Video
+    let client: CatalogClient
+}
+
+/// What a stand-in source resolved for an episode.
+private struct AlternateResolution: Sendable {
+    let channel: Channel
+    let detail: Video
+    let episode: Episode
+    let client: CatalogClient
 }
 
 #if !os(tvOS)
