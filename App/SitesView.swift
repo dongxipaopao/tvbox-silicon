@@ -3114,6 +3114,7 @@ struct VideoDetailView: View {
         // A drive line goes to the plugin even without an app sign-in: the plugin asks for its account itself, with
         // its own code, which the app shows (PluginSignIn, or the bundle's sign-in below).
         busy = true; loadingEpisode = episode.id
+        store.failoverToken = UUID()
         withAnimation(.smooth(duration: 0.2)) { playbackIssue = nil }
         defer { busy = false; if !choosingQuality { loadingEpisode = nil } }
         do {
@@ -3130,62 +3131,32 @@ struct VideoDetailView: View {
         } catch { await playFailed(episode, error, resume: resume) }
     }
 
-    /// An episode that can't be resolved on this source is tried on the title's next sources before the error shows:
-    /// at most two other sources, each given 20 seconds, never one that failed already, only the same season and an
-    /// episode list of about the same length, and only for a failure that isn't a sign-in. Playback that fails after
-    /// the address was found is the player's (it switches lines itself), not this.
+    /// An episode that can't be resolved on this source is tried on the title's other sources before the error shows
+    /// (`SourceFailoverRunner`): bounded, never a source that failed, only for the same episode, never for a sign-in.
+    /// Playback that fails after the address was found is the player's: its lines first, then
+    /// `Store.failoverFromPlayer`.
     private func playFailed(_ episode: Episode, _ error: Error, resume: Double?) async {
         guard !Task.isCancelled, !(error is CancellationError) else { return }
         let needsSignIn = error is CloudDriveLoginRequired
             || (client.site.isCatPawOpen && CatPawSignIn.provider(for: error.localizedDescription) != nil)
-        if !needsSignIn, let embed, let alternatives = embed.alternatives,
-           let index = activeEpisodes.firstIndex(where: { $0.id == episode.id }) {
-            let count = activeEpisodes.count
-            embed.failCurrent?()
-            for alternate in alternatives() {
-                guard !Task.isCancelled else { return }
-                loadingEpisode = episode.id
-                let applied = store.subscription.map { alternate.client.applying($0) } ?? alternate.client
-                let found = await Self.resolveOnAlternate(alternate, applied: applied, index: index, currentCount: count)
-                guard !Task.isCancelled else { return }
-                if let found {
-                    Diagnostics.shared.record(.info, "catalog", "source failover to \(alternate.client.site.key) episode \(index + 1)")
-                    store.playing = store.catalogChannel(found.channel, video: found.detail, episode: found.episode, client: found.client,
-                                                         resumePosition: resume)
-                    embed.adopt?(alternate.id)
-                    return
-                }
-                Diagnostics.shared.record(.warning, "catalog", "source failover: \(alternate.client.site.key) couldn't play episode \(index + 1)")
+        if !needsSignIn, let embed, embed.alternatives != nil {
+            let hooks = AlternateHooks(videoID: currentVideo().id, alternatives: embed.alternatives, failCurrent: embed.failCurrent, markFailed: embed.markFailed, adopt: embed.adopt)
+            store.alternateHooks = hooks
+            let list = activeEpisodes
+            let token = store.failoverToken
+            loadingEpisode = episode.id
+            if let found = await SourceFailoverRunner.run(hooks: hooks, current: episode, currentCount: list.count, token: token, store: store) {
+                guard store.failoverToken == token, !Task.isCancelled else { return }
+                store.playing = store.catalogChannel(found.channel, video: found.detail, episode: found.episode, client: found.client,
+                                                     resumePosition: resume)
+                hooks.adopt?(found.sourceID)
+                return
             }
+            guard store.failoverToken == token, !Task.isCancelled else { return }
         }
         fail(episode, error)
     }
 
-    private static func resolveOnAlternate(_ alternate: AlternateSource, applied: CatalogClient, index: Int,
-                                           currentCount: Int) async -> AlternateResolution? {
-        await withTaskGroup(of: AlternateResolution?.self) { group in
-            group.addTask {
-                do {
-                    let detail = try await alternate.client.detail(alternate.video.id)
-                    let flag = detail.episodes.first?.flag
-                    let list = detail.episodes.filter { $0.flag == flag }
-                    guard SourceFailover.listsLineUp(index: index, currentCount: currentCount, otherCount: list.count) else { return nil }
-                    let episode = list[index]
-                    let plan = try await applied.preparePlayback(episode)
-                    guard let choice = plan.choices.first else { return nil }
-                    let channel = try await applied.resolvePlayback(plan, choice: choice)
-                    return AlternateResolution(channel: channel, detail: detail, episode: episode, client: applied)
-                } catch { return nil }
-            }
-            group.addTask {
-                try? await Task.sleep(for: .seconds(20))
-                return nil
-            }
-            let first = await group.next() ?? nil
-            group.cancelAll()
-            return first
-        }
-    }
     private func resolve(_ plan: PlaybackPlan, choice: PlaybackChoice, episode: Episode) async {
         busy = true; loadingEpisode = episode.id
         defer { busy = false; pendingPlan = nil; pendingEpisode = nil; loadingEpisode = nil }
@@ -4002,6 +3973,8 @@ struct DetailEmbed {
     var alternatives: (() -> [AlternateSource])? = nil
     /// This source failed to play: it is not tried again for the title.
     var failCurrent: (() -> Void)? = nil
+    /// This other source (`AlternateSource.id`) couldn't play the episode either.
+    var markFailed: ((String) -> Void)? = nil
     /// A stand-in source (`AlternateSource.id`) played the episode: the page switches to it.
     var adopt: ((String) -> Void)? = nil
 }
@@ -4013,13 +3986,6 @@ struct AlternateSource: Sendable {
     let client: CatalogClient
 }
 
-/// What a stand-in source resolved for an episode.
-private struct AlternateResolution: Sendable {
-    let channel: Channel
-    let detail: Video
-    let episode: Episode
-    let client: CatalogClient
-}
 
 #if !os(tvOS)
 /// A sheet from a page that forced its own light or dark look gets the app's back (`DetailEmbed.appColorScheme`).
