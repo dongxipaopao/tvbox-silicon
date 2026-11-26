@@ -682,6 +682,7 @@ private struct DiscoverMacSeasonButton: View {
     }
 
     func markFailed(_ candidate: SourceTitleMatch.Candidate) { failedIDs.insert(candidate.id) }
+    func markFailed(id: String) { failedIDs.insert(id) }
 
     /// The viewer asked for another source: the next best one for the same title and season, false when none is left.
     @discardableResult func advance() -> Bool {
@@ -768,6 +769,7 @@ private struct DiscoverSourceEpisodes<CatalogEpisodes: View>: View {
                                                        }
                                                    },
                                                    failCurrent: { sources.markFailed(chosen) },
+                                                   markFailed: { sources.markFailed(id: $0) },
                                                    adopt: { sources.adopt(id: $0) }))
                     .id(chosen.id)
             } else {
