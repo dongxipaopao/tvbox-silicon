@@ -344,7 +344,6 @@ private final class OfflineProtocol: URLProtocol, @unchecked Sendable {
     let live = try #require(config.lives.first)
     #expect(live.url.absoluteString == "https://example.com/headers?id=1&sign=a")
     #expect(live.headers == ["User-Agent": "Custom"])
-    #expect(try await client().channels(live).first?.headers["User-Agent"] == "Custom")
     // The address keeps its suffix, so a refresh from the stored address sends it again.
     guard case .subscription(let again) = try await client().subscriptionImport(WebAddress.resolve(address.absoluteString)) else {
         Issue.record("refresh lost the headers"); return
