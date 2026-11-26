@@ -6,6 +6,6 @@
 <plist version="1.0">
 <dict>
 	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
-	<string>$(TeamIdentifierPrefix)com.jo32.yingxia.ios</string>
+	<string>$(TeamIdentifierPrefix)com.dongxipaopao.xiplayer.ios</string>
 </dict>
 </plist>

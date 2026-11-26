@@ -9,6 +9,6 @@
 		<string>Default</string>
 	</array>
 	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
-	<string>$(TeamIdentifierPrefix)com.jo32.yingxia.ios</string>
+	<string>$(TeamIdentifierPrefix)com.dongxipaopao.xiplayer.ios</string>
 </dict>
 </plist>

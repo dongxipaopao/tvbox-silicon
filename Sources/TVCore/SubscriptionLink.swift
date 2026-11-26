@@ -4,7 +4,9 @@ import Foundation
 /// `yingxia://import?url=<percent-encoded address>&name=<optional>`. The app confirms it before fetching
 /// anything, so a page can point at a subscription but never add one on its own (#167).
 public struct SubscriptionImportLink: Sendable, Equatable, Identifiable {
-    public static let scheme = "yingxia"
+    public static let scheme = "xiplayer"
+    /// Links made for the earlier name still import; only `xiplayer` is registered with the system, so the two apps never compete for a scheme.
+    static let legacyScheme = "yingxia"
     public static let action = "import"
 
     /// The subscription's address, as it will be fetched.
@@ -15,7 +17,7 @@ public struct SubscriptionImportLink: Sendable, Equatable, Identifiable {
     public var id: String { address.absoluteString }
 
     public init?(_ url: URL) {
-        guard url.scheme?.lowercased() == Self.scheme, url.host()?.lowercased() == Self.action,
+        guard let scheme = url.scheme?.lowercased(), scheme == Self.scheme || scheme == Self.legacyScheme, url.host()?.lowercased() == Self.action,
               let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
               let typed = items.first(where: { $0.name == "url" })?.value,
               // The same reading as an address typed in Settings: http or https with a host, IDN hosts in Punycode.

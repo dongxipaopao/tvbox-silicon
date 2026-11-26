@@ -78,7 +78,8 @@ public struct DouyinAccount: Codable, Equatable, Sendable {
 /// iPhone's camera opens the app, which sends the account sealed with that one-time key
 /// (AES-GCM), so nothing readable crosses the network and only the code's holder can send.
 public enum DouyinHandoff {
-    public static let scheme = "yingxia"
+    public static let scheme = "xiplayer"
+    static let legacyScheme = "yingxia"
     public static let action = "douyin-login"
 
     /// A TV's handoff address, as its code carries it.
@@ -88,7 +89,7 @@ public enum DouyinHandoff {
         let key: Data
         public var id: String { "\(host):\(port)" }
         public init?(_ url: URL) {
-            guard url.scheme == DouyinHandoff.scheme, url.host() == DouyinHandoff.action,
+            guard url.scheme == DouyinHandoff.scheme || url.scheme == DouyinHandoff.legacyScheme, url.host() == DouyinHandoff.action,
                   let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
                   let host = items.first(where: { $0.name == "host" })?.value, !host.isEmpty,
                   let port = items.first(where: { $0.name == "port" })?.value.flatMap(UInt16.init),

@@ -52,3 +52,11 @@ import Testing
     let slash = try #require(URL(string: "yingxia://import?url=https%3A%2Fexample.com%2Ftv.json"))
     #expect(SubscriptionImportLink(slash)?.address.absoluteString == "https://example.com/tv.json")
 }
+
+@Test func importLinkUsesTheXiPlayerSchemeAndStillReadsTheEarlierOne() throws {
+    #expect(SubscriptionImportLink.scheme == "xiplayer")
+    let current = try #require(URL(string: "xiplayer://import?url=https%3A%2F%2Fexample.com%2Ftv.json"))
+    #expect(SubscriptionImportLink(current)?.address.absoluteString == "https://example.com/tv.json")
+    let earlier = try #require(URL(string: "yingxia://import?url=https%3A%2F%2Fexample.com%2Ftv.json"))
+    #expect(SubscriptionImportLink(earlier)?.address.absoluteString == "https://example.com/tv.json")
+}

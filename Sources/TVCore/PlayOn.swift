@@ -15,7 +15,7 @@ import Observation
 /// load a plugin from elsewhere.
 public enum PlayOn {
     /// Also listed under NSBonjourServices in the app's Info.plist, which iOS requires for browsing.
-    public static let serviceType = "_yingxia._tcp"
+    public static let serviceType = "_xiplayer._tcp"
     /// A request carries a whole episode list; past this it is not one.
     static let maximumLength = 8 << 20
     /// This installation, in the service's TXT record, so a Mac doesn't list itself.

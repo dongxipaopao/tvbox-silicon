@@ -11,7 +11,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Yingxia</string>
+	<string>XiPlayer</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -54,10 +54,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.tvbox.yingxia.handoff</string>
+			<string>com.tvbox.xiplayer.handoff</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>yingxia</string>
+				<string>xiplayer</string>
 			</array>
 		</dict>
 	</array>
@@ -74,10 +74,10 @@
 	</dict>
 	<key>NSBonjourServices</key>
 	<array>
-		<string>_yingxia._tcp</string>
+		<string>_xiplayer._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Connect to the local media and subscription services you configure, and find Yingxia on your other devices.</string>
+	<string>Connect to the local media and subscription services you configure, and find XiPlayer on your other devices.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Adds frames you save from videos, and sign-in codes, to Photos.</string>
 	<key>UIApplicationSceneManifest</key>
@@ -116,9 +116,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>YingxiaAccountsServer</key>
+	<key>XiPlayerAccountsServer</key>
 	<string>$(ACCOUNTS_SERVER)</string>
-	<key>YingxiaAppleSignIn</key>
+	<key>XiPlayerAppleSignIn</key>
 	<string>$(APPLE_SIGN_IN)</string>
 </dict>
 </plist>
