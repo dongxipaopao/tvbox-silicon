@@ -1,0 +1,24 @@
+name: apply-change
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Change name: Scripts/change-NAME.diff and Scripts/change-NAME.txt'
+        required: true
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply patch and deletions
+        run: |
+          set -euo pipefail
+          n="${{ inputs.name }}"
+          git apply --index "Scripts/change-$n.diff"
+          while IFS= read -r p; do [ -n "$p" ] && git rm -r -q -- "$p"; done < "Scripts/change-$n.txt"
+          git rm -q -- "Scripts/change-$n.diff" "Scripts/change-$n.txt"
+          git -c user.name="build-bot" -c user.email="build-bot@users.noreply.github.com" commit -q -m "Apply change $n"
+          git push
+          git log --oneline -1
