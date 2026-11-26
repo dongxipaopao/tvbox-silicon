@@ -5,6 +5,7 @@ permissions:
   contents: write
 jobs:
   runtime-sim:
+    if: false
     runs-on: macos-15
     timeout-minutes: 350
     steps:
@@ -53,7 +54,6 @@ jobs:
           path: runtime.log
           if-no-files-found: ignore
   shots:
-    needs: runtime-sim
     runs-on: xcode-27
     timeout-minutes: 200
     steps:
@@ -61,6 +61,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: runtime-sim
+          run-id: 45780843689
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: mkdir -p build && tar -C build -xf runtime.tar
       - name: Select newest Xcode
         run: |
