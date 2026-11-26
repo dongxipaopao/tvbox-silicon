@@ -60,6 +60,14 @@ jobs:
         with:
           name: runtime
       - run: mkdir -p build && tar -C build -xf runtime.tar
+      - name: Select newest Xcode
+        run: |
+          ls -d /Applications/Xcode_*.app || true
+          best=$(ls -d /Applications/Xcode_*.app | grep -v -i beta | sort -V | tail -1)
+          echo "Using $best"
+          sudo xcode-select -s "$best/Contents/Developer"
+          xcodebuild -version
+          swift --version
       - name: Tools
         run: brew install xcodegen meson ninja 2>&1 | tail -2 || true
       - name: Restore FFmpeg cache
@@ -111,7 +119,6 @@ jobs:
           path: xcodebuild.log
           if-no-files-found: ignore
       - name: Logic tests (SourceFailover)
-        continue-on-error: true
         run: |
           set -o pipefail
           swift test --filter SourceFailoverTests 2>&1 | tee tests.log | tail -40
