@@ -26,8 +26,12 @@ public enum CloudSources {
         }
     }
 
-    /// Its music channels (`yingxiaMusic`).
-    static var music: CloudMusic.Listing? { lock.withLock { musicListing } }
+    /// Its music channels (`yingxiaMusic`); the bundled channels when no enabled subscription lists any.
+    static var music: CloudMusic.Listing? { lock.withLock { musicListing } ?? BuiltInMusic.listing }
+
+    /// Where the music script and its relative addresses resolve: the enabled subscription's home, or the
+    /// bundled listing's home when the channels come from the app itself.
+    static var musicOrigin: URL { (try? address) ?? BuiltInMusic.origin }
 
     /// One of Yingxia's own sources from the latest copy.
     public static func site(where matches: (Site) -> Bool) -> Site? { current?.sites.first(where: matches) }
