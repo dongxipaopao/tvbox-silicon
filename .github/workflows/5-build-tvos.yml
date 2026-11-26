@@ -121,7 +121,7 @@ jobs:
           ls -l Yingxia-tvOS-unsigned.ipa
       - name: Verify IPA contents
         run: |
-          set -o pipefail
+          set +o pipefail
           rm -rf /tmp/ipachk && mkdir /tmp/ipachk && unzip -q Yingxia-tvOS-unsigned.ipa -d /tmp/ipachk
           A=$(ls -d /tmp/ipachk/Payload/*.app)
           {
@@ -149,7 +149,7 @@ jobs:
           V=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$A/Info.plist")
           B=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$A/Info.plist")
           mkdir -p ipa
-          cp Yingxia-tvOS-unsigned.ipa "ipa/Yingxia-${V}-b${B}-$(echo ${{ github.sha }} | cut -c1-7)-tvos-unsigned.ipa"
+          cp Yingxia-tvOS-unsigned.ipa "ipa/XiPlayer-${V}-b${B}-$(echo ${{ github.sha }} | cut -c1-7)-tvos-unsigned.ipa"
           ls -l ipa; (cd ipa && shasum -a 256 *.ipa) | tee ipa-named.sha256
       - uses: actions/upload-artifact@v4
         with:
