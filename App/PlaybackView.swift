@@ -233,6 +233,9 @@ import IOKit.pwr_mgt
     /// Plays another line of the same episode when this file can't play here (an MKV original);
     /// returns that line's name, or nil when there is none.
     var onUnplayableFile: (() -> String?)?
+    /// Every line failed or never started: switch to the title's other sources (`Store.failoverFromPlayer`); true when it began.
+    var onSourceExhausted: (() -> Bool)?
+    private var sourceSwitched = false
     /// The episode after this one, resolved for the queue; nil when there is none.
     var upcomingEpisode: (@MainActor () async -> Channel?)?
     /// Whether playback runs on into the next episode (auto-play can be switched off meanwhile).
@@ -276,6 +279,8 @@ import IOKit.pwr_mgt
     private var lineReadyAt: ContinuousClock.Instant?
     private var lineWatch: Task<Void, Never>?
     static let lineWait: Duration = .seconds(10)
+    /// A single line that isn't ready by now gives way to another source: long enough for a slow network.
+    static let sourceWait: Duration = .seconds(25)
     /// The sound tracks of a file that groups none of them (`UngroupedAudio`), for the player's Audio choice, and the
     /// one playing. Empty when AVFoundation offers the choice itself, or there is none.
     private(set) var audioChoices: [UngroupedAudio.Choice] = []
@@ -905,9 +910,17 @@ import IOKit.pwr_mgt
     /// The channel's next line not tried since it was chosen, when this one failed or hasn't started (#679); false when
     /// there is none left. A line that played a while before it dropped leaves every line to try again.
     private func tryNextLine(after failure: Error?) -> Bool {
-        guard lines.count > 1 else { return false }
         if let readyAt = lineReadyAt, readyAt.duration(to: .now) > .seconds(60) { triedLines = [line] }
-        guard let next = (1..<lines.count).map({ (line + $0) % lines.count }).first(where: { !triedLines.contains($0) }) else { return false }
+        guard lines.count > 1,
+              let next = (1..<lines.count).map({ (line + $0) % lines.count }).first(where: { !triedLines.contains($0) }) else {
+            // No line left: the title's other sources, once.
+            guard !sourceSwitched, lineReadyAt == nil, let switchSource = onSourceExhausted else { return false }
+            sourceSwitched = true
+            guard switchSource() else { return false }
+            Diagnostics.shared.record(.warning, "player", "no line played; trying another source")
+            switchNotice = L10n.text("Trying another source")
+            return true
+        }
         Diagnostics.shared.record(.warning, "player", "line \(line + 1)/\(lines.count) \(failure.map(Self.describe) ?? "not ready"); trying line \(next + 1)")
         let failed = line
         line = next; triedLines.insert(next)
@@ -929,9 +942,10 @@ import IOKit.pwr_mgt
                                     sharper: UserDefaults.standard.bool(forKey: VideoEnhancement.upscaleKey))
         let activeGeneration = generation
         lineReadyAt = nil
-        if lines.count > 1 {
+        if lines.count > 1 || onSourceExhausted != nil {
+            let wait = lines.count > 1 ? Self.lineWait : Self.sourceWait
             lineWatch = Task { [weak self] in
-                try? await Task.sleep(for: Self.lineWait)
+                try? await Task.sleep(for: wait)
                 guard let self, !Task.isCancelled, self.generation == activeGeneration, self.lineReadyAt == nil, self.error == nil else { return }
                 _ = self.tryNextLine(after: nil)
             }
@@ -1503,7 +1517,7 @@ import IOKit.pwr_mgt
         skipNotice = nil; introNoticeUntil = nil
         position = 0; duration = 0; editingSkip = false; resumeAfterEditing = false; seekingSegment = false
         sourceSkips = []; skipOffer = nil; skippedSource = []; chapters = []; bilibiliPart = nil
-        onPlaybackEnded = nil; onUnplayableFile = nil
+        onPlaybackEnded = nil; onUnplayableFile = nil; onSourceExhausted = nil
         if player.currentItem != nil {
             let seconds = player.currentTime().seconds
             Diagnostics.shared.record(.info, "player", "stop at=\(seconds.isFinite ? Int(seconds) : -1)s")
