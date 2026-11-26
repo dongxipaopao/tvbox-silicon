@@ -138,6 +138,11 @@ jobs:
           ls -l ~/Library/Logs/DiagnosticReports > crash-list.txt 2>&1 || true
           shot 12-more 12 -qaSection more
           shot 13-home-after-play 30 -qaSection home
+          shot 14-home-scrolled 30 -qaSection home -qaSeedHistory qa-standard:1,qa-standard:2 -qaScroll continueWatching
+          # Music: the app's own search and play hooks against the live public music channels (upstream-dependent). Three captures to see progress.
+          shot 15a-music-play 40 -qaSection music -qaQuery 晴天 -qaMusicPlay 1
+          shot 15b-music-play 55 -qaSection music -qaQuery 晴天 -qaMusicPlay 1
+          shot 15c-music-play 75 -qaSection music -qaQuery 晴天 -qaMusicPlay 1
           xcrun simctl terminate "$UDID" $B || true
           # The user's own source address, as a second pass (no fixture server).
           REAL='https://gh-proxy.cc/https://raw.githubusercontent.com/aaaaa2780009/cat-bundle/main/cat/index.js.md5'
@@ -149,7 +154,7 @@ jobs:
         if: always()
         run: |
           rm -rf /tmp/pub && mkdir /tmp/pub
-          cp shots/0*.png shots/1[0-3]*.png /tmp/pub/ || true
+          cp shots/0*.png shots/1[0-5]*.png /tmp/pub/ || true
           cp qa-server.log crash-list.txt /tmp/pub/ || true
           tail -300 sim-build.log > /tmp/pub/sim-build-tail.log || true
           cd /tmp/pub
