@@ -1174,7 +1174,8 @@ private enum SettingsSearchTarget: Hashable, Sendable {
     case feedback
     case telegram
     case subscription(String)
-    case hiddenSources    case arrangeSubscriptions
+    case hiddenSources
+    case arrangeSubscriptions
     case removeSubscriptions
     case addSubscription
     case extra(SubscriptionExtra)
