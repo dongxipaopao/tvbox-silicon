@@ -158,6 +158,7 @@ jobs:
             echo "--- file count: $(find "$A" -type f | wc -l)"
             echo "--- codesign"; codesign -dv "$A" 2>&1 | head -5 || true
           } 2>&1 | tee ipa-verify.txt
+          grep -E '^(ipa sha256|ipa bytes|DTPlatformName|CFBundleVersion|CFBundleShortVersionString|MinimumOSVersion|--- file count)|Python|PythonHost|NodeMobile' ipa-verify.txt | head -20 | while read -r l; do echo "::notice title=verify::$l"; done
           grep -q "arm64" ipa-verify.txt
       - name: Name IPA into ipa/ (version, build, commit, platform)
         run: |
@@ -165,7 +166,7 @@ jobs:
           V=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$A/Info.plist")
           B=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$A/Info.plist")
           mkdir -p ipa
-          cp Yingxia-custom-unsigned.ipa "ipa/Yingxia-${V}-b${B}-$(echo ${{ github.sha }} | cut -c1-7)-ios-unsigned.ipa"
+          cp Yingxia-custom-unsigned.ipa "ipa/XiPlayer-${V}-b${B}-$(echo ${{ github.sha }} | cut -c1-7)-ios-unsigned.ipa"
           ls -l ipa; (cd ipa && shasum -a 256 *.ipa) | tee ipa-named.sha256
       - uses: actions/upload-artifact@v4
         with:
