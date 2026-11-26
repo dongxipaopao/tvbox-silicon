@@ -490,7 +490,7 @@ struct PlaybackView: View {
         if let error = session.error {
             #if os(tvOS)
             TVPlaybackFailureView(channelName: channel.name, details: error, symbol: session.errorSymbol, backdrop: waitContent,
-                                  retry: { startCatalogPlayback(session, channel: channel, store: store) }, goBack: { dismiss() })
+                                  retry: { store.alternateHooks?.resetFailed?(); startCatalogPlayback(session, channel: channel, store: store) }, goBack: { dismiss() })
             #elseif os(iOS)
             if playerLayout == .inline {
                 // At the top of a watch page: the same words, small, and Try Again; the page has Back.
@@ -536,7 +536,7 @@ struct PlaybackView: View {
             }
             #else
             ErrorState(title: L10n.text("Can't play this right now"), message: error, details: "", symbol: session.errorSymbol,
-                       retry: { startCatalogPlayback(session, channel: channel, store: store) }, goBack: { dismiss() }, backTitle: L10n.text("Close"))
+                       retry: { store.alternateHooks?.resetFailed?(); startCatalogPlayback(session, channel: channel, store: store) }, goBack: { dismiss() }, backTitle: L10n.text("Close"))
                 .padding(30).frame(maxWidth: 480)
                 .glassSurface(.regular, in: RoundedRectangle(cornerRadius: 30, style: .continuous)).padding(30)
             #endif
@@ -1767,7 +1767,7 @@ private struct DesktopPlaybackView: View {
                 .animation(.easeOut(duration: 0.2), value: showsChrome)
                 if let error = session.error {
                     ErrorState(title: L10n.text("Can't play this right now"), message: error, details: "", symbol: session.errorSymbol,
-                               retry: { startCatalogPlayback(session, channel: channel, store: store) })
+                               retry: { store.alternateHooks?.resetFailed?(); startCatalogPlayback(session, channel: channel, store: store) })
                         .padding(28).frame(maxWidth: 460)
                         .glassSurface(.regular, in: RoundedRectangle(cornerRadius: 28, style: .continuous)).padding()
                         .environment(\.colorScheme, .dark)

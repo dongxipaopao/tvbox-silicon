@@ -3140,7 +3140,7 @@ struct VideoDetailView: View {
         let needsSignIn = error is CloudDriveLoginRequired
             || (client.site.isCatPawOpen && CatPawSignIn.provider(for: error.localizedDescription) != nil)
         if !needsSignIn, let embed, embed.alternatives != nil {
-            let hooks = AlternateHooks(videoID: currentVideo().id, alternatives: embed.alternatives, failCurrent: embed.failCurrent, markFailed: embed.markFailed, adopt: embed.adopt)
+            let hooks = AlternateHooks(videoID: currentVideo().id, alternatives: embed.alternatives, failCurrent: embed.failCurrent, markFailed: embed.markFailed, adopt: embed.adopt, resetFailed: embed.resetFailed)
             store.alternateHooks = hooks
             let list = activeEpisodes
             let token = store.failoverToken
@@ -3984,6 +3984,8 @@ struct DetailEmbed {
     var alternatives: (() -> [AlternateSource])? = nil
     /// This source failed to play: it is not tried again for the title.
     var failCurrent: (() -> Void)? = nil
+    /// The viewer asked to try everything again: no source stays marked failed.
+    var resetFailed: (() -> Void)? = nil
     /// This other source (`AlternateSource.id`) couldn't play the episode either.
     var markFailed: ((String) -> Void)? = nil
     /// A stand-in source (`AlternateSource.id`) played the episode: the page switches to it.

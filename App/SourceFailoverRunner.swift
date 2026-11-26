@@ -9,6 +9,8 @@ struct AlternateHooks {
     var failCurrent: (() -> Void)?
     var markFailed: ((String) -> Void)?
     var adopt: ((String) -> Void)?
+    /// The viewer asked to try everything again: clear every failed mark.
+    var resetFailed: (() -> Void)?
 }
 
 /// What a stand-in source resolved for an episode.
