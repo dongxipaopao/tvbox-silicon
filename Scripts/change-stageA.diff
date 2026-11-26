@@ -1,0 +1,891 @@
+diff --git a/App/DiscoverDetailView.swift b/App/DiscoverDetailView.swift
+index 86163be..96298b6 100644
+--- a/App/DiscoverDetailView.swift
++++ b/App/DiscoverDetailView.swift
+@@ -907,7 +907,7 @@ private struct DiscoverSourcePicker: View {
+         ForEach(sources.matches) { match in
+             let checked = match.id == selected?.id
+             Button { choose(match); dismiss() } label: {
+-                NovelRow(symbol: checked ? "checkmark.circle.fill" : "circle", title: SourceLabel(match.site.name).text,
++                InfoRow(symbol: checked ? "checkmark.circle.fill" : "circle", title: SourceLabel(match.site.name).text,
+                          detail: match.video.remarks.isEmpty ? match.video.year ?? "" : match.video.remarks, note: match.video.name)
+             }
+             #if os(tvOS)
+diff --git a/App/InfoRow.swift b/App/InfoRow.swift
+new file mode 100644
+index 0000000..b369570
+--- /dev/null
++++ b/App/InfoRow.swift
+@@ -0,0 +1,28 @@
++import SwiftUI
++
++/// A row in a detail list: a symbol, a title, a value, and a line under it.
++struct InfoRow: View {
++    let symbol: String
++    let title: String
++    var detail: String = ""
++    var note: String? = nil
++    var body: some View {
++        HStack(spacing: 14) {
++            Image(systemName: symbol).font(.body.weight(.semibold)).frame(width: 28).foregroundStyle(.secondary)
++            VStack(alignment: .leading, spacing: 3) {
++                HStack(spacing: 8) {
++                    Text(title).font(.body.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
++                    Spacer(minLength: 8)
++                    Text(detail).font(.callout).foregroundStyle(.secondary).lineLimit(1).fixedSize()
++                }
++                if let note { Text(note).font(.footnote).foregroundStyle(.secondary).lineLimit(1) }
++            }
++            #if !os(tvOS)
++            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
++            #endif
++        }
++        .padding(.horizontal, 16).padding(.vertical, 12)
++        .frame(maxWidth: .infinity, alignment: .leading)
++        .contentShape(Rectangle())
++    }
++}
+diff --git a/App/MoreView.swift b/App/MoreView.swift
+index 8b91d16..cec5716 100644
+--- a/App/MoreView.swift
++++ b/App/MoreView.swift
+@@ -28,9 +28,9 @@ struct PhoneTabs: Equatable {
+     static func slots(horizontal: UserInterfaceSizeClass?, vertical: UserInterfaceSizeClass?) -> Int {
+         horizontal == .regular && vertical == .regular ? wideBarSlots : barSlots
+     }
+-    static let standard = PhoneTabs(bar: [.home, .discover, .live, .search], more: [.music, .manga, .novels, .sites, .files, .history, .favorites, .downloads, .messages, .settings])
++    static let standard = PhoneTabs(bar: [.home, .discover, .live, .search], more: [.music, .sites, .files, .history, .favorites, .downloads, .messages, .settings])
+     /// The iPad sidebar's order until the viewer arranges it. Messages is left out: only the phone lists it.
+-    static let sidebarStandard: [AppSection] = [.home, .discover, .live, .music, .manga, .novels, .search, .sites, .files, .history, .favorites, .downloads, .settings]
++    static let sidebarStandard: [AppSection] = [.home, .discover, .live, .music, .search, .sites, .files, .history, .favorites, .downloads, .settings]
+     var bar: [AppSection]
+     var more: [AppSection]
+ 
+@@ -84,8 +84,6 @@ extension AppSection {
+         case .discover: Color(red: 0.43, green: 0.48, blue: 1.0)
+         case .live: Color(red: 1.0, green: 0.45, blue: 0.32)
+         case .music, .nowPlaying: Color(red: 1.0, green: 0.34, blue: 0.56)
+-        case .manga: Color(red: 1.0, green: 0.58, blue: 0.0)
+-        case .novels: Color(red: 0.20, green: 0.70, blue: 0.48)
+         case .search: Color(red: 0.36, green: 0.60, blue: 1.0)
+         case .sites: Color(red: 0.60, green: 0.46, blue: 1.0)
+         case .history: Brand.amber
+diff --git a/App/QALaunch.swift b/App/QALaunch.swift
+index 4803355..589222f 100644
+--- a/App/QALaunch.swift
++++ b/App/QALaunch.swift
+@@ -17,8 +17,6 @@ enum QALaunch {
+         case "discover": .discover
+         case "live": .live
+         case "music": .music
+-        case "manga": .manga
+-        case "novels": .novels
+         case "search": .search
+         case "sites": .sites
+         case "favorites": .favorites
+@@ -337,8 +335,6 @@ enum QALaunch {
+             SubtitleStyleView()
+         } else if section == self.section, page == "danmaku-style" {
+             DanmakuSettingsView()
+-        } else if section == self.section, page == "book-sources" {
+-            NovelSourcesView()
+         } else if section == self.section, page == "app-icon" {
+             appIconPage
+         } else if section == self.section, page == "color-theme" {
+@@ -433,9 +429,6 @@ enum QALaunch {
+                     SubscriptionDetailView(entry: entry)
+                     #endif
+                 }
+-            // `-qaPage novel-list:<n>`: Settings › Book Sources › the nth list (from 0).
+-            case "novel-list":
+-                if let list = NovelStore.shared.lists.dropFirst(Int(parts.dropFirst().first ?? "") ?? 0).first { NovelListView(url: list.address) }
+             case "logs": DiagnosticsView()
+             #if os(tvOS)
+             case "telegram": TelegramGroupView()
+@@ -523,7 +516,7 @@ enum QALaunch {
+ 
+     static func overrides(_ section: AppSection) -> Bool {
+         guard section == self.section, let page else { return false }
+-        return ["site", "setting", "detail", "open-detail", "channels", "runtime", "subscription", "novel-list", "arrange-subscriptions", "logs", "feedback", "telegram", "cache", "playback", "privacy", "licenses", "app-icon", "color-theme", "profiles", "account", "points", "cloud-login", "cloud-accounts", "subtitle-style", "danmaku-style", "book-sources", "drive-sign-in", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "danmaku-list", "danmaku-settings", "web-sign-in", "plugin-sign-in", "catpaw-sign-in", "folder", "files-title", "alist-add", "up", "comments", "chapters", "live-plugins", "live-plugin", "live-plugin-sign-in", "live-plugin-qr"].contains(page.split(separator: ":").first.map(String.init) ?? "")
++        return ["site", "setting", "detail", "open-detail", "channels", "runtime", "subscription", "arrange-subscriptions", "logs", "feedback", "telegram", "cache", "playback", "privacy", "licenses", "app-icon", "color-theme", "profiles", "account", "points", "cloud-login", "cloud-accounts", "subtitle-style", "danmaku-style", "book-sources", "drive-sign-in", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "danmaku-list", "danmaku-settings", "web-sign-in", "plugin-sign-in", "catpaw-sign-in", "folder", "files-title", "alist-add", "up", "comments", "chapters", "live-plugins", "live-plugin", "live-plugin-sign-in", "live-plugin-qr"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+     }
+ }
+ 
+diff --git a/App/RootView.swift b/App/RootView.swift
+index 4e274dc..3205ac3 100644
+--- a/App/RootView.swift
++++ b/App/RootView.swift
+@@ -2,7 +2,7 @@ import SwiftUI
+ import TVCore
+ 
+ enum AppSection: String, CaseIterable, Identifiable, Hashable {
+-    case home = "Watch Now", discover = "Discover", live = "Live TV", music = "Music", manga = "Manga", novels = "Novels", search = "Global Search", sites = "Sources", files = "Cloud Files", favorites = "Favorites", history = "Playback History", downloads = "Downloads", settings = "Settings", more = "More"
++    case home = "Watch Now", discover = "Discover", live = "Live TV", music = "Music", search = "Global Search", sites = "Sources", files = "Cloud Files", favorites = "Favorites", history = "Playback History", downloads = "Downloads", settings = "Settings", more = "More"
+     /// Messages from the website (App/Announcements.swift); only the phone lists it, in More.
+     case messages = "Messages"
+     /// Apple TV's sidebar item for the song playing, first while one is loaded; it opens the player.
+@@ -19,8 +19,6 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
+         case .search: "magnifyingglass"
+         case .live: "dot.radiowaves.left.and.right"
+         case .music: "music.note"
+-        case .manga: "book.fill"
+-        case .novels: "text.book.closed.fill"
+         case .sites: "square.grid.2x2.fill"
+         case .files: "folder.fill"
+         case .favorites: "heart.fill"
+@@ -77,7 +75,7 @@ struct RootView: View {
+         // The iPad's sidebar, in the order set in Settings > Edit Tab Bar (#427).
+         return PhoneTabs.sidebar(stored: storedTabs, hiding: store.hiddenSections)
+         #else
+-        let sections = [AppSection.home, .discover, .live, .music, .manga, .novels, .search, .sites, .files, .history, .favorites, .downloads, .settings]
++        let sections = [AppSection.home, .discover, .live, .music, .search, .sites, .files, .history, .favorites, .downloads, .settings]
+             .filter { !store.hiddenSections.contains($0) }
+         #if os(tvOS)
+         // Where the remote already goes to change section, so the song is one move away from anywhere.
+@@ -380,8 +378,6 @@ struct SectionPage: View {
+         case .search: GlobalSearchView()
+         case .live: LiveView()
+         case .music: MusicView()
+-        case .manga: MangaView()
+-        case .novels: NovelView()
+         case .sites: SitesView()
+         case .files: CloudFilesView()
+         case .favorites: FavoritesView()
+@@ -470,7 +466,7 @@ private struct MacSidebar: View {
+     @Environment(Store.self) private var store
+     @Environment(Updates.self) private var updates
+     private var groups: [(title: String, items: [AppSection])] {
+-        let groups: [(title: String, items: [AppSection])] = [(L10n.text("Browse"), [.home, .discover, .search, .live, .music, .manga, .novels, .sites, .files]),
++        let groups: [(title: String, items: [AppSection])] = [(L10n.text("Browse"), [.home, .discover, .search, .live, .music, .sites, .files]),
+                                                              (L10n.text("Library"), [.history, .favorites, .downloads, .settings])]
+         return groups.map { (title: $0.title, items: $0.items.filter { !store.hiddenSections.contains($0) }) }
+     }
+diff --git a/App/SettingsView.swift b/App/SettingsView.swift
+index da8dead..a42d1c0 100644
+--- a/App/SettingsView.swift
++++ b/App/SettingsView.swift
+@@ -198,18 +198,15 @@ extension Store {
+     }
+ }
+ 
+-/// What Settings › Subscriptions lists besides the subscriptions: comic and book source lists, LX Music sources and live
++/// What Settings › Subscriptions lists besides the subscriptions: LX Music sources and live
+ /// plugins. Add Subscription adds most of them too, so each is managed and removed there as well: its row's menu, its page,
+ /// or Remove Subscriptions with the subscriptions.
+ enum SubscriptionExtra: Identifiable, Hashable {
+-    case manga(URL)
+-    case novel(URL)
+     case lxSource(LXSource)
+     case livePlugin(LivePlugins.Installed)
+ 
+     @MainActor static func all(_ store: Store) -> [SubscriptionExtra] {
+-        MangaStore.shared.repositories.map(SubscriptionExtra.manga) + NovelStore.shared.lists.map { .novel($0.address) }
+-            + store.lxSources.map(SubscriptionExtra.lxSource) + store.livePlugins.map(SubscriptionExtra.livePlugin)
++        store.lxSources.map(SubscriptionExtra.lxSource) + store.livePlugins.map(SubscriptionExtra.livePlugin)
+     }
+ 
+     /// Removes the subscriptions (by address) and the other entries (by `id`) among `keys`.
+@@ -221,16 +218,12 @@ enum SubscriptionExtra: Identifiable, Hashable {
+ 
+     var id: String {
+         switch self {
+-        case .manga(let url): "manga " + url.absoluteString
+-        case .novel(let url): "novel " + url.absoluteString
+         case .lxSource(let source): "lx " + source.id
+         case .livePlugin(let plugin): "plugin " + plugin.pluginId
+         }
+     }
+     @MainActor var title: String {
+         switch self {
+-        case .manga(let url): MangaSources.title(of: url)
+-        case .novel(let url): NovelStore.shared.title(of: url)
+         case .lxSource(let source): source.info.name
+         case .livePlugin(let plugin): plugin.name
+         }
+@@ -238,8 +231,6 @@ enum SubscriptionExtra: Identifiable, Hashable {
+     /// What it feeds, as a subscription's row shows its count, or Off.
+     var value: String {
+         switch self {
+-        case .manga: L10n.text("Manga")
+-        case .novel: L10n.text("Novels")
+         case .lxSource(let source): source.enabled ? L10n.text("Music") : L10n.text("Off")
+         case .livePlugin: L10n.text("Live Plugins")
+         }
+@@ -247,23 +238,18 @@ enum SubscriptionExtra: Identifiable, Hashable {
+     /// The value in its kind's section, where the kind goes without saying (#1261): a book list's size, or Off.
+     @MainActor var sectionValue: String? {
+         switch self {
+-        case .novel(let url): NovelStore.shared.lists.first { $0.address == url }.map { L10n.text("%lld sources", $0.count) }
+         case .lxSource(let source): source.enabled ? nil : L10n.text("Off")
+-        case .manga, .livePlugin: nil
++        case .livePlugin: nil
+         }
+     }
+     var symbol: String {
+         switch self {
+-        case .manga: "books.vertical.fill"
+-        case .novel: "text.book.closed.fill"
+         case .lxSource: "music.note"
+         case .livePlugin: "puzzlepiece.extension.fill"
+         }
+     }
+     var tint: Color {
+         switch self {
+-        case .manga: .orange
+-        case .novel: .green
+         case .lxSource(let source): source.enabled ? .pink : .gray
+         case .livePlugin: .purple
+         }
+@@ -278,8 +264,6 @@ enum SubscriptionExtra: Identifiable, Hashable {
+ 
+     @MainActor @ViewBuilder var page: some View {
+         switch self {
+-        case .manga(let url): MangaRepositoryView(url: url)
+-        case .novel(let url): NovelListView(url: url)
+         case .lxSource(let source): LXSourcePage(source: source)
+         case .livePlugin(let plugin): LivePluginPage(plugin: plugin)
+         }
+@@ -287,8 +271,6 @@ enum SubscriptionExtra: Identifiable, Hashable {
+ 
+     @MainActor func remove() {
+         switch self {
+-        case .manga(let url): MangaStore.shared.removeRepository(url)
+-        case .novel(let url): NovelStore.shared.removeList(url)
+         case .lxSource(let source): LXSourceLibrary.shared.remove(source.id)
+         case .livePlugin(let plugin): LivePlugins.shared.uninstall(plugin.pluginId)
+         }
+@@ -582,7 +564,7 @@ struct FormSettingsView: View {
+     /// The row a search result asked for, scrolled to once the page shows again.
+     @State private var jumpTarget: String?
+ 
+-    /// A live plugin, LX Music source, or comic or book source list, in its kind's section: its page, and in its menu
++    /// A live plugin, LX Music source, in its kind's section: its page, and in its menu
+     /// on or off (music) and Remove.
+     private func extraRow(_ extra: SubscriptionExtra) -> some View {
+         FormLink(symbol: extra.symbol, tint: extra.tint, title: extra.title, value: extra.sectionValue) { extra.page }
+@@ -764,7 +746,7 @@ struct FormSettingsView: View {
+                 if let message = store.importError ?? store.notice { Text(message) }
+             }
+ 
+-            // Live plugins, music, comic and book source lists are added with Add Subscription too, but each is listed in
++            // Live plugins and music sources are added with Add Subscription too, but each is listed in
+             // its own kind's section rather than mixed in with the subscriptions (#1261), and managed and removed there.
+             if store.extrasUnlocked || !store.livePlugins.isEmpty {
+                 Section {
+@@ -784,34 +766,6 @@ struct FormSettingsView: View {
+                 }
+             }
+ 
+-            if !MangaStore.shared.repositories.isEmpty {
+-                Section {
+-                    ForEach(MangaStore.shared.repositories.map(SubscriptionExtra.manga)) { extraRow($0).settingsAnchor(.extra($0)) }
+-                    let sources = MangaStore.shared.sources
+-                    FormLink(symbol: "books.vertical.fill", tint: .orange, title: L10n.text("Comic Sources"),
+-                             value: sources.isEmpty ? nil : String(sources.count)) { MangaSourcesView() }
+-                        .settingsAnchor(.comicSources)
+-                } header: {
+-                    Text(L10n.text("Manga"))
+-                } footer: {
+-                    Text(L10n.text("Manga shows while a Venera comic source list is among your subscriptions."))
+-                }
+-            }
+-
+-            if !NovelStore.shared.lists.isEmpty || !NovelStore.shared.offers.isEmpty {
+-                Section {
+-                    ForEach(NovelStore.shared.lists.map { SubscriptionExtra.novel($0.address) }) { extraRow($0).settingsAnchor(.extra($0)) }
+-                    let store = NovelStore.shared
+-                    FormLink(symbol: "text.book.closed.fill", tint: .green, title: L10n.text("Book Sources"),
+-                             value: L10n.text("%lld on", store.enabledKeys.count)) { NovelSourcesView() }
+-                        .settingsAnchor(.bookSources)
+-                } header: {
+-                    Text(L10n.text("Novels"))
+-                } footer: {
+-                    Text(L10n.text("Novels shows while a Legado book source list is among your subscriptions."))
+-                }
+-            }
+-
+             Section(L10n.text("Accounts")) {
+                 if store.extrasUnlocked {
+                     FormLink(symbol: "play.tv.fill", tint: .pink, title: L10n.text("Bilibili"), value: bilibiliSummary) { BilibiliAccountView() }
+@@ -1271,8 +1225,6 @@ private enum SettingsSearchTarget: Hashable, Sendable {
+     case removeSubscriptions
+     case addSubscription
+     case livePlugins
+-    case comicSources
+-    case bookSources
+     case extra(SubscriptionExtra)
+     case bilibili
+     case douyin
+@@ -1451,22 +1403,6 @@ private extension FormSettingsView {
+             add(.extra(.lxSource(source)), title: source.info.name, section: L10n.text("Music"),
+                 keywords: ["music", "lx", "洛雪", "音乐"])
+         }
+-        if !MangaStore.shared.repositories.isEmpty {
+-            for repo in MangaStore.shared.repositories {
+-                add(.extra(.manga(repo)), title: MangaSources.title(of: repo), section: L10n.text("Manga"),
+-                    keywords: ["manga", "comic", "漫画"])
+-            }
+-            add(.comicSources, title: L10n.text("Comic Sources"), section: L10n.text("Manga"),
+-                keywords: ["manga", "comic", "venera", "漫画", "书源"])
+-        }
+-        if !NovelStore.shared.lists.isEmpty || !NovelStore.shared.offers.isEmpty {
+-            for list in NovelStore.shared.lists {
+-                add(.extra(.novel(list.address)), title: NovelStore.shared.title(of: list.address), section: L10n.text("Novels"),
+-                    keywords: ["novel", "book", "小说", "书源"])
+-            }
+-            add(.bookSources, title: L10n.text("Book Sources"), section: L10n.text("Novels"),
+-                keywords: ["novel", "book", "legado", "小说", "书源"])
+-        }
+ 
+         if store.extrasUnlocked {
+             add(.bilibili, title: L10n.text("Bilibili"), section: secAccounts, subtitle: bilibiliSummary,
+@@ -2536,8 +2472,6 @@ struct TVSettingsView: View {
+             if !store.lxSources.isEmpty {
+                 TVSettingsSection(title: L10n.text("Music")) { extraLinks(store.lxSources.map(SubscriptionExtra.lxSource)) }
+             }
+-            if !MangaStore.shared.repositories.isEmpty { comicSection }
+-            if !NovelStore.shared.lists.isEmpty || !NovelStore.shared.offers.isEmpty { novelSection }
+             TVSettingsSection(title: L10n.text("Accounts")) {
+                 if store.extrasUnlocked {
+                     TVSettingsLink(title: L10n.text("Bilibili"), value: bilibiliSummary) { BilibiliAccountView() }
+@@ -2623,28 +2557,13 @@ struct TVSettingsView: View {
+         return L10n.text("With your phone on the same network, tap the TV button in a Bilibili video and choose %@.", L10n.text("Yingxia")) + "\n" + phones
+     }
+ 
+-    private var novelSection: some View {
+-        TVSettingsSection(title: L10n.text("Novels"), footer: L10n.text("Novels shows while a Legado book source list is among your subscriptions.")) {
+-            extraLinks(NovelStore.shared.lists.map { SubscriptionExtra.novel($0.address) })
+-            TVSettingsLink(title: L10n.text("Book Sources"), value: L10n.text("%lld on", NovelStore.shared.enabledKeys.count)) { NovelSourcesView() }
+-        }
+-    }
+-
+-    /// Live plugins, LX Music sources, comic or book source lists: each page removes its own, Remove Subscriptions several.
++    /// Live plugins, LX Music sources: each page removes its own, Remove Subscriptions several.
+     private func extraLinks(_ extras: [SubscriptionExtra]) -> some View {
+         ForEach(extras) { extra in
+             TVSettingsLink(title: extra.title, value: extra.sectionValue) { extra.page }
+         }
+     }
+ 
+-    private var comicSection: some View {
+-        TVSettingsSection(title: L10n.text("Manga"), footer: L10n.text("Manga shows while a Venera comic source list is among your subscriptions.")) {
+-            extraLinks(MangaStore.shared.repositories.map(SubscriptionExtra.manga))
+-            let sources = MangaStore.shared.sources
+-            TVSettingsLink(title: L10n.text("Comic Sources"), value: sources.isEmpty ? nil : String(sources.count)) { MangaSourcesView() }
+-        }
+-    }
+-
+     private var subscriptionSection: some View {
+         TVSettingsSection(title: L10n.text("Subscriptions"), footer: store.notice) {
+             ForEach(store.subscriptions) { entry in
+diff --git a/App/Store.swift b/App/Store.swift
+index 9222f97..f52d147 100644
+--- a/App/Store.swift
++++ b/App/Store.swift
+@@ -93,8 +93,6 @@ import TVCore
+     }
+     /// Set while a listening source's episode goes to the video player on purpose.
+     @ObservationIgnored private var playsAsVideo = false
+-    /// When each audiobook chapter's source was last asked for a new address (`renewAudiobook`).
+-    @ObservationIgnored private var audiobookRenewals: [String: Date] = [:]
+     /// The channels the live channel playing was picked from, in order (its playlist, or the favorites): the player's
+     /// Previous and Next Channel and its channel list go through them (#1010).
+     var liveLineup: LiveLineup?
+@@ -153,19 +151,16 @@ import TVCore
+     /// is resolved 30 seconds before its end for the queue, as before.
+     static let nextAheadLength: Double = 10 * 60
+     var section: AppSection = .home
+-    /// The Mac sidebar folds away while the manga reader fills the window, and comes back when it closes.
+-    /// macOS 26 floats the sidebar over the page, so it covered the left part of every comic page.
++    /// The Mac sidebar folds away while a full-window reader is open, and comes back when it closes.
++    /// macOS 26 floats the sidebar over the page, so it covered the left part of the page.
+     var hidesSidebar = false
+     /// Unlock additional sections once an enabled subscription has sources or live playlists.
+     var extrasUnlocked: Bool {
+         subscriptions.contains { $0.enabled && documents[$0.address].map { !$0.sites.isEmpty || !$0.lives.isEmpty } == true }
+     }
+-    /// Sections kept out of the tab bar and sidebar until then; Manga while no Venera comic source list
+-    /// is subscribed (one is added with Add Subscription, like any other).
++    /// Sections kept out of the tab bar and sidebar until then.
+     var hiddenSections: [AppSection] {
+-        var hidden: [AppSection] = extrasUnlocked ? [] : [.music]
+-        if MangaStore.shared.repositories.isEmpty { hidden.append(.manga) }
+-        if NovelStore.shared.lists.isEmpty { hidden.append(.novels) }
++        let hidden: [AppSection] = extrasUnlocked ? [] : [.music]
+         return hidden
+     }
+     /// The open profile's defaults: the main defaults for the main profile.
+@@ -380,17 +375,6 @@ import TVCore
+         return AudioSources.queue(video: catalog.video, from: episode, site: catalog.client.site, origin: catalog.client.origin)
+     }
+ 
+-    /// Plays an audiobook's chapters from `index` in the music player (#1130), at `seconds` into that chapter.
+-    func listen(to book: NovelBook, chapters: [NovelChapter], from index: Int, at seconds: Double?) {
+-        let queue = NovelListening.queue(book: book, chapters: chapters, from: index)
+-        guard !queue.tracks.isEmpty else { return }
+-        Diagnostics.shared.record(.info, "music", "audiobook queue=\(queue.tracks.count)")
+-        music.play(queue, at: seconds.flatMap { $0 > 1 ? $0 : nil })
+-        #if os(iOS)
+-        music.presentsPlayer = true
+-        #endif
+-    }
+-
+     /// Plays the queue from the channel's stream, where this chapter stopped last time.
+     private func listen(_ queue: MusicQueue, from channel: Channel) {
+         var position = channel.resumePosition
+@@ -419,15 +403,8 @@ import TVCore
+             return try await self.resolveListening(source)
+         }
+         music.recordSource = { [weak self] source, position, duration in
+-            // An audiobook's place goes to the Novels shelf (#1130).
+-            if let item = NovelListening.item(source) {
+-                NovelStore.shared.record(item.book, chapter: item.chapter, count: item.count,
+-                                         position: duration > 0 ? position / duration : 0, seconds: position)
+-                return
+-            }
+             self?.playbackHistory.record(source.context, position: position, duration: duration)
+         }
+-        music.renewAudiobook = { [weak self] source, position in self?.renewAudiobook(source, at: position) ?? false }
+         music.handOffSource = { [weak self] stream, position, picture, covered in
+             guard let self, let context = stream.historyContext else { return }
+             if picture { AudioSourceVerdicts(defaults: self.playbackDefaults).recordVideo(context) }
+@@ -445,31 +422,8 @@ import TVCore
+         }
+     }
+ 
+-    /// An audiobook chapter that didn't play: its source lists the book's chapters again and listening goes on from them
+-    /// when the chapter has a new address there. Some sources put signed sound addresses, which expire, in the table of
+-    /// contents, and after the app was closed Continue failed until the book was found again (#1840). Once a chapter in
+-    /// five minutes, so an address that fails fresh isn't asked for over and over.
+-    private func renewAudiobook(_ source: MusicSourceEpisode, at position: Double) -> Bool {
+-        guard let item = NovelListening.item(source) else { return false }
+-        let key = item.book.id + "#\(item.chapter.index)"
+-        if let last = audiobookRenewals[key], Date().timeIntervalSince(last) < 300 { return false }
+-        audiobookRenewals[key] = Date()
+-        Task { @MainActor [weak self] in
+-            let chapters = try? await NovelBooks.shared.chapters(item.book, refresh: true)
+-            guard let self, self.music.queue?.current?.source == source else { return }
+-            guard let chapters, let index = NovelListening.renewed(item.chapter, in: chapters) else {
+-                Diagnostics.shared.record(.info, "music", "audiobook source gave no new address")
+-                self.music.stop()
+-                return
+-            }
+-            self.music.play(NovelListening.queue(book: item.book, chapters: chapters, from: index), at: position > 1 ? position : nil)
+-        }
+-        return true
+-    }
+-
+     /// A chapter's stream from its source, as Continue Watching gets an episode's.
+     private func resolveListening(_ source: MusicSourceEpisode) async throws -> Channel {
+-        if let item = NovelListening.item(source) { return try await NovelListening.channel(for: item) }
+         let context = source.context
+         guard let client = historyClient(PlaybackHistoryEntry(context: context, position: 0, duration: 0, updatedAt: Date())) else {
+             throw TVError.unsupported(L10n.text("This history source is no longer in the current subscription. Restore that subscription to continue."))
+@@ -552,9 +506,7 @@ import TVCore
+         guard !importing else { return }
+         importing = true; importError = nil; notice = nil
+         defer { importing = false }
+-        var typed = (address ?? subscriptionAddress).trimmingCharacters(in: .whitespacesAndNewlines)
+-        // Legado's one-tap import links (legado://import/bookSource?src=…) carry the list's address.
+-        if let link = URL(string: typed), let inner = NovelSources.importAddress(link) { typed = inner.absoluteString }
++        let typed = (address ?? subscriptionAddress).trimmingCharacters(in: .whitespacesAndNewlines)
+         do {
+             let url = try WebAddress.resolve(typed: typed)
+             switch try await http.subscriptionImport(url, fresh: true) {
+@@ -572,19 +524,6 @@ import TVCore
+                 let added = entries.filter { entry in !subscriptions.contains { $0.address == entry.address } }
+                 subscriptions += added
+                 notice = L10n.text("This address lists %lld subscriptions. They were added switched off; turn on the ones you want.", added.count)
+-            case .comicSources(let count):
+-                // Comic source lists feed Manga (and show it); they are listed under Subscriptions too.
+-                MangaStore.shared.addRepository(url)
+-                notice = L10n.text("Added a Venera comic source list (%lld sources). Choose the ones to install in Comic Sources.", count)
+-            case .novelSources(let count, let data):
+-                // Book source lists feed Novels (and show it); they are listed under Subscriptions too.
+-                let title = (address == nil ? subscriptionName : (name ?? "")).trimmingCharacters(in: .whitespacesAndNewlines)
+-                try NovelStore.shared.addList(url, data: data, name: title)
+-                notice = L10n.text("Added a Legado book source list (%lld sources). Search and read in Novels.", count)
+-            case .novelIndex(let offers):
+-                // A page of lists (or a Legado subscription source that opens one): Book Sources offers them one by one.
+-                NovelStore.shared.offer(offers)
+-                notice = L10n.text("This page lists %lld Legado book source lists. Choose the ones to add in Settings › Novels › Book Sources.", offers.count)
+             case .lxMusicSource(let script):
+                 // An LX Music source plays music, so it joins Music's own sources (#1177). A file's copy has no address
+                 // to fetch it again from.
+@@ -630,7 +569,6 @@ import TVCore
+         importing = true; importError = nil; notice = nil
+         defer { importing = false }
+         await fetch(subscriptions.filter(\.enabled))
+-        await NovelStore.shared.refreshLists()
+         let failed = subscriptions.filter { $0.enabled && subscriptionErrors[$0.address] != nil && !ImportedFiles.isMissing($0.address) }.count
+         if failed > 0 { notice = L10n.text("%lld subscriptions could not be refreshed; their last copies stay in use.", failed) }
+     }
+@@ -775,12 +713,6 @@ import TVCore
+                 guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }) else { continue }
+                 let known = Set(subscriptions.map(\.address))
+                 subscriptions.replaceSubrange(index...index, with: listed.filter { !known.contains($0.address) })
+-            case .success(.comicSources):
+-                subscriptionErrors[entry.address] = L10n.text("This address is now a comic source list. Add it again to use it for Manga.")
+-            case .success(.novelSources):
+-                subscriptionErrors[entry.address] = L10n.text("This address is now a book source list. Add it again to use it for Novels.")
+-            case .success(.novelIndex):
+-                subscriptionErrors[entry.address] = L10n.text("This address is now a page of book source lists. Add it again to choose from them.")
+             case .success(.alist):
+                 subscriptionErrors[entry.address] = L10n.text("This address is now an AList server. Add it again to browse it in Cloud Files.")
+             case .success(.lxMusicSource):
+diff --git a/Sources/TVBoxProbe/main.swift b/Sources/TVBoxProbe/main.swift
+index 591ce28..17056ef 100644
+--- a/Sources/TVBoxProbe/main.swift
++++ b/Sources/TVBoxProbe/main.swift
+@@ -123,49 +123,6 @@ import TVCore
+         guard let site = CloudSources.site(where: matches) else { throw TVError.invalidConfiguration }
+         return site
+     }
+-    static func manga(_ address: String, keyword: String?) async throws {
+-        let started = Date()
+-        func step(_ text: String) { print(String(format: "[%5.1fs] ", Date().timeIntervalSince(started)) + text) }
+-        let source = address.hasPrefix("http") ? try await MangaSources.shared.install(from: URL(string: address)!)
+-            : try await MangaSources.shared.install(code: String(contentsOfFile: address, encoding: .utf8), origin: nil)
+-        let runtime = MangaRuntime.shared
+-        let info = try await runtime.info(source.key)
+-        step("installed \(info.name) \(info.key) v\(info.version) explore=\(info.explore.map { "\($0.title)(\($0.type))" }) search=\(info.canSearch) category=\(info.categoryParts.map(\.name)) settings=\(info.settings.map(\.key))")
+-        var first: MangaComic?
+-        if !info.explore.isEmpty {
+-            do {
+-                let result = try await runtime.explore(source.key, page: 0, cursor: nil)
+-                step("explore: \(result.shelves.count) shelves \(result.shelves.map { "\($0.title):\($0.comics.count)" }) list=\(result.page.comics.count) next=\(String(describing: result.page.next))")
+-                first = result.shelves.first?.comics.first ?? result.page.comics.first
+-            } catch { step("explore FAILED: \(error.localizedDescription)") }
+-        }
+-        if let keyword, info.canSearch {
+-            do {
+-                let page = try await runtime.search(source.key, keyword: keyword, options: info.searchOptions.map { $0.defaultValue ?? $0.choices.first?.value }, cursor: nil)
+-                step("search \(keyword): \(page.comics.count) next=\(String(describing: page.next)) first=\(page.comics.prefix(3).map(\.title))")
+-                first = page.comics.first ?? first
+-            } catch { step("search FAILED: \(error.localizedDescription)") }
+-        }
+-        guard let comic = first else { step("no comic to open"); return }
+-        step("comic \(comic.title) id=\(comic.id) cover=\(comic.cover.prefix(90))")
+-        do {
+-            await MangaImages.shared.prepareCovers(source: source.key, urls: [comic.cover])
+-            let cover = try await MangaImages.shared.data(source: source.key, url: comic.cover, kind: .cover)
+-            step("cover \(cover.count) bytes")
+-        } catch { step("cover FAILED: \(error.localizedDescription)") }
+-        let details = try await runtime.details(source.key, id: comic.id)
+-        step("details \(details.comic.title) tags=\(details.tags.map { "\($0.name):\($0.values.prefix(3))" }) groups=\(details.groups.map { "\($0.title):\($0.chapters.count)" }) first=\(details.chapters.prefix(2).map(\.title)) last=\(details.chapters.last?.title ?? "-")")
+-        let chapter = details.chapters.first
+-        let pages = try await runtime.pages(source.key, comic: comic.id, chapter: chapter?.id)
+-        step("pages \(pages.count): \(pages.first?.prefix(120) ?? "")")
+-        for url in pages.prefix(2) {
+-            do {
+-                let data = try await MangaImages.shared.data(source: source.key, url: url, kind: .page, comic: comic.id, chapter: chapter?.id)
+-                let image = MangaImages.bitmap(data, width: 1200)
+-                step("page \(data.count) bytes \(image.map { "\($0.width)x\($0.height)" } ?? "undecodable")")
+-            } catch { step("page FAILED: \(error.localizedDescription)") }
+-        }
+-    }
+     static func main() async throws {
+         let args = CommandLine.arguments
+         // Yingxia's own sources and live platforms come from its subscription.
+@@ -177,39 +134,6 @@ import TVCore
+             print("       TVBoxProbe --subscription-check <URL> [...]")
+             return
+         }
+-        if args[1] == "--manga", args.count >= 3 {
+-            // --manga <source .js URL or file> [keyword]: a Venera comic source end to end.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            try await manga(args[2], keyword: args.count > 3 ? args[3] : nil)
+-            return
+-        }
+-        if args[1] == "--novel-check", args.count >= 3 {
+-            // --novel-check <Legado list URL or file> [keyword] [--limit N] [--offset N] [--jobs N]: every source searched,
+-            // and the keyword's book read through to its first chapter.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            try await novelCheck(Array(args[2...]))
+-            return
+-        }
+-        if args[1] == "--novel-bench", args.count >= 3 {
+-            // --novel-bench <list> [sessions]: runtime boot time, memory, and load() time over the list.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            novelProfiles()
+-            let sources = try await novelList(args[2])
+-            for line in try await NovelRuntime.benchmark(sources, sessions: args.count > 3 ? Int(args[3]) ?? 16 : 16) { print(line) }
+-            return
+-        }
+-        if args[1] == "--novel-audio", args.count >= 3 {
+-            // --novel-audio <list> [keyword]: each audio (听书) source searched, its first chapter's sound found and fetched.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            try await novelAudioCheck(args[2], keyword: args.count > 3 ? args[3] : "凡人修仙传")
+-            return
+-        }
+-        if args[1] == "--novel-read", args.count >= 5 {
+-            // --novel-read <list> <source key or name> <keyword>: one Legado source, verbosely.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            try await novelRead(args[2], args[3], keyword: args[4])
+-            return
+-        }
+         if args[1] == "--download", args.count >= 4 {
+             // --download <media URL | bili:<BV>[:part]> <folder> [pause after seconds]: the download queue end to end,
+             // optionally paused and resumed partway, then the result played through AVPlayer.
+@@ -1036,197 +960,6 @@ final class ManagedAtomicCounter: @unchecked Sendable {
+     var value: Int { lock.withLock { count } }
+ }
+ 
+-// MARK: - Novels (Legado book sources)
+-
+-extension Probe {
+-    static func novelList(_ target: String) async throws -> [NovelSource] {
+-        let data: Data
+-        if target.hasPrefix("http") {
+-            var request = URLRequest(url: URL(string: target)!)
+-            request.timeoutInterval = 60
+-            data = try await URLSession.shared.data(for: request).0
+-        } else { data = try Data(contentsOf: URL(filePath: target)) }
+-        guard let sources = NovelSource.list(from: data) else { throw TVError.unsupported("not a Legado book source list") }
+-        return sources
+-    }
+-
+-    /// One source end to end: search → details → table of contents → the first chapter's text.
+-    static func novelRun(_ source: NovelSource, keyword: String, verbose: Bool) async -> (stage: String, line: String) {
+-        let runtime = NovelRuntime.shared
+-        let began = Date()
+-        func took() -> String { String(format: "%.1fs", Date().timeIntervalSince(began)) }
+-        func short(_ error: Error) -> String { error.localizedDescription.replacingOccurrences(of: "\n", with: " ").prefix(160).description }
+-        guard source.searchable else { return ("no-search", "no searchUrl") }
+-        var books: [NovelBook]
+-        do { books = try await runtime.search(source, keyword: keyword, page: 1) } catch { return ("search-error", "search: \(short(error)) \(took())") }
+-        // Niche sources don't have every book: then the source's own test word (ruleSearch.checkKeyWord).
+-        let object = (try? JSONSerialization.jsonObject(with: Data(source.json.utf8))) as? [String: Any]
+-        let rules = (object?["ruleSearch"] as? [String: Any]) ?? ((object?["ruleSearch"] as? String).flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) } as? [String: Any])
+-        if books.isEmpty, let check = (rules?["checkKeyWord"] as? String)?.trimmingCharacters(in: .whitespaces), !check.isEmpty, check != keyword {
+-            do { books = try await runtime.search(source, keyword: check, page: 1) } catch { return ("search-error", "search \(check): \(short(error)) \(took())") }
+-        }
+-        if verbose { for book in books.prefix(5) { print("  book: \(book.name) / \(book.author) | \(book.kind) | \(book.lastChapter) | \(book.url) | cover \(book.cover.prefix(80))") } }
+-        let wanted = novelKey(keyword)
+-        // The keyword's book, or else the first result (niche sources don't have every book).
+-        guard let picked = books.first(where: { novelKey($0.name) == wanted }) ?? books.first(where: { novelKey($0.name).contains(wanted) }) ?? books.first else {
+-            return ("search-empty", "search: no results \(took())")
+-        }
+-        var book = picked
+-        do { book = try await runtime.details(source, book: picked) } catch { return ("info-error", "search \(books.count) → info: \(short(error)) \(took())") }
+-        if verbose { print("  info: \(book.name) / \(book.author) | kind \(book.kind) | words \(book.wordCount) | last \(book.lastChapter) | toc \(book.tocURL) | cover \(book.cover.prefix(100))\n  intro: \(book.intro.prefix(160))") }
+-        let chapters: [NovelChapter]
+-        do { chapters = try await runtime.chapters(source, book: book) } catch { return ("toc-error", "search \(books.count) → toc: \(short(error)) \(took())") }
+-        if verbose { for chapter in chapters.prefix(4) + chapters.suffix(2) { print("  chapter \(chapter.index): \(chapter.title) \(chapter.isVolume ? "[volume] " : "")\(chapter.isVip ? "[vip] " : "")\(chapter.url.prefix(100))") } }
+-        let readable = chapters.filter { !$0.isVolume }
+-        guard let first = readable.first else { return ("toc-empty", "search \(books.count) → toc empty \(took())") }
+-        let next = readable.dropFirst().first
+-        do {
+-            let content = try await runtime.content(source, book: book, chapter: first, next: next)
+-            let characters = content.paragraphs.reduce(0) { $0 + $1.count }
+-            if verbose { print("  content \(content.title): \(content.paragraphs.count) paragraphs, \(characters) characters"); for line in content.paragraphs.prefix(5) { print("    " + line.prefix(120)) } }
+-            if characters < 200 { return ("content-short", "search \(books.count) → toc \(chapters.count) → content only \(characters) chars: \(content.paragraphs.joined(separator: " ").prefix(100)) \(took())") }
+-            return ("ok", "search \(books.count) → toc \(chapters.count) → content \(content.paragraphs.count)¶ \(characters) chars \(took())")
+-        } catch { return ("content-error", "search \(books.count) → toc \(chapters.count) → content: \(short(error)) \(took())") }
+-    }
+-
+-    /// Whether the source's site answers from here: "up", "down" (no answer), or "blocked" (403/5xx, a bot check, a parked domain).
+-    static func novelReach(_ source: NovelSource) async -> String {
+-        let address = String(source.key.split(separator: "#").first ?? "").trimmingCharacters(in: .whitespaces)
+-        guard let url = URL(string: address), url.scheme?.hasPrefix("http") == true else { return "up" }
+-        var request = URLRequest(url: url, timeoutInterval: 12)
+-        request.setValue("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36", forHTTPHeaderField: "User-Agent")
+-        guard let (data, response) = try? await URLSession.shared.data(for: request), let http = response as? HTTPURLResponse else { return "down" }
+-        let text = String(decoding: data.prefix(6000), as: UTF8.self)
+-        if http.statusCode == 403 || http.statusCode == 451 || http.statusCode >= 500 || text.contains("Just a moment...") || text.contains("region has been denied") { return "blocked" }
+-        return "up"
+-    }
+-
+-    static func novelKey(_ text: String) -> String { text.lowercased().filter { !$0.isWhitespace && !$0.isPunctuation && !$0.isSymbol } }
+-
+-    static func novelProfiles() {
+-        NovelRuntime.profilesRoot = FileManager.default.temporaryDirectory.appendingPathComponent("novel-probe-profiles", isDirectory: true)
+-    }
+-
+-    /// --novel-check <list URL or file> [keyword] [--limit N] [--offset N] [--jobs N]
+-    static func novelCheck(_ args: [String]) async throws {
+-        novelProfiles()
+-        func option(_ name: String) -> Int? { args.firstIndex(of: name).flatMap { args.indices.contains($0 + 1) ? Int(args[$0 + 1]) : nil } }
+-        var plain: [String] = [], skip = false
+-        for value in args { if skip { skip = false } else if value.hasPrefix("--") { skip = true } else { plain.append(value) } }
+-        let keyword = plain.count > 1 ? plain[1] : "斗破苍穹"
+-        let all = try await novelList(plain[0])
+-        let offset = option("--offset") ?? 0, limit = option("--limit") ?? all.count, jobs = max(1, option("--jobs") ?? 6)
+-        var sources = Array(all.dropFirst(offset).prefix(limit))
+-        if let sample = option("--sample"), sample < sources.count {
+-            // The same sample every run: a fixed-seed shuffle.
+-            var seed: UInt64 = 0x9E3779B97F4A7C15
+-            var generator = AnyRandom { seed &+= 0x9E3779B97F4A7C15; var z = seed; z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9; z = (z ^ (z >> 27)) &* 0x94D049BB133111EB; return z ^ (z >> 31) }
+-            sources = Array(sources.filter { !$0.disabledByList }.shuffled(using: &generator).prefix(sample))
+-        }
+-        print("\(all.count) sources in the list; checking \(sources.count) with \(keyword), \(jobs) at a time")
+-        var stages: [String: Int] = [:]
+-        var index = 0
+-        await withTaskGroup(of: (Int, NovelSource, String, String).self) { group in
+-            func add() {
+-                guard index < sources.count else { return }
+-                let (n, source) = (index, sources[index]); index += 1
+-                group.addTask {
+-                    async let reach = novelReach(source)
+-                    let result = await novelRun(source, keyword: keyword, verbose: false)
+-                    await NovelRuntime.shared.reset(source.key)
+-                    let site = await reach
+-                    return (n, source, result.stage == "ok" || site == "up" ? result.stage : result.stage + "/" + site, result.line)
+-                }
+-            }
+-            for _ in 0..<jobs { add() }
+-            while let (n, source, stage, line) = await group.next() {
+-                stages[stage, default: 0] += 1
+-                print("[\(n + offset)] \(stage.padding(toLength: 14, withPad: " ", startingAt: 0)) \(source.name) <\(source.key.prefix(60))>\(source.disabledByList ? " (off in list)" : "") — \(line)")
+-                add()
+-            }
+-        }
+-        print("summary:", stages.sorted { $0.value > $1.value }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
+-        // Sources whose site is down or refuses this network can't pass anywhere from here.
+-        let reachable = stages.filter { !$0.key.contains("/") }.values.reduce(0, +)
+-        print(String(format: "ok %d of %d (%.0f%%); of the %d whose site answers from here: %.0f%%", stages["ok"] ?? 0, sources.count, Double(stages["ok"] ?? 0) * 100 / Double(max(sources.count, 1)),
+-                     reachable, Double(stages["ok"] ?? 0) * 100 / Double(max(reachable, 1))))
+-    }
+-
+-    static func novelAudioCheck(_ list: String, keyword: String) async throws {
+-        novelProfiles()
+-        let sources = try await novelList(list).filter(\.isAudio)
+-        print("\(sources.count) audio sources; checking with \(keyword)")
+-        var stages: [String: Int] = [:]
+-        await withTaskGroup(of: (NovelSource, String, String).self) { group in
+-            for source in sources {
+-                group.addTask {
+-                    let result = await novelAudioRun(source, keyword: keyword)
+-                    await NovelRuntime.shared.reset(source.key)
+-                    let site = await novelReach(source)
+-                    return (source, result.stage == "ok" || site == "up" ? result.stage : result.stage + "/" + site, result.line)
+-                }
+-            }
+-            for await (source, stage, line) in group {
+-                stages[stage, default: 0] += 1
+-                print("\(stage.padding(toLength: 18, withPad: " ", startingAt: 0)) \(source.name) <\(source.key.prefix(50))> \(line)")
+-            }
+-        }
+-        print("summary:", stages.sorted { $0.value > $1.value }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
+-    }
+-
+-    static func novelAudioRun(_ source: NovelSource, keyword: String) async -> (stage: String, line: String) {
+-        let runtime = NovelRuntime.shared
+-        func short(_ error: Error) -> String { error.localizedDescription.replacingOccurrences(of: "\n", with: " ").prefix(140).description }
+-        guard source.searchable else { return ("no-search", "") }
+-        var books: [NovelBook] = []
+-        do { books = try await runtime.search(source, keyword: keyword, page: 1) } catch { return ("search-error", short(error)) }
+-        let object = (try? JSONSerialization.jsonObject(with: Data(source.json.utf8))) as? [String: Any]
+-        let rules = (object?["ruleSearch"] as? [String: Any]) ?? ((object?["ruleSearch"] as? String).flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) } as? [String: Any])
+-        if books.isEmpty, let check = (rules?["checkKeyWord"] as? String)?.trimmingCharacters(in: .whitespaces), !check.isEmpty, check != keyword {
+-            do { books = try await runtime.search(source, keyword: check, page: 1) } catch { return ("search-error", short(error)) }
+-        }
+-        guard let picked = books.first else { return ("search-empty", "") }
+-        var book = picked
+-        do { book = try await runtime.details(source, book: picked) } catch { return ("info-error", short(error)) }
+-        let chapters: [NovelChapter]
+-        do { chapters = try await runtime.chapters(source, book: book) } catch { return ("toc-error", short(error)) }
+-        guard let first = chapters.first(where: { !$0.isVolume }) else { return ("toc-empty", "") }
+-        let sound: NovelAudio
+-        do { sound = try await NovelListening.playable(runtime.audio(source, book: book, chapter: first)) } catch { return ("audio-error", "\(book.name) \(chapters.count)ch: \(short(error))") }
+-        guard let url = URL(string: sound.url) else { return ("audio-badurl", sound.url) }
+-        var request = URLRequest(url: url, timeoutInterval: 15)
+-        for (name, value) in sound.headers { request.setValue(value, forHTTPHeaderField: name) }
+-        request.setValue("bytes=0-4095", forHTTPHeaderField: "Range")
+-        guard let (data, response) = try? await URLSession.shared.data(for: request), let http = response as? HTTPURLResponse else { return ("fetch-failed", sound.url) }
+-        let type = http.value(forHTTPHeaderField: "Content-Type") ?? "?"
+-        let head = data.prefix(4).map { String(format: "%02x", $0) }.joined()
+-        let audio = type.hasPrefix("audio") || type.contains("mpegurl") || type.contains("octet") || ["494433", "fff"].contains { head.hasPrefix($0) } || head.hasPrefix("0000")
+-        return (http.statusCode < 400 && audio ? "ok" : "not-audio", "\(book.name) \(chapters.count)ch \(http.statusCode) \(type) \(head) \(sound.url.prefix(90))")
+-    }
+-
+-    /// --novel-read <list> <source key or name> <keyword>: one source, verbosely.
+-    static func novelRead(_ list: String, _ which: String, keyword: String) async throws {
+-        novelProfiles()
+-        let sources = try await novelList(list)
+-        guard let source = sources.first(where: { $0.key == which }) ?? sources.first(where: { $0.name == which }) ?? sources.first(where: { $0.name.contains(which) || $0.key.contains(which) }) else {
+-            throw TVError.unsupported("no source \(which)")
+-        }
+-        print("source \(source.name) <\(source.key)> searchable=\(source.searchable) explorable=\(source.explorable)")
+-        if source.explorable {
+-            do {
+-                let kinds = try await NovelRuntime.shared.exploreKinds(source)
+-                print("explore: \(kinds.count) kinds: \(kinds.prefix(8).map { $0.title + ($0.url.isEmpty ? "" : "→") }.joined(separator: ", "))")
+-                if let kind = kinds.first(where: { !$0.url.isEmpty }) {
+-                    let books = try await NovelRuntime.shared.explore(source, url: kind.url, page: 1)
+-                    print("explore \(kind.title): \(books.count) books: \(books.prefix(5).map(\.name).joined(separator: ", "))")
+-                }
+-            } catch { print("explore failed: \(error.localizedDescription)") }
+-        }
+-        let result = await novelRun(source, keyword: keyword, verbose: true)
+-        print(result.stage, result.line)
+-    }
+-}
+-
+ struct AnyRandom: RandomNumberGenerator {
+     let make: () -> UInt64
+     init(_ make: @escaping () -> UInt64) { self.make = make }
+diff --git a/Sources/TVCore/ScriptRuntime.swift b/Sources/TVCore/ScriptRuntime.swift
+index 542254b..5183c7a 100644
+--- a/Sources/TVCore/ScriptRuntime.swift
++++ b/Sources/TVCore/ScriptRuntime.swift
+@@ -298,7 +298,7 @@ final class ScriptBridge: @unchecked Sendable {
+     }
+ }
+ 
+-/// More host operations for one kind of script (MangaHost): an answer, `.some(nil)` for null, or nil when
++/// More host operations for one kind of script: an answer, `.some(nil)` for null, or nil when
+ /// the operation isn't one of its own.
+ protocol ScriptHostExtension: AnyObject, Sendable {
+     func answer(_ operation: String, _ argument: String) throws -> String??
+diff --git a/Sources/TVCore/SubscriptionMerge.swift b/Sources/TVCore/SubscriptionMerge.swift
+index ae5dbf5..181a661 100644
+--- a/Sources/TVCore/SubscriptionMerge.swift
++++ b/Sources/TVCore/SubscriptionMerge.swift
+@@ -137,15 +137,6 @@ public enum SubscriptionImport: Sendable {
+     case subscription(Subscription)
+     case directory([SubscriptionEntry])
+     case alist([AListServer])
+-    /// A Venera comic source list (`index.json` of venera-configs or a copy), with how many sources it lists:
+-    /// it feeds the Manga section, not Watch Now.
+-    case comicSources(Int)
+-    /// A Legado book source list (one JSON array of `bookSourceUrl` sources), with the data downloaded:
+-    /// it feeds the Novels section.
+-    case novelSources(Int, Data)
+-    /// A page of Legado book source lists, or a Legado subscription source (订阅源) that opens one: the lists it links
+-    /// to, for the viewer to choose from in Book Sources.
+-    case novelIndex([NovelSourceOffer])
+     /// An LX Music custom source (洛雪音源), the script's text: people add these here too (#1177). It goes to Music's
+     /// LX Music Sources, not Watch Now. Only content that is no subscription reads as one.
+     case lxMusicSource(String)
+@@ -182,13 +173,8 @@ extension HTTPClient {
+         let (data, finalURL) = try await get(url, headers: ["User-Agent": Self.subscriptionUserAgent].merging(headers) { $1 },
+                                              fresh: fresh, limit: Self.subscriptionLimit)
+         if let bundle = CatPawOpen.bundle(data, at: finalURL) { return .subscription(try await CatPawOpen.subscription(bundle: bundle, origin: finalURL, http: self)) }
+-        if let count = MangaSources.listedCount(data) { return .comicSources(count) }
+-        if let sources = NovelSource.list(from: data) { return .novelSources(sources.count, data) }
+-        if let pages = NovelSourceIndex.pages(from: data) { return .novelIndex(try await NovelSourceIndex.offers(pages: pages, http: self)) }
+         if let servers = AListServer.list(from: data) { return .alist(servers) }
+         if let entries = Subscription.directory(data, origin: finalURL) { return .directory(entries) }
+-        let offers = NovelSourceIndex.offers(inPage: data, origin: finalURL)
+-        if !offers.isEmpty { return .novelIndex(offers) }
+         do {
+             let subscription = try await Subscription.parse(data, origin: finalURL, headers: headers).sniffingScripts(http: self)
+             if fresh, subscription.isSingleSpider { await PluginDownloads.shared.store(data, for: finalURL) }
+diff --git a/Tests/TVCoreTests/XimalayaAudioTests.swift b/Tests/TVCoreTests/XimalayaAudioTests.swift
+index 7a932df..f83f354 100644
+--- a/Tests/TVCoreTests/XimalayaAudioTests.swift
++++ b/Tests/TVCoreTests/XimalayaAudioTests.swift
+@@ -102,12 +102,6 @@ private let encrypted = "s5hBDAWDgj82X65-VZ-SLlIx-9c7RqeHMSm7FGis8LrJPSTe9rBvclZ
+     #expect(throws: TVError.self) { try XimalayaAudio.sound(from: Data(#"{"ret":1001,"msg":"系统繁忙"}"#.utf8)) }
+ }
+ 
+-/// The audio player is handed a track page's sound; other sounds go through as they are.
+-@Test func audiobookSoundsOtherThanXimalayaPassThrough() async throws {
+-    let sound = NovelAudio(url: "https://a.example/1.m4a", headers: ["Referer": "https://a.example"])
+-    #expect(try await NovelListening.playable(sound) == sound)
+-}
+-
+ private final class Locked<Value>: @unchecked Sendable {
+     private var value: Value
+     private let lock = NSLock()
