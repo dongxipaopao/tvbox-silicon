@@ -187,7 +187,7 @@ public protocol SubtitleCredentialStore: Sendable {
 /// TV or Mac has been asleep).
 public struct KeychainSubtitleCredentials: SubtitleCredentialStore {
     let service: String
-    public init(service: String = "com.jo32.yingxia.subtitle-sources") { self.service = service }
+    public init(service: String = "com.dongxipaopao.xiplayer.subtitle-sources") { self.service = service }
 
     public func values(for provider: String) -> [String: String] {
         var query = base(provider)

@@ -322,7 +322,7 @@ extension Data {
 /// The session token, in the keychain (this device only). QA runs with `-qaIsolatedData` keep their own.
 public enum AccountKeychain {
     static var service: String {
-        "com.jo32.yingxia.account" + (UserDefaults.standard.bool(forKey: "qaIsolatedData") ? ".qa" : "")
+        "com.dongxipaopao.xiplayer.account" + (UserDefaults.standard.bool(forKey: "qaIsolatedData") ? ".qa" : "")
     }
 
     private static var query: [String: Any] {
