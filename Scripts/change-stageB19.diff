@@ -1,0 +1,108 @@
+diff --git a/Sources/TVBoxProbe/Timing.swift b/Sources/TVBoxProbe/Timing.swift
+new file mode 100644
+index 0000000..28158ee
+--- /dev/null
++++ b/Sources/TVBoxProbe/Timing.swift
+@@ -0,0 +1,87 @@
++import Foundation
++import TVCore
++
++/// `--timing <subscription> <query> <label>`: where the time goes from a search to the first bytes of the picture, on one
++/// subscription, through the app's own search model and catalog client. It prints durations and counts only: no source
++/// name, title, address or message, so the log can be public. The network is the CI runner's, not the viewer's, so the
++/// absolute seconds are not what a phone sees; the split between search, detail, play address and first bytes is.
++extension Probe {
++    private static func seconds(_ d: Duration) -> Double {
++        Double(d.components.seconds) + Double(d.components.attoseconds) / 1e18
++    }
++    private static func f(_ v: Double?) -> String { v.map { String(format: "%.2f", $0) } ?? "-" }
++    private struct Timeout: Error {}
++    private static func limited<T: Sendable>(_ limit: Double, _ work: @escaping @Sendable () async throws -> T) async throws -> T {
++        try await withThrowingTaskGroup(of: T.self) { group in
++            group.addTask { try await work() }
++            group.addTask { try await Task.sleep(for: .seconds(limit)); throw Timeout() }
++            let first = try await group.next()!
++            group.cancelAll()
++            return first
++        }
++    }
++    private static func kind(_ error: Error) -> String { error is Timeout ? "timeout" : String(describing: type(of: error)) }
++
++    @MainActor static func timing(subscription: String, query: String, label: String) async throws {
++        setvbuf(stdout, nil, _IONBF, 0)
++        print("timing[\(label)] query-length=\(query.count)")
++        let begin = ContinuousClock.now
++        let imported = try await HTTPClient().subscriptionImport(try WebAddress.resolve(subscription), fresh: true)
++        guard case .subscription(let config) = imported else { print("timing[\(label)] address is not a source subscription"); return }
++        print("timing[\(label)] subscription load=\(f(seconds(begin.duration(to: .now))))s sites=\(config.sites.count)")
++
++        let model = SearchModel()
++        var answers: [(at: Double, hits: Int, failed: Bool)] = []
++        var hitCandidates: [SourceTitleMatch.Candidate] = []
++        let wanted = SourceTitleMatch.Wanted(names: [query], year: nil)
++        let started = ContinuousClock.now
++        model.onResult = { result in
++            let at = seconds(started.duration(to: .now))
++            let videos = result.page?.videos ?? []
++            let more = SourceTitleMatch.candidates(videos, site: result.site, wanted: wanted)
++            hitCandidates += more
++            answers.append((at, more.count, result.error != nil))
++        }
++        model.search(query, config: config)
++        let asked = model.total
++        while model.completed < model.total, seconds(started.duration(to: .now)) < 90 { try await Task.sleep(for: .milliseconds(100)) }
++        let total = seconds(started.duration(to: .now))
++        let times = answers.map(\.at).sorted()
++        func pct(_ p: Double) -> Double? { times.isEmpty ? nil : times[min(times.count - 1, Int(Double(times.count) * p))] }
++        let firstHit = answers.filter { $0.hits > 0 }.map(\.at).min()
++        print("timing[\(label)] search asked=\(asked) answered=\(answers.count) failed=\(answers.filter(\.failed).count) withMatch=\(answers.filter { $0.hits > 0 }.count) first-answer=\(f(times.first))s first-match=\(f(firstHit))s p50=\(f(pct(0.5)))s p90=\(f(pct(0.9)))s last=\(f(times.last))s total=\(f(total))s completed=\(model.completed >= model.total)")
++
++        // The play chain on the first few matching sources (by arrival), one at a time.
++        var seen = Set<String>(), picked: [SourceTitleMatch.Candidate] = []
++        for c in hitCandidates where !seen.contains(c.site.key) { seen.insert(c.site.key); picked.append(c); if picked.count == 4 { break } }
++        for (index, candidate) in picked.enumerated() {
++            let tag = "timing[\(label)] play#\(index + 1) type=\(candidate.site.type)"
++            let client = CatalogClient(site: candidate.site, origin: config.origin, jarURL: config.spiderURL)
++            do {
++                let t1 = ContinuousClock.now
++                let video = try await limited(30) { try await client.detail(candidate.video.id) }
++                let detail = seconds(t1.duration(to: .now))
++                guard let episode = video.episodes.first else { print("\(tag) detail=\(f(detail))s episodes=0"); continue }
++                let t2 = ContinuousClock.now
++                let plan = try await limited(30) { try await client.preparePlayback(episode) }
++                let prepare = seconds(t2.duration(to: .now))
++                let t3 = ContinuousClock.now
++                let channel = try await limited(30) { try await client.resolvePlayback(plan, choice: plan.choices[0]) }
++                let resolve = seconds(t3.duration(to: .now))
++                var request = URLRequest(url: channel.url, timeoutInterval: 20)
++                for (key, value) in channel.headers { request.setValue(value, forHTTPHeaderField: key) }
++                request.setValue("bytes=0-65535", forHTTPHeaderField: "Range")
++                let t4 = ContinuousClock.now
++                var firstByte: Double?, status = 0
++                do {
++                    let (bytes, response) = try await URLSession.shared.bytes(for: request)
++                    status = (response as? HTTPURLResponse)?.statusCode ?? 0
++                    for try await _ in bytes { firstByte = seconds(t4.duration(to: .now)); break }
++                } catch { print("\(tag) firstbyte-error=\(kind(error))") }
++                print("\(tag) episodes=\(video.episodes.count) web=\(plan.requiresWebDetection) detail=\(f(detail))s prepare=\(f(prepare))s resolve=\(f(resolve))s firstbyte=\(f(firstByte))s http=\(status) sum=\(f(detail + prepare + resolve + (firstByte ?? 0)))s")
++            } catch {
++                print("\(tag) failed=\(kind(error))")
++            }
++        }
++    }
++}
+diff --git a/Sources/TVBoxProbe/main.swift b/Sources/TVBoxProbe/main.swift
+index e619852..8603fc7 100644
+--- a/Sources/TVBoxProbe/main.swift
++++ b/Sources/TVBoxProbe/main.swift
+@@ -134,6 +134,10 @@ import TVCore
+             print("       TVBoxProbe --subscription-check <URL> [...]")
+             return
+         }
++        if args[1] == "--timing", args.count >= 5 {
++            try await timing(subscription: args[2], query: args[3], label: args[4])
++            return
++        }
+         if args[1] == "--download", args.count >= 4 {
+             // --download <media URL | bili:<BV>[:part]> <folder> [pause after seconds]: the download queue end to end,
+             // optionally paused and resumed partway, then the result played through AVPlayer.
