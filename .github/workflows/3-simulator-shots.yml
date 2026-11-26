@@ -130,7 +130,10 @@ jobs:
           shot 08-settings 12 -qaSection settings
           shot 09-detail-episodes-lines 30 -qaSection sites -qaPage detail:qa-standard:1
           shot 10-source-site 25 -qaSection sites -qaPage site:qa-standard
-          shot 11-playback 40 -qaSection home -qaPage play-source:qa-standard
+          shot 11a-playback 14 -qaSection home -qaPage play-source:qa-standard
+          shot 11b-playback 24 -qaSection home -qaPage play-source:qa-standard
+          shot 11c-playback 36 -qaSection home -qaPage play-source:qa-standard
+          ls -l ~/Library/Logs/DiagnosticReports > crash-list.txt 2>&1 || true
           shot 12-more 12 -qaSection more
           xcrun simctl terminate "$UDID" $B || true
           # The user's own source address, as a second pass (no fixture server).
@@ -144,7 +147,7 @@ jobs:
         run: |
           rm -rf /tmp/pub && mkdir /tmp/pub
           cp shots/0*.png shots/1*.png /tmp/pub/ || true
-          cp qa-server.log /tmp/pub/ || true
+          cp qa-server.log crash-list.txt /tmp/pub/ || true
           tail -300 sim-build.log > /tmp/pub/sim-build-tail.log || true
           cd /tmp/pub
           git init -q && git checkout -qb shots-evidence
