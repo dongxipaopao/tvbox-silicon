@@ -1,2 +1,0 @@
-Scripts/change-stageB23.diff
-Scripts/change-stageB23.txt

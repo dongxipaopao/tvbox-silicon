@@ -133,13 +133,14 @@ struct DiscoverDetailView: View {
             ZStack(alignment: .top) {
                 DiscoverDetailBackground(model: model, width: width, height: coverHeight,
                                          active: onScreen && scenePhase == .active && !trailerShown && !searchShown && still == nil && !overviewShown)
+                ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 30) {
                         identity(width: width)
                         if model.failed {
                             Button(L10n.text("Try Again")) { Task { await model.load(item) } }.padding(.horizontal, 20)
                         }
-                        discoverEpisodes
+                        discoverEpisodes.id("qa.episodes")
                         if let details {
                             if !details.cast.isEmpty { people(details.cast, title: L10n.text("Cast")) }
                             if details.crew.contains(where: { $0.profile != nil }) { people(details.crew, title: L10n.text("Crew")) }
@@ -156,6 +157,14 @@ struct DiscoverDetailView: View {
                 }
                 .scrollIndicators(.hidden)
                 .modifier(DiscoverDetailScroll(model: model))
+                #if DEBUG
+                // `-qaScrollEpisodes 1`: the page scrolls to its Episodes block once the sources have had time, for screenshots.
+                .task {
+                    guard UserDefaults.standard.string(forKey: "qaScrollEpisodes") != nil else { return }
+                    try? await Task.sleep(for: .seconds(12)); proxy.scrollTo("qa.episodes", anchor: .top)
+                }
+                #endif
+                }
             }
         }
         .foregroundStyle(dark ? Color.white : Color.black)

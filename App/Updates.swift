@@ -86,13 +86,27 @@ import TVCore
         if let value = defaults.string(forKey: "qaReleaseFeed"), let url = URL(string: value) { address = url }
         if let value = defaults.string(forKey: "qaVersion") { current = value }
         if defaults.object(forKey: "qaBuild") != nil { build = defaults.integer(forKey: "qaBuild") }
+        // QA: `-qaStaleFeed 1` seeds the cache the way reading the upstream feed left it: a newer release
+        // with no feed address on record. This build must ignore it (see Keys.feedAddress); the version
+        // tops the qa-feed-new fixture so a regression still announces it.
+        if defaults.string(forKey: "qaStaleFeed") != nil {
+            let stale = ReleaseFeed(releases: [ReleaseFeed.Release(version: "9.9.10", build: 1000, date: "2026-01-01",
+                links: ["ios": URL(string: "https://example.invalid/qa-stale")!, "tvos": URL(string: "https://example.invalid/qa-stale")!],
+                features: [ReleaseFeed.Feature(symbol: "exclamationmark.triangle", title: "Stale upstream release", detail: "Seeded by -qaStaleFeed; must never appear.")])])
+            defaults.set(try? JSONEncoder().encode(stale), forKey: Keys.feed)
+            defaults.removeObject(forKey: Keys.feedAddress)
+        }
         #endif
         self.current = current
         self.build = build
         self.address = address
         let bundled = bundle.url(forResource: "releases", withExtension: "json")
             .flatMap { try? JSONDecoder().decode(ReleaseFeed.self, from: Data(contentsOf: $0)) } ?? ReleaseFeed(releases: [])
-        let cached = defaults.data(forKey: Keys.feed).flatMap { try? JSONDecoder().decode(ReleaseFeed.self, from: $0) }
+        // A cached feed counts only when it came from the address this build reads: a fork that moves the
+        // feed never replays releases the previous source announced.
+        let cached = defaults.string(forKey: Keys.feedAddress) == address.absoluteString
+            ? defaults.data(forKey: Keys.feed).flatMap { try? JSONDecoder().decode(ReleaseFeed.self, from: $0) }
+            : nil
         feed = cached.map(bundled.merged(with:)) ?? bundled
         lastChecked = defaults.object(forKey: Keys.checked) as? Date
         #if os(macOS)
@@ -143,6 +157,7 @@ import TVCore
             let fetched = try await ReleaseFeed.fetch(address)
             feed = feed.merged(with: fetched)
             defaults.set(try? JSONEncoder().encode(fetched), forKey: Keys.feed)
+            defaults.set(address.absoluteString, forKey: Keys.feedAddress)
             lastChecked = Date()
             defaults.set(lastChecked, forKey: Keys.checked)
             Diagnostics.shared.record(.info, "updates", "Release feed checked: current=\(displayVersion) latest=\(latestVersion ?? displayVersion)")
@@ -181,6 +196,7 @@ import TVCore
         static let announced = "updates.announcedVersion"
         static let checked = "updates.lastChecked"
         static let feed = "updates.feed"
+        static let feedAddress = "updates.feedAddress"
     }
 }
 

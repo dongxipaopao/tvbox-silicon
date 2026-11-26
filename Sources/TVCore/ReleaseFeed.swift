@@ -1,9 +1,10 @@
 import Foundation
 
-/// Release announcements published with the website (`website/public/releases.json`).
+/// Release announcements the XiPlayer fork publishes itself (`xiplayer-releases.json` at the repo root,
+/// served raw). Independent from the upstream project's feed, so this build never offers upstream releases.
 /// The apps bundle a copy too, so "What's New" works offline right after an update.
 public struct ReleaseFeed: Codable, Sendable, Equatable {
-    public static let address = URL(string: "https://yingxia.getmegaportal.com/releases.json")!
+    public static let address = URL(string: "https://raw.githubusercontent.com/dongxipaopao/tvbox-silicon/main/xiplayer-releases.json")!
     public var releases: [Release]
     /// The build TestFlight testers can install now, keyed by `ReleaseFeed.platform`. Every TestFlight build is
     /// called 1.7.7 and carries the build number of the release it was made from, so builds are what compare;

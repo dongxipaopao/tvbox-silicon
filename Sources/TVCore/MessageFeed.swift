@@ -1,9 +1,10 @@
 import Foundation
 
-/// Messages to the people using the app, published with the website (`website/public/messages.json`).
+/// Messages to the people using the app, published by the XiPlayer fork itself (`xiplayer-messages.json`
+/// at the repo root, served raw). This build does not read the upstream project's message feed.
 /// Unlike release notes they reach every build, App Store and TestFlight ones too, and each shows once.
 public struct MessageFeed: Codable, Sendable, Equatable {
-    public static let address = URL(string: "https://yingxia.getmegaportal.com/messages.json")!
+    public static let address = URL(string: "https://raw.githubusercontent.com/dongxipaopao/tvbox-silicon/main/xiplayer-messages.json")!
     public var messages: [Message]
     public init(messages: [Message]) { self.messages = messages }
 

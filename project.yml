@@ -17,7 +17,7 @@ settings:
     # https://developer.apple.com/forums/thread/802729
     OTHER_SWIFT_FLAGS: $(inherited) -Xfrontend -disable-dynamic-actor-isolation
     MARKETING_VERSION: '1.8.31'
-    CURRENT_PROJECT_VERSION: '69'
+    CURRENT_PROJECT_VERSION: '70'
     GENERATE_INFOPLIST_FILE: YES
     INFOPLIST_KEY_CFBundleDisplayName: XiPlayer
     INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.entertainment

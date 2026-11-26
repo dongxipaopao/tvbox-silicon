@@ -179,6 +179,7 @@ private extension ReleaseFeed {
 
 @Test func relaunchFailureIsTranslated() {
     let key = "Yingxia couldn't relaunch to finish the update. Quit Yingxia and open it again."
-    #expect(L10n.text(key, language: "en") == key)
+    // The B21 rename gave this key an explicit English display value (XiPlayer); the key itself stays the lookup key.
+    #expect(L10n.text(key, language: "en") == "XiPlayer couldn't relaunch to finish the update. Quit XiPlayer and open it again.")
     for language in L10n.supportedLanguages where language != "en" { #expect(L10n.text(key, language: language) != key) }
 }

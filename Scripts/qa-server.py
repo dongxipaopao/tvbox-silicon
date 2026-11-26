@@ -54,6 +54,9 @@ class Handler(BaseHTTPRequestHandler):
             ]})
         # Python source: a real spider the embedded CPython must run (the name carries the interpreter's version).
         if path == '/py-config.json': return self.send({'sites': [{'key':'qa-py','name':'Python 源 / Python','type':3,'api':base+'/spider.py'}], 'lives': []})
+        # Update-feed fixtures: the fork's own feed announces its own release; an empty one announces nothing.
+        if path == '/qa-feed-empty.json': return self.send({'releases': []})
+        if path == '/qa-feed-new.json': return self.send({'releases': [{'version':'9.9.9','build':999,'date':'2026-11-27','links':{'ios':base,'tvos':base},'features':[{'symbol':'checkmark.shield','title':{'en':'Fixture update','zh-Hans':'夹具更新测试'},'detail':{'en':'QA fixture release from the fork feed.','zh-Hans':'来自分叉自家更新源的质检夹具说明。'}}]}]})
         if path == '/spider.py':
             return self.send("""import sys
 sys.path.append('..')
@@ -167,6 +170,9 @@ class Spider(Spider):
             title=q.get('wd') or ('剧集' if q.get('t')=='series' else '测试影片')
             # Searching "few" finds two videos per source and one page: Global Search's results fit in one row.
             few=q.get('wd','').startswith('few')
+            if q.get('wd') == 'Breaking Bad':
+                # Exact-title fixtures, with the quality notes real sources put after a title.
+                return self.send({'list':[{'vod_id':'bb%d'%i,'vod_name':n,'vod_pic':base+'/poster.png','vod_remarks':r} for i,(n,r) in enumerate([('Breaking Bad【4K】','4K HDR'),('Breaking Bad','1080P'),('Breaking Bad [国语]','HD'),('Breaking Bad','更新至 62 集')])]})
             videos=[{'vod_id':str((pg-1)*12+i),'vod_name':f'{title} {i:02d}', 'vod_pic':base+'/poster.png','vod_remarks':'更新至 36 集' if i%2 else '1080P'} for i in range(1,3 if few else 13)]
             if path=='/index':
                 videos=[{'vod_name':'测试影片','vod_pic':base+'/poster.png','vod_remarks':'7.8'},{'vod_name':'剧集','vod_pic':base+'/poster.png'}]
