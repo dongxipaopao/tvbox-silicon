@@ -92,6 +92,30 @@ jobs:
             ~/Library/Caches/tvbox-ffmpeg
             ~/Library/Caches/tvbox-libass
           key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
+      - name: Restore Python cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/apple-python
+          key: python-v1-${{ hashFiles('Scripts/build-apple-python.sh', 'Scripts/build-apple-python-wheels.sh', 'Runtime/PythonHost/requirements.txt') }}
+      - name: Python runtime (iOS device)
+        continue-on-error: true
+        run: |
+          brew install python@3.14 2>&1 | tail -3 || true
+          export HOST_PYTHON="$(brew --prefix python@3.14)/bin/python3.14"
+          Scripts/build-apple-python.sh ios 2>&1 | tee python.log | tail -80
+          ls build/ApplePython/iphoneos | head
+      - name: Save Python cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: build/apple-python
+          key: python-v1-${{ hashFiles('Scripts/build-apple-python.sh', 'Scripts/build-apple-python-wheels.sh', 'Runtime/PythonHost/requirements.txt') }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-log
+          path: python.log
+          if-no-files-found: ignore
       - name: Generate project
         run: |
           mkdir -p build/ScriptHost build/PythonHost
