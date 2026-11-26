@@ -128,3 +128,18 @@ jobs:
           name: tests-log
           path: tests.log
           if-no-files-found: ignore
+      - name: Full TVCore tests
+        if: always()
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee tests-full.log | tail -60
+      - name: Test summary
+        if: always()
+        run: grep -E "Test run with|Executed [0-9]+ tests|✘|Suite .* (passed|failed)" tests.log tests-full.log | tail -80 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-full-log
+          path: tests-full.log
+          if-no-files-found: ignore
