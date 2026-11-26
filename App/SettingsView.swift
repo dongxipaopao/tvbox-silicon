@@ -587,40 +587,6 @@ struct FormSettingsView: View {
             } else {
             heroSection
 
-            // Who is signed in: their feedback points, and Pro.
-            Section { AccountSettingsRow().settingsAnchor(.account) }
-
-            // Right under the app, so a problem or an idea is never more than one click away.
-            #if os(iOS)
-            // Two tiles side by side, so the way to the developer reads as a place, not two more rows.
-            Section {
-                HStack(spacing: 12) {
-                    Button { showsFeedback = true } label: {
-                        SettingsTile(symbol: "bubble.left.and.text.bubble.right.fill", tint: Brand.indigo, title: L10n.text("Send Feedback"),
-                                     subtitle: L10n.text("Report a problem or share an idea"))
-                    }
-                    Button { openURL(Support.telegram) } label: {
-                        SettingsTile(symbol: "paperplane.fill", tint: Brand.cyan, title: L10n.text("Telegram Group"),
-                                     subtitle: L10n.text("Chat with the developer and other users"), external: true)
-                    }
-                }
-                // Its own style per button, so each tile takes its own taps rather than the row's.
-                .buttonStyle(PressableStyle())
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
-                .settingsAnchor(.feedback)
-            }
-            #else
-            Section {
-                SettingsLinkRow(symbol: "bubble.left.and.text.bubble.right.fill", tint: Brand.indigo, title: L10n.text("Send Feedback"),
-                                subtitle: L10n.text("Report a problem or share an idea")) { FeedbackView() }
-                    .settingsAnchor(.feedback)
-                SettingsWebRow(symbol: "paperplane.fill", tint: Brand.cyan, title: L10n.text("Telegram Group"),
-                               subtitle: L10n.text("Chat with the developer and other users"), url: Support.telegram)
-                    .settingsAnchor(.telegram)
-            }
-            #endif
-
             Section {
                 ForEach(store.subscriptions) { entry in
                     let failure = store.subscriptionErrors[entry.address]
@@ -1310,13 +1276,6 @@ private extension FormSettingsView {
         let secPicture = L10n.text("Picture")
         let secAdvanced = L10n.text("Advanced")
         let secAbout = L10n.text("About")
-
-        add(.account, title: L10n.text("Sign In"), section: secAccounts, subtitle: L10n.text("Feedback points and Pro codes"),
-            keywords: ["account", "pro", "points", "login", "账号", "登录", "积分", "会员"])
-        add(.feedback, title: L10n.text("Send Feedback"), section: secGeneral, subtitle: L10n.text("Report a problem or share an idea"),
-            keywords: ["feedback", "bug", "issue", "report", "反馈", "建议"])
-        add(.telegram, title: L10n.text("Telegram Group"), section: secGeneral, subtitle: L10n.text("Chat with the developer and other users"),
-            keywords: ["telegram", "tg", "group", "chat", "电报", "群组"])
 
         for entry in store.subscriptions {
             add(.subscription(entry.address), title: entry.title, section: secSubs, subtitle: store.subscriptionValue(entry),
