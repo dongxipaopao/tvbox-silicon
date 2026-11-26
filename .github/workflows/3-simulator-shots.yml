@@ -82,6 +82,13 @@ jobs:
         run: |
           Scripts/build-apple-ffmpeg.sh
           Scripts/build-apple-libass.sh
+      - name: Python runtime (iOS simulator)
+        continue-on-error: true
+        run: |
+          brew install python@3.14 2>&1 | tail -3 || true
+          export HOST_PYTHON="$(brew --prefix python@3.14)/bin/python3.14"
+          Scripts/build-apple-python.sh ios-simulator 2>&1 | tail -30
+          ls build/ApplePython/iphonesimulator | head
       - name: Generate project
         run: |
           mkdir -p build/ScriptHost build/PythonHost
@@ -142,18 +149,26 @@ jobs:
           shot 12-more 12 -qaSection more
           shot 13-home-after-play 30 -qaSection home
           shot 14-home-scrolled 30 -qaSection home -qaSeedHistory qa-standard:1,qa-standard:2 -qaScroll continueWatching
+          # Python source through the embedded CPython (fixture spider served by qa-server).
+          PYSUB=http://127.0.0.1:8765/py-config.json
+          SUB_SAVE=$SUB; SUB=$PYSUB
+          shot 16-python-category 40 -qaSection sites -qaPage site:qa-py
+          shot 17-python-search 40 -qaSection search -qaPage search:测试
+          SUB=$SUB_SAVE
+          # Discover detail: inline sources under the episode row (public TMDB metadata, fixture sources).
+          shot 18a-discover-detail 40 -qaSection discover -qaDiscoverOpen tv:1396
+          shot 18b-episode-picked 55 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2
+          shot 18c-source-tapped 85 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2 -qaPickSource 4
+          xcrun simctl spawn "$UDID" log show --last 3m --predicate 'subsystem CONTAINS "tvbox" OR process == "TVBox-iOS"' --style compact 2>/dev/null | grep -E 'python|play.timing' | sed -E 's#http[^ ]*#URL#g' | head -30 > shots/applog-python-timing.txt || true
           # Music: the app's own search and play hooks against the live public music channels (upstream-dependent). Three captures to see progress.
           shot 15a-music-play 40 -qaSection music -qaQuery 晴天 -qaMusicPlay 1
           xcrun simctl terminate "$UDID" $B || true
-          # The user's own source address, as a second pass (no fixture server).
-          REAL='https://gh-proxy.cc/https://raw.githubusercontent.com/aaaaa2780009/cat-bundle/main/cat/index.js.md5'
-          SUB="$REAL"
           ls -l shots
       - name: Publish simulator shots to a branch
         if: always()
         run: |
           rm -rf /tmp/pub && mkdir /tmp/pub
-          cp shots/0*.png shots/1[0-5]*.png /tmp/pub/ || true
+          cp shots/0*.png shots/1*.png shots/applog-python-timing.txt /tmp/pub/ || true
           cp qa-server.log crash-list.txt /tmp/pub/ || true
           tail -300 sim-build.log > /tmp/pub/sim-build-tail.log || true
           cd /tmp/pub
