@@ -40,7 +40,6 @@ public struct HTTPClient: Sendable {
     public func channels(_ source: LiveSource) async throws -> [Channel] { try await playlist(source).channels }
     /// A live source's channels, and the XMLTV guide its M3U header names, if any (#802).
     public func playlist(_ source: LiveSource) async throws -> (channels: [Channel], guide: String?) {
-        if let platform = source.platform { return (try await LiveCatalog.channels(platform), nil) }
         let (data, finalURL) = try await get(source.url, headers: source.headers)
         guard let text = String(data: data, encoding: .utf8) else { throw TVError.unsupported(L10n.text("Live playlists must use UTF-8 encoding.")) }
         let guide = Playlist.guideAddress(in: text).flatMap { try? WebAddress.resolve($0, relativeTo: finalURL).absoluteString }

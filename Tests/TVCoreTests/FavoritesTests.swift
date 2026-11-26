@@ -24,10 +24,11 @@ private func episode(_ id: String, flag: String, name: String, episodeID: String
     let saved = [channel("First"), channel("Second")]
     defaults.set(try JSONEncoder().encode(saved), forKey: "favorites")
     let favorites = Favorites(defaults: defaults)
-    #expect(favorites.liveChannels.map(\.name) == ["First", "Second"])
+    #expect(favorites.items.map(\.kind) == [.live, .live])
+    #expect(favorites.listed.isEmpty)
     let document = try JSONDecoder().decode(FavoriteDocument.self, from: try #require(defaults.data(forKey: "favorites")))
     #expect(document.version == 2)
-    #expect(Favorites(defaults: defaults).liveChannels.map(\.name) == ["First", "Second"])
+    #expect(Favorites(defaults: defaults).items.count == 2)
 }
 
 /// Shows saved by the earlier list (`videoFavorites`, written by `VideoFavorite`) join Favorites once, newest first,

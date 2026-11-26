@@ -35,15 +35,12 @@ struct PlayerChannelsSheet: View {
     let session: PlaybackSession
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @State private var group: String?
-    /// The viewer chose a channel here: the sheet closes once it plays.
-    @State private var picked = false
 
     static let symbol = "list.bullet.rectangle"
 
     /// A channel picked from a list of several, or one of several lines.
     @MainActor static func offered(for channel: Channel, session: PlaybackSession, in store: Store) -> Bool {
-        store.lineup(for: channel) != nil || session.lines.count > 1
+        session.lines.count > 1
     }
 
     /// The channel playing now.
@@ -52,8 +49,7 @@ struct PlayerChannelsSheet: View {
     var body: some View {
         NavigationStack {
             content
-                .environment(store.guide(for: playing))
-                .navigationTitle(store.lineup(for: playing)?.title ?? playing.name)
+                .navigationTitle(L10n.text("Lines"))
                 #if os(iOS)
                 .navigationBarTitleDisplayMode(.inline)
                 #endif
@@ -68,79 +64,19 @@ struct PlayerChannelsSheet: View {
         #else
         .frame(minWidth: 520, idealWidth: 620, minHeight: 460, idealHeight: 560)
         #endif
-        .onChange(of: store.playing) { _, _ in if picked { dismiss() } }
     }
 
     private var content: some View {
-        let playing = playing
-        let channels = store.lineup(for: playing)?.channels ?? []
-        var seen = Set<String>()
-        let groups = channels.map(\.group).filter { seen.insert($0).inserted }
-        let shown = group.flatMap { groups.contains($0) ? $0 : nil } ?? playing.group
-        let items = groups.count > 1 ? channels.filter { $0.group == shown } : channels
-        // The lines and groups stay put above the channels: in the same scroll view, choosing a group scrolled them away.
-        return VStack(spacing: 0) {
-            if session.lines.count > 1 || groups.count > 1 {
-                VStack(alignment: .leading, spacing: 14) {
-                    if session.lines.count > 1 {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(L10n.text("Lines")).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                            SourceStrip(items: session.lines.indices.map { .init(id: "\($0)", name: L10n.text("Line %@", "\($0 + 1)")) },
-                                        selection: "\(session.line)") { id in
-                                if let index = Int(id) { session.choose(line: index) }
-                            }
-                            .contentMargins(.horizontal, 16, for: .scrollContent).scrollClipDisabled()
-                            .padding(.horizontal, -16)
-                        }
-                    }
-                    if groups.count > 1 {
-                        SourceStrip(items: groups.map { .init(id: $0, name: $0.isEmpty ? L10n.text("Ungrouped") : $0) }, selection: shown) {
-                            group = $0
-                        }
-                        .contentMargins(.horizontal, 16, for: .scrollContent).scrollClipDisabled()
-                        .padding(.horizontal, -16)
-                    }
-                }
-                .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 10)
+        VStack(alignment: .leading, spacing: 8) {
+            SourceStrip(items: session.lines.indices.map { .init(id: "\($0)", name: L10n.text("Line %@", "\($0 + 1)")) },
+                        selection: "\(session.line)") { id in
+                if let index = Int(id) { session.choose(line: index) }
             }
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 4) {
-                        ForEach(items) { item in row(item, current: item.id == playing.id).id(item.id) }
-                    }
-                    .padding(.horizontal, 16).padding(.bottom, 16).padding(.top, 4)
-                }
-                .onAppear { proxy.scrollTo(playing.id, anchor: .center) }
-                .onChange(of: shown) { _, _ in
-                    if items.contains(where: { $0.id == playing.id }) { proxy.scrollTo(playing.id, anchor: .center) }
-                    else if let first = items.first { proxy.scrollTo(first.id, anchor: .top) }
-                }
-            }
+            .contentMargins(.horizontal, 16, for: .scrollContent).scrollClipDisabled()
+            .padding(.horizontal, -16)
+            Spacer(minLength: 0)
         }
-    }
-
-    private func row(_ item: Channel, current: Bool) -> some View {
-        Button {
-            guard !current else { return }
-            picked = true
-            store.playing = item
-        } label: {
-            HStack(spacing: 12) {
-                ChannelLogo(channel: item, size: 36)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(item.name).font(current ? .body.weight(.semibold) : .body).lineLimit(1)
-                    NowOnText(channel: item).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
-                Spacer(minLength: 8)
-                if current { Image(systemName: "speaker.wave.2.fill").foregroundStyle(Brand.accent) }
-            }
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(current ? Brand.accent.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 10))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(current ? .isSelected : [])
+        .padding(16)
     }
 }
 #endif

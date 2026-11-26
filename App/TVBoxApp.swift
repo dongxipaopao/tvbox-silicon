@@ -19,8 +19,6 @@ import TVCore
     /// A link or an opened file that asks to add a subscription, waiting for the viewer to agree (#167, #983).
     /// Apple TV opens no links or files.
     @State private var subscriptionRequest: SubscriptionImportRequest?
-    /// A live plugin source link (`yingxia://install-source`), opened in Live Plugins.
-    @State private var pluginSourceLink: LivePluginSourceLink?
     #endif
     init() {
         #if os(macOS)
@@ -86,9 +84,7 @@ import TVCore
                     if let file = OpenedSubscriptionFile(url) { subscriptionRequest = .file(file) }
                     else if let link = DouyinHandoff.Link(url) { douyinHandoff = link }
                     else if let link = SubscriptionImportLink(url) { subscriptionRequest = .link(link) }
-                    else if let link = LivePluginSourceLink(url), store.extrasUnlocked { pluginSourceLink = link }
                 }
-                .sheet(item: $pluginSourceLink) { link in LivePluginSourceSheet(link: link).environment(store) }
                 .sheet(item: $douyinHandoff) { DouyinHandoffView(link: $0) }
                 .sheet(item: $subscriptionRequest) { SubscriptionImportView(request: $0) }
                 #elseif os(macOS)
@@ -96,9 +92,7 @@ import TVCore
                     // A file opened with Yingxia from Finder (the document types in project.yml).
                     if let file = OpenedSubscriptionFile(url) { subscriptionRequest = .file(file) }
                     else if let link = SubscriptionImportLink(url) { subscriptionRequest = .link(link) }
-                    else if let link = LivePluginSourceLink(url), store.extrasUnlocked { pluginSourceLink = link }
                 }
-                .sheet(item: $pluginSourceLink) { link in LivePluginSourceSheet(link: link).environment(store) }
                 .sheet(item: $subscriptionRequest) { SubscriptionImportView(request: $0) }
                 // Without this, every link opened a second main window, and the sheet showed in both.
                 .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
@@ -189,20 +183,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 /// What a `yingxia://import?url=` link opens: the subscription it names, and the viewer's agreement. A page
 /// can point at a subscription, but nothing is downloaded before Add (#167).
 #if os(iOS) || os(macOS)
-/// Live Plugins in a sheet, adding the linked source.
-struct LivePluginSourceSheet: View {
-    let link: LivePluginSourceLink
-    @Environment(\.dismiss) private var dismiss
-    var body: some View {
-        NavigationStack {
-            LivePluginsView(initialSource: link.source)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { dismiss() } } }
-        }
-        #if os(macOS)
-        .frame(minWidth: 520, minHeight: 560)
-        #endif
-    }
-}
 #endif
 
 /// What asks to add a subscription: a web page's link, or a file opened with the app.

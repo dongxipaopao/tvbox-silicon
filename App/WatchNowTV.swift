@@ -84,21 +84,11 @@ struct WatchNowTVPage: View {
             }
         }
         if sections.contains(.recommendations) { RecommendationsView(config: config, rails: true).id("recommendations") }
-        if sections.contains(.favorites), !store.favorites.items.isEmpty {
+        if sections.contains(.favorites), !store.favorites.listed.isEmpty {
             WatchNowTVRail(title: L10n.text("Favorites"), seeAll: WatchNowTVSeeAll(height: WatchNowTVCover.height) { store.section = .favorites }) {
-                ForEach(Array(store.favorites.items.prefix(20))) { WatchNowTVFavorite(item: $0) }
+                ForEach(Array(store.favorites.listed.prefix(20))) { WatchNowTVFavorite(item: $0) }
             }
             .id("favorites")
-        }
-        if sections.contains(.liveTV), !store.liveSources.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                WatchNowTVHeading(title: L10n.text("Live TV"))
-                // Every platform, then one row of playlists.
-                LiveSourceGrid(sources: store.liveSources.filter(\.isBuiltIn) + store.liveSources.filter { !$0.isBuiltIn }.prefix(3), titled: false)
-                    .padding(.horizontal, DiscoverLayout.gutter).padding(.vertical, 24)
-                    .focusSection()
-            }
-            .id("live")
         }
     }
 }
@@ -466,10 +456,8 @@ private struct WatchNowTVFavorite: View {
                 WatchNowTVCover(title: episode.video.videoName, detail: episode.episodeName, poster: episode.video.poster, headers: episode.video.posterHeaders)
             }
             .cardButton().contextMenu { FavoriteMenuButton(item: item, name: episode.video.videoName) }
-        case .live(let channel):
-            plate(title: channel.name, detail: channel.displayGroup, action: { store.watchFavorite(channel) }) {
-                ChannelLogo(channel: channel).frame(width: 140, height: 140)
-            }
+        case .live:
+            EmptyView()
         case .music(let track):
             plate(title: track.title, detail: track.artistLine, action: { store.music.play(track) }) {
                 MusicArtwork(url: track.artwork, size: 170)
@@ -484,7 +472,7 @@ private struct WatchNowTVFavorite: View {
 
     private var name: String {
         switch item {
-        case .live(let channel): channel.name
+        case .live: ""
         case .music(let track): track.title
         case .cloud(let file): file.fileName
         case .video(let video): video.videoName

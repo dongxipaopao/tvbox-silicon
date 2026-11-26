@@ -65,8 +65,8 @@ public struct DouyinAccount: Codable, Equatable, Sendable {
     /// Fills in the account's nickname; false when Douyin no longer accepts the sign-in.
     public mutating func refresh() async -> Bool {
         guard signedIn else { return false }
-        let url = LiveHTTP.url("https://live.douyin.com/webcast/user/me/", [("aid", "6383")])
-        guard let reply = try? await LiveHTTP.json(url, headers: ["Cookie": cookie, "Referer": "https://live.douyin.com/", "User-Agent": DouyinAccount.userAgent]) else { return true }
+        let url = WebHTTP.url("https://live.douyin.com/webcast/user/me/", [("aid", "6383")])
+        guard let reply = try? await WebHTTP.json(url, headers: ["Cookie": cookie, "Referer": "https://live.douyin.com/", "User-Agent": DouyinAccount.userAgent]) else { return true }
         if let nickname = reply["data"]?.object?["nickname"]?.string, !nickname.isEmpty { name = nickname; return true }
         // 20003 is "please sign in"; anything else (a network hiccup, a new error) keeps the sign-in.
         return reply["status_code"]?.int != 20003

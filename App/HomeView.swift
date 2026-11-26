@@ -14,7 +14,6 @@ struct HomeView: View {
     @AppStorage(HomeSection.pinnedSources.key) private var showsPinnedSources = true
     @AppStorage(HomeSection.recommendations.key) private var showsRecommendations = true
     @AppStorage(HomeSection.favorites.key) private var showsFavorites = true
-    @AppStorage(HomeSection.liveTV.key) private var showsLiveTV = true
     @AppStorage(HomeSection.upNext.key) private var showsUpNext = true
     /// The first frame is only the section placeholders. The source row is built on the next turn, so the page can appear before that layout.
     @State private var settled = false
@@ -58,7 +57,6 @@ struct HomeView: View {
             case .pinnedSources: showsPinnedSources
             case .recommendations: showsRecommendations
             case .favorites: showsFavorites
-            case .liveTV: showsLiveTV
             }
         })
     }
@@ -108,8 +106,7 @@ struct HomeView: View {
         (showsContinueWatching && !store.playbackHistory.entries.isEmpty)
             || (showsPinnedSources && !store.pinnedSources.isEmpty)
             || showsRecommendations
-            || (showsFavorites && !store.favorites.items.isEmpty)
-            || (showsLiveTV && !store.liveSources.isEmpty)
+            || (showsFavorites && !store.favorites.listed.isEmpty)
     }
 
     @ViewBuilder private var sections: some View {
@@ -120,9 +117,8 @@ struct HomeView: View {
                     pinnedSources(config)
                 }
                 if showsRecommendations { RecommendationsView(config: config) }
-                if showsFavorites, !store.favorites.items.isEmpty { favorites }
-                if showsLiveTV, !store.liveSources.isEmpty { playlists(config).id("live") }
-                if !(showsContinueWatching || showsPinnedSources || showsRecommendations || showsFavorites || showsLiveTV) { allHidden }
+                if showsFavorites, !store.favorites.listed.isEmpty { favorites }
+                if !(showsContinueWatching || showsPinnedSources || showsRecommendations || showsFavorites) { allHidden }
             } else {
                 welcome
             }
@@ -145,11 +141,8 @@ struct HomeView: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(L10n.text("Loading…"))
             }
-            if showsFavorites, !store.favorites.items.isEmpty {
+            if showsFavorites, !store.favorites.listed.isEmpty {
                 loadingSection(HomeSection.favorites.title, action: { openSection(.favorites) }) { cardRow }
-            }
-            if showsLiveTV, !store.liveSources.isEmpty {
-                loadingSection(HomeSection.liveTV.title, action: { openSection(.live) }) { ChannelSkeletonGrid(count: 3) }
             }
         }
     }
@@ -308,7 +301,7 @@ struct HomeView: View {
             SectionHeader(title: L10n.text("Favorites")) { openSection(.favorites) }
             ChipRow {
                 HStack(spacing: Layout.cardSpacing) {
-                    ForEach(Array(store.favorites.items.prefix(12))) { item in
+                    ForEach(Array(store.favorites.listed.prefix(12))) { item in
                         HomeFavoriteCard(item: item).frame(width: Layout.cardMin)
                     }
                 }.padding(.vertical, 6)
@@ -316,13 +309,6 @@ struct HomeView: View {
         }
     }
 
-    private func playlists(_ config: Subscription) -> some View {
-        VStack(alignment: .leading, spacing: Layout.headerSpacing) {
-            SectionHeader(title: L10n.text("Live TV")) { openSection(.live) }
-            // Every platform, then one row of playlists.
-            LiveSourceGrid(sources: store.liveSources.filter(\.isBuiltIn) + store.liveSources.filter { !$0.isBuiltIn }.prefix(3), titled: false)
-        }
-    }
 
 }
 
@@ -368,10 +354,8 @@ private struct HomeFavoriteCard: View {
     /// plate stuck out of it, and the remote could not press it: the tile's menu (press and hold) removes the favorite.
     @ViewBuilder private var tvBody: some View {
         switch item {
-        case .live(let channel):
-            tvButton(name: channel.name) { store.watchFavorite(channel) } label: {
-                media(ChannelLogo(channel: channel), title: channel.name, subtitle: channel.displayGroup)
-            }
+        case .live:
+            EmptyView()
         case .video(let video):
             let label = media(poster(url: video.poster, headers: video.posterHeaders), title: video.videoName, subtitle: video.sourceName)
             if let listing = video.listingVideo(), let client = store.catalogClient(for: video) {
@@ -407,8 +391,8 @@ private struct HomeFavoriteCard: View {
 
     @ViewBuilder private var cardBody: some View {
         switch item {
-        case .live(let channel):
-            ChannelCard(channel: channel) { store.watchFavorite($0) }
+        case .live:
+            EmptyView()
         case .video(let video):
             videoCard(video)
         case .episode(let episode):
@@ -609,7 +593,7 @@ private enum PosterSurface {
 
 /// A section of Watch Now that Settings can hide. Each one shows until it is switched off.
 enum HomeSection: String, CaseIterable, Identifiable {
-    case upNext, continueWatching, pinnedSources, recommendations, favorites, liveTV
+    case upNext, continueWatching, pinnedSources, recommendations, favorites
     var id: String { rawValue }
     /// The sections Watch Now has.
     static var available: [HomeSection] { allCases }
@@ -622,7 +606,6 @@ enum HomeSection: String, CaseIterable, Identifiable {
         case .pinnedSources: L10n.text("Pinned Sources")
         case .recommendations: L10n.text("Recommendations")
         case .favorites: L10n.text("Favorites")
-        case .liveTV: L10n.text("Live TV")
         }
     }
     var symbol: String {
@@ -632,7 +615,6 @@ enum HomeSection: String, CaseIterable, Identifiable {
         case .pinnedSources: "pin.fill"
         case .recommendations: "sparkles"
         case .favorites: AppSection.favorites.icon
-        case .liveTV: AppSection.live.icon
         }
     }
     var tint: Color {
@@ -642,7 +624,6 @@ enum HomeSection: String, CaseIterable, Identifiable {
         case .pinnedSources: .purple
         case .recommendations: .orange
         case .favorites: Brand.rose
-        case .liveTV: .red
         }
     }
 }
@@ -653,7 +634,7 @@ struct WatchNowSettingsView: View {
     var body: some View {
         SettingsPage(title: L10n.text("Watch Now"), symbol: AppSection.home.icon) {
             SettingsGroup(title: L10n.text("Show on Watch Now"),
-                          footer: L10n.text("A section you switch off only leaves Watch Now: Playback History, Favorites, Sources and Live TV still have everything.")) {
+                          footer: L10n.text("A section you switch off only leaves Watch Now: Playback History, Favorites and Sources still have everything.")) {
                 ForEach(HomeSection.available) { HomeSectionToggle(section: $0) }
             }
             SettingsGroup(title: L10n.text("Playback History"),

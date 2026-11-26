@@ -281,14 +281,7 @@ struct PlaybackView: View {
             panel: { AnyView(TVPlayerEpisodesPanel(channel: channel).environment(store)) })
     }
 
-    /// The list the live channel was picked from, for the info panel's Channel List tab (#1010): nil when there is none.
-    private var channelChoices: ChannelChoices? {
-        guard let lineup = store.lineup(for: channel) else { return nil }
-        let store = store, channel = channel
-        return ChannelChoices(key: "\(lineup.title):\(lineup.channels.count):\(channel.id)") {
-            AnyView(TVPlayerChannelsPanel(channel: channel).environment(store))
-        }
-    }
+    private var channelChoices: ChannelChoices? { nil }
     #endif
 
     #if !os(tvOS)
@@ -2167,9 +2160,6 @@ extension Store {
             return PlayerStep(name: file.name, busy: false) { [weak self] in
                 if back || !session.playUpcoming() { self?.playing = file }
             }
-        }
-        if let other = lineup(for: channel)?.neighbor(of: channel, back: back) {
-            return PlayerStep(name: other.name, busy: false, channel: true) { [weak self] in self?.playing = other }
         }
         return nil
     }

@@ -93,33 +93,6 @@ import TVCore
     }
     /// Set while a listening source's episode goes to the video player on purpose.
     @ObservationIgnored private var playsAsVideo = false
-    /// The channels the live channel playing was picked from, in order (its playlist, or the favorites): the player's
-    /// Previous and Next Channel and its channel list go through them (#1010).
-    var liveLineup: LiveLineup?
-    /// The program guide of the playlist `liveLineup` is (#802).
-    private(set) var liveGuide: LiveGuide?
-    /// Plays a live channel picked from `lineup`, with its playlist's guide.
-    func watch(_ channel: Channel, in lineup: LiveLineup, guide: LiveGuide? = nil) {
-        liveLineup = lineup
-        liveGuide = guide
-        playing = channel
-    }
-    /// Plays a favorite live channel with the other favorite channels to switch through, wherever it was picked: the
-    /// Live page, Watch Now or the Favorites page (#1172).
-    func watchFavorite(_ channel: Channel) {
-        watch(channel, in: LiveLineup(title: L10n.text("Favorites"), channels: favorites.liveChannels))
-    }
-    /// The guide of the list the channel was picked from.
-    func guide(for channel: Channel) -> LiveGuide? { lineup(for: channel) != nil ? liveGuide : nil }
-    /// Program guide addresses the viewer typed in for live playlists, by playlist address (#802).
-    var guideAddresses: [String: String] {
-        didSet { if persistsChanges { defaults.set(guideAddresses, forKey: "liveGuideAddresses") } }
-    }
-    /// The list the channel was picked from, when it holds others to switch to.
-    func lineup(for channel: Channel) -> LiveLineup? {
-        guard let lineup = liveLineup, lineup.channels.count > 1, lineup.position(of: channel) != nil else { return nil }
-        return lineup
-    }
     /// The videos whose iPhone watch page is on screen (`PlaybackHistoryContext.id`): their episodes play at the top
     /// of the page instead of in the full-screen player.
     var watchPageScopes: Set<String> = []
@@ -252,7 +225,6 @@ import TVCore
         playlists = MusicPlaylists(defaults: library.defaults)
         followedShows = FollowedShows(defaults: library.defaults)
         autoPlayNext = library.defaults.object(forKey: "autoPlayNextEpisode") == nil || library.defaults.bool(forKey: "autoPlayNextEpisode")
-        guideAddresses = library.defaults.dictionary(forKey: "liveGuideAddresses") as? [String: String] ?? [:]
         subscriptionAddress = ""
         loadSubscriptions(resetting: false)
         // Signing in to a drive or adding a server adds its source; signing out or removing one takes it away.
@@ -321,7 +293,7 @@ import TVCore
         playing = nil
         cancelEpisodeSelection(); cancelResume()
         nextAheadTask?.task.cancel(); nextAheadTask = nil; nextAhead = nil
-        liveLineup = nil; liveGuide = nil; playbackCatalog = nil; filesFolder = nil; watchPageScopes = []; episodeError = nil
+        playbackCatalog = nil; filesFolder = nil; watchPageScopes = []; episodeError = nil
         // The main profile's last changes go up before iCloud stops listening to it.
         if profile.isMain { cloudSync?.flushPending() }
         Profiles.shared.select(target)
@@ -340,7 +312,6 @@ import TVCore
         followedShows = FollowedShows(defaults: library.defaults)
         searchModel.order = sourceOrder
         autoPlayNext = library.defaults.object(forKey: "autoPlayNextEpisode") == nil || library.defaults.bool(forKey: "autoPlayNextEpisode")
-        guideAddresses = library.defaults.dictionary(forKey: "liveGuideAddresses") as? [String: String] ?? [:]
         subscriptionAddress = ""; subscriptionName = ""; error = nil; notice = nil; importError = nil
         // The new lists' revisions can match the old ones', so the cached rows go by hand.
         rememberSiteLists("")

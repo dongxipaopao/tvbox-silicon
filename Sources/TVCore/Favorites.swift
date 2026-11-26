@@ -119,7 +119,6 @@ public enum FavoriteItem: Codable, Hashable, Sendable, Identifiable {
     public var key: String {
         switch self {
         case .live(let channel):
-            if LiveCatalog.isRoomAddress(channel.url) { return "live|" + channel.url.absoluteString }
             return "live|" + channel.id
         case .video(let video):
             return "video|" + EpisodeSkipSettings.scope(origin: video.origin, source: video.sourceKey, video: video.videoID)
@@ -138,7 +137,7 @@ public enum FavoriteItem: Codable, Hashable, Sendable, Identifiable {
     public func matches(_ other: FavoriteItem) -> Bool {
         switch (self, other) {
         case (.live(let saved), .live(let channel)):
-            return saved.id == channel.id || (LiveCatalog.isRoomAddress(channel.url) && saved.url == channel.url)
+            return saved.id == channel.id
         default:
             return key == other.key
         }
@@ -252,9 +251,8 @@ struct FavoriteDocument: Codable {
         return FavoriteKind.allCases.filter(present.contains)
     }
 
-    public var liveChannels: [Channel] {
-        items.compactMap { if case .live(let channel) = $0 { channel } else { nil } }
-    }
+    /// What the app lists: live channels saved by an earlier version stay in the data but are not shown.
+    public var listed: [FavoriteItem] { items.filter { $0.kind != .live } }
 
     /// The songs saved with Like, newest first, which Liked Songs plays as one list.
     public var musicTracks: [MusicTrack] {

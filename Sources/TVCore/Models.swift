@@ -297,7 +297,7 @@ public struct Subscription: Codable, Sendable {
         }
         let lives = (raw["lives"]?.array ?? []).compactMap { entry -> LiveSource? in
             guard let v = entry.object, let address = v["url"]?.string,
-                  let url = (try? WebAddress.resolve(address, relativeTo: origin)) ?? LiveCatalog.platformAddress(address) else { return nil }
+                  let url = try? WebAddress.resolve(address, relativeTo: origin) else { return nil }
             var headers = v["header"]?.object?.compactMapValues(\.string) ?? [:]
             if let ua = v["ua"]?.string { headers["User-Agent"] = ua }
             let guide = v["epg"]?.string.flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }

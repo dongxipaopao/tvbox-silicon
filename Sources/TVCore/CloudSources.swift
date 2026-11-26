@@ -14,7 +14,6 @@ public enum CloudSources {
     static let version = 1
 
     nonisolated(unsafe) private static var document: Subscription?
-    nonisolated(unsafe) private static var livePlatforms: [LivePlatform] = []
     nonisolated(unsafe) private static var musicListing: CloudMusic.Listing?
     private static let lock = NSLock()
 
@@ -22,14 +21,11 @@ public enum CloudSources {
     public static var current: Subscription? {
         get { lock.withLock { document } }
         set {
-            let platforms = (newValue?.raw["yingxiaLive"]?.array ?? []).compactMap { $0.object.flatMap(LivePlatform.init(json:)) }
             let listing = CloudMusic.Listing(json: newValue?.raw["yingxiaMusic"])
-            lock.withLock { document = newValue; livePlatforms = platforms; musicListing = listing }
+            lock.withLock { document = newValue; musicListing = listing }
         }
     }
 
-    /// Its live platforms (`yingxiaLive`).
-    static var platforms: [LivePlatform] { lock.withLock { livePlatforms } }
     /// Its music channels (`yingxiaMusic`).
     static var music: CloudMusic.Listing? { lock.withLock { musicListing } }
 
