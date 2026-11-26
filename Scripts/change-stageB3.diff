@@ -1,0 +1,979 @@
+diff --git a/App/BilibiliCastController.swift b/App/BilibiliCastController.swift
+index c1d6041..2a5e59b 100644
+--- a/App/BilibiliCastController.swift
++++ b/App/BilibiliCastController.swift
+@@ -58,15 +58,8 @@ import TVCore
+                     store?.playing = channel
+                 } catch { BilibiliCastReceiver.log("play failed \(error)"); store?.error = error.localizedDescription }
+             }
+-        case .live(let room):
+-            Task {
+-                // The room plays through Yingxia's own Bilibili Live platform, which names it when it starts.
+-                guard let platform = LivePlatform(rawValue: "bilibili"), let url = URL(string: "\(platform.scheme)://room/\(room)") else {
+-                    store?.error = L10n.text("The phone sent a video this app can't open."); return
+-                }
+-                if store?.playing != nil { store?.playing = nil; try? await Task.sleep(for: .milliseconds(700)) }
+-                store?.playing = Channel(name: "", group: platform.name, url: url)
+-            }
++        case .live:
++            store?.error = L10n.text("The phone sent a video this app can't open.")
+         case .media(let url, let title):
+             Task {
+                 // The phone casts Bilibili videos to DLNA TVs as a 720p MP4. When the part can be identified,
+diff --git a/App/BilibiliViews.swift b/App/BilibiliViews.swift
+index 736b16e..28af84b 100644
+--- a/App/BilibiliViews.swift
++++ b/App/BilibiliViews.swift
+@@ -11,11 +11,8 @@ import TVCore
+              folder: Video(id: "up_\(mid)", name: name, category: "folder"))
+ }
+ 
+-/// A live room of Bilibili's, as the Live tab plays it.
+-func bilibiliLiveChannel(room: Int, host: String) -> Channel? {
+-    let scheme = LivePlatform(rawValue: "bilibili")?.scheme ?? "bilibili-live"
+-    return URL(string: "\(scheme)://room/\(room)").map { Channel(name: host, group: L10n.text("Bilibili Live"), url: $0) }
+-}
++/// Live rooms are not played in this app: always nil, so the live buttons next to a creator stay hidden.
++func bilibiliLiveChannel(room: Int, host: String) -> Channel? { nil }
+ 
+ private enum BilibiliMetrics {
+     #if os(tvOS)
+diff --git a/App/DouyinAccountView.swift b/App/DouyinAccountView.swift
+index 14f071d..5d8340e 100644
+--- a/App/DouyinAccountView.swift
++++ b/App/DouyinAccountView.swift
+@@ -147,7 +147,7 @@ extension DouyinAccount {
+ struct DouyinSignInBanner: View {
+     var body: some View {
+         HStack(spacing: 16) {
+-            if let douyin = LivePlatform(rawValue: "douyin") { LivePlatformMark(platform: douyin, size: 44) }
++            Image(systemName: "person.crop.circle").font(.system(size: 36))
+             VStack(alignment: .leading, spacing: 4) {
+                 Text(L10n.text("Sign In to Douyin")).font(.headline)
+                 Text(L10n.text("Douyin answers live searches only for signed-in accounts."))
+@@ -182,7 +182,7 @@ struct DouyinLoginView: View {
+     var body: some View {
+         VStack(spacing: 0) {
+             HStack(spacing: 12) {
+-                if let douyin = LivePlatform(rawValue: "douyin") { LivePlatformMark(platform: douyin, size: 28) }
++                Image(systemName: "person.crop.circle").font(.system(size: 24))
+                 VStack(alignment: .leading, spacing: 1) {
+                     Text(L10n.text("Sign In to Douyin")).font(.headline)
+                     Text(L10n.text("Use Douyin's Log In button on the page.")).font(.caption).foregroundStyle(.secondary)
+diff --git a/App/PlaybackView.swift b/App/PlaybackView.swift
+index 4d832f0..8068291 100644
+--- a/App/PlaybackView.swift
++++ b/App/PlaybackView.swift
+@@ -305,12 +305,8 @@ import IOKit.pwr_mgt
+     private var automatic: URL?
+     /// The drive plays its transcoded copy, which has none of the file's subtitles (#1343).
+     var playsDriveCopy: Bool { automatic.map(CloudStreams.isDriveCopy) ?? false }
+-    /// The live room playing (at the quality chosen), when it opens again with a fresh address (`LiveReopen`), and
+-    /// when its stream last became ready.
+-    private var liveRoom: Channel?
+-    private var liveReopen = LiveReopen()
++    /// When the stream last became ready.
+     private var liveReadyAt: ContinuousClock.Instant?
+-    private var liveRetrying = false
+     /// The episode was already asked for again after its server ignored AVPlayer's byte range.
+     private var rangeRetried = false
+     /// When the loopback server behind the episode last listened again (`recoverLoopback`).
+@@ -322,10 +318,6 @@ import IOKit.pwr_mgt
+     private var checkingPicture = false
+     /// The item whose HLS stream is being watched for sound without a picture (`checkSegmentedPicture`).
+     private var checkingSegments: ObjectIdentifier?
+-    /// A live stream is being moved to its live edge (`catchUpLive`).
+-    private var catchingUpLive = false
+-    /// A live room's chat, whose comments join `danmaku` as they are sent.
+-    private var chat: (any LiveChat)?
+     /// Download state while connecting or buffering, sampled once a second from AVFoundation's logs.
+     struct Transfer {
+         var received: Int64 = 0
+@@ -386,21 +378,6 @@ import IOKit.pwr_mgt
+         player.seek(to: CMTime(seconds: target, preferredTimescale: 600))
+     }
+ 
+-    /// Shows a live room's chat as danmaku: each comment enters as it arrives.
+-    private func listen(_ chat: any LiveChat, generation active: UUID) {
+-        self.chat = chat
+-        chat.start { text, color, position in
+-            Task { @MainActor [weak self] in
+-                guard let self, self.generation == active else { return }
+-                let now = self.player.currentTime().seconds
+-                let time = max(now.isFinite ? now + 0.2 : 0, self.sourceDanmaku.last?.time ?? 0)
+-                self.sourceDanmaku.append(Danmaku(time: time, position: position, color: color, text: text))
+-                // Keep the recent chat; dropping the oldest restarts the overlay's layout once.
+-                if self.sourceDanmaku.count > 4000 { self.sourceDanmaku.removeFirst(1000) }
+-            }
+-        }
+-    }
+-
+     /// Plays the sound track `id` of a file whose tracks AVFoundation offers no choice between (`audioChoices`).
+     func chooseAudio(_ id: CMPersistentTrackID) {
+         guard let item else { return }
+@@ -412,19 +389,6 @@ import IOKit.pwr_mgt
+     func choose(quality: Int?) {
+         guard let channel = playing, quality != self.quality,
+               let url = quality.flatMap({ id in qualities.first { $0.id == id }?.url }) ?? automatic else { return }
+-        if LiveCatalog.isRoom(url) {
+-            // A live quality is another stream address, fetched now; live has no position to keep.
+-            let active = generation
+-            Task {
+-                guard let resolved = try? await LiveCatalog.resolve(Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo)),
+-                      self.generation == active else { return }
+-                self.detachItem()
+-                self.quality = resolved.current ?? quality
+-                self.liveRoom = Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo)
+-                self.configure(resolved.channel, url: resolved.channel.url, generation: active)
+-            }
+-            return
+-        }
+         let time = player.currentTime(), paused = player.rate == 0
+         detachItem()
+         self.quality = quality
+@@ -441,36 +405,6 @@ import IOKit.pwr_mgt
+         sampler?.cancel(); sampler = nil
+     }
+ 
+-    /// A live room that stopped asks its platform for a fresh address and plays on, instead of waiting for the viewer
+-    /// to try again: one that played a while each time (Huya refuses an address about two minutes in, #488), one
+-    /// that hasn't once for a playlist that contradicted itself (`LiveReopen`).
+-    private func retryLive(after failure: Error?) -> Bool {
+-        if liveRetrying { return true } // The failed item's other report of the same failure.
+-        let played = liveReadyAt.map { ContinuousClock.now - $0 }
+-        guard let room = liveRoom, liveReopen.shouldReopen(after: failure, playedFor: played) else { return false }
+-        liveRetrying = true; loading = true
+-        if failure.map({ ($0 as NSError).domain == "CoreMediaErrorDomain" && ($0 as NSError).code == -12312 }) == true {
+-            LiveRepair.noteContradiction((player.currentItem?.asset as? AVURLAsset)?.url)
+-        }
+-        detachItem(); observation = nil
+-        let active = generation
+-        Diagnostics.shared.record(.warning, "player", "live retry room=\(room.url.absoluteString) played=\(played.map { "\(Int($0.components.seconds))s" } ?? "-")")
+-        note(L10n.text("The connection dropped. Reconnecting"))
+-        Task {
+-            do {
+-                let resolved = try await LiveCatalog.resolve(room)
+-                guard self.generation == active else { return }
+-                self.liveRetrying = false
+-                self.configure(resolved.channel, url: resolved.channel.url, generation: active)
+-            } catch {
+-                guard self.generation == active else { return }
+-                self.liveRetrying = false
+-                self.error = error.localizedDescription; self.loading = false
+-            }
+-        }
+-        return true
+-    }
+-
+     /// A server that answers the first request for a file with the whole file, ignoring the two bytes
+     /// AVPlayer asked for (CoreMedia -12939), can answer properly the next time: 立播's v.vimsec.app does
+     /// this for every episode nobody has opened lately. One more try, at once, does what Retry would.
+@@ -571,13 +505,11 @@ import IOKit.pwr_mgt
+         detachItem(); observation = nil
+         Diagnostics.shared.record(.warning, "player", "hdr refused captured=\(captured); converting to sdr \(failure.map(Self.describe) ?? "-")")
+         Remux.stop(url)
+-        let room = liveRoom
+         preparation = Task { [weak self] in
+             guard let self else { return }
+             var channel = channel
+             let prepared: Prepared
+             do {
+-                if let room { channel = try await LiveCatalog.resolve(room).channel }
+                 prepared = try await self.prepare(channel)
+             }
+             catch {
+@@ -932,10 +864,10 @@ import IOKit.pwr_mgt
+     private func open(_ channel: Channel) {
+         savedDownload = channel.url.scheme == DownloadLibrary.scheme
+         stop(); error = nil; errorSymbol = "play.slash.fill"; loading = true; showsPicture = false; openedAt = .now; sourceDanmaku = []; qualities = []; quality = nil; switchNotice = nil
+-        let live = LiveCatalog.isRoom(channel.url) || channel.group == L10n.text("Bilibili Live")
++        let live = false
+         begin(channel, live: live)
+         isLive = live
+-        liveRoom = LiveCatalog.isRoom(channel.url) ? channel : nil; liveReopen = LiveReopen(); liveRetrying = false; rangeRetried = false
++        rangeRetried = false
+         loopbackRecovered = nil; dropRecovery = PlaybackDropRecovery(); reopenedAfterDrop = false
+         ErrorReports.shared.playing(live: isLive, format: channel.url.pathExtension, source: channel.historyContext?.sourceKey,
+                                     danmaku: UserDefaults.standard.object(forKey: DanmakuPreference.key) == nil || UserDefaults.standard.bool(forKey: DanmakuPreference.key),
+@@ -953,22 +885,7 @@ import IOKit.pwr_mgt
+         Diagnostics.shared.record(.info, "player", "start name=\(channel.name) group=\(channel.group) url=\(channel.url.absoluteString) headers=\(channel.headers.keys.sorted().joined(separator: ","))")
+         preparation = Task { [weak self] in
+             guard let self else { return }
+-            // A live room becomes its current stream address now; the address expires.
+-            var channel = channel
+-            var liveQualities: [StreamQuality] = [], liveQuality: Int?
+-            if let (platform, id) = LiveCatalog.room(channel.url), let chat = LiveChats.make(platform, room: id, address: channel.url) { self.listen(chat, generation: activeGeneration) }
+-            if LiveCatalog.isRoom(channel.url) {
+-                self.note(L10n.text("Finding the live stream"))
+-                do { (channel, liveQualities, liveQuality) = try await LiveCatalog.resolve(channel) }
+-                catch {
+-                    guard self.generation == activeGeneration, !Task.isCancelled else { return }
+-                    Diagnostics.shared.failure("player", "live room=\(channel.url.absoluteString)", error)
+-                    self.error = error.localizedDescription; self.loading = false; return
+-                }
+-            } else {
+-                // A Huya stream a playlist reaches through an FLV relay plays as HLS.
+-                channel = await LiveCatalog.playable(channel)
+-            }
++            let channel = channel
+             let prepared: Prepared
+             do { prepared = try await self.prepare(channel) }
+             catch {
+@@ -996,8 +913,8 @@ import IOKit.pwr_mgt
+             self.playing = channel; self.automatic = address
+             self.externalSubtitles.begin(channel, playing: address)
+             self.loadPartExtras(channel, generation: activeGeneration)
+-            self.qualities = liveQualities.isEmpty ? DashStreams.qualities(for: address) : liveQualities
+-            self.quality = liveQuality
++            self.qualities = DashStreams.qualities(for: address)
++            self.quality = nil
+             if DanmakuSource.has(channel.url), let comments = await DanmakuSource.comments(for: channel.url),
+                self.generation == activeGeneration { self.sourceDanmaku = comments }
+         }
+@@ -1280,7 +1197,6 @@ import IOKit.pwr_mgt
+                     if self.recoverLoopback(Self.urlErrorCode(failure), channel: channel, url: url, generation: activeGeneration) { return }
+                     if self.reopenedAfterDrop, self.resumeAfterDrop(failure, channel: channel, url: url, generation: activeGeneration) { return }
+                     Diagnostics.shared.record(.error, "player", "failed host=\(self.transfer.host ?? channel.url.host() ?? "-") \(self.transfer.failure.map { "upstream=\($0) " } ?? "")\(detail) \(self.failureContext(channel, url: url, item: item))")
+-                    if self.retryLive(after: failure) { return }
+                     if self.tryNextLine(after: failure) { return }
+                     // A refused link is usually an expired one: say so in plain words rather than the system's.
+                     let expired = refused || [401, 403, 404, 410].contains(self.transfer.httpStatus ?? 0)
+@@ -1300,7 +1216,6 @@ import IOKit.pwr_mgt
+                 if self.recoverLoopback(Self.urlErrorCode(failure), channel: channel, url: url, generation: activeGeneration) { return }
+                 if self.resumeAfterDrop(failure, channel: channel, url: url, generation: activeGeneration) { return }
+                 Diagnostics.shared.record(.error, "player", "interrupted host=\(self.transfer.host ?? channel.url.host() ?? "-") at=\(Int(self.player.currentTime().seconds.isFinite ? self.player.currentTime().seconds : -1))s \(failure.map(Self.describe) ?? "-") \(self.failureContext(channel, url: url, item: item))")
+-                if self.retryLive(after: failure) { return }
+                 if self.tryNextLine(after: failure) { return }
+                 self.error = message ?? L10n.text("Playback was interrupted."); self.loading = false
+             }
+@@ -1380,7 +1295,6 @@ import IOKit.pwr_mgt
+         if pendingResume == nil, !restoringPosition { markClock() }
+         updateSkipping(item)
+         throttleBoost(item)
+-        catchUpLive(item)
+         queueUpcomingIfDue(item)
+         if let url = playing?.url { CENCStreams.updatePosition(for: url, seconds: pendingResume ?? player.currentTime().seconds) }
+         if tick % 5 == 0 { saveHistory() }
+@@ -1450,17 +1364,6 @@ import IOKit.pwr_mgt
+         }
+         return true
+     }
+-    /// A live stream playing before everything its playlist still lists shows a frozen picture (`LiveEdge`); it
+-    /// jumps to the live edge, as a web player does, instead of waiting for someone to open it again.
+-    private func catchUpLive(_ item: AVPlayerItem) {
+-        guard !catchingUpLive, item.status == .readyToPlay, item.duration.isIndefinite, player.timeControlStatus == .playing,
+-              let edge = LiveEdge.target(position: player.currentTime(), seekable: item.seekableTimeRanges.map(\.timeRangeValue)) else { return }
+-        catchingUpLive = true
+-        Diagnostics.shared.record(.info, "player", "live catch-up from=\(Int(player.currentTime().seconds))s to=\(Int(edge.seconds))s")
+-        player.seek(to: edge) { [weak self] _ in
+-            Task { @MainActor [weak self] in self?.catchingUpLive = false }
+-        }
+-    }
+     /// Domain and code of the error and its underlying cause: AVFoundation's messages alone
+     /// ("The operation could not be completed") don't tell an HTTP 403 from a decoder failure.
+     nonisolated static func describe(_ error: Error) -> String { Diagnostics.describe(error) }
+@@ -1523,7 +1426,6 @@ import IOKit.pwr_mgt
+             Diagnostics.shared.record(.info, "player", "stop at=\(seconds.isFinite ? Int(seconds) : -1)s")
+         }
+         generation = UUID()
+-        chat?.stop(); chat = nil
+         preparation?.cancel(); preparation = nil
+         lineWatch?.cancel(); lineWatch = nil
+         sampler?.cancel(); sampler = nil
+diff --git a/App/QALaunch.swift b/App/QALaunch.swift
+index 1be588a..6036e89 100644
+--- a/App/QALaunch.swift
++++ b/App/QALaunch.swift
+@@ -152,14 +152,6 @@ enum QALaunch {
+             try? await Task.sleep(for: .seconds(2))
+             store.searchVideos(String(page.dropFirst(7)))
+         }
+-        // `-qaPlayLive [<platform>:]<room>` opens a live room (Bilibili by default) in the player.
+-        if let target = UserDefaults.standard.string(forKey: "qaPlayLive") {
+-            let parts = target.split(separator: ":", maxSplits: 1).map(String.init)
+-            if let platform = LivePlatform(rawValue: parts.count == 2 ? parts[0] : "bilibili"), let room = parts.last,
+-               let url = URL(string: "\(platform.scheme)://room/\(room)") {
+-                store.playing = Channel(name: "Live \(room)", group: platform.name, url: url)
+-            }
+-        }
+         // `-qaSubtitleSource <address>` adds that subtitle-source script (#576 M2) before anything plays, and
+         // `-qaSubtitleSourceKeys '{apiKey=value;}'` gives it its keys (a property-list dictionary: the argument domain
+         // drops a JSON object it can't read).
+@@ -183,22 +175,6 @@ enum QALaunch {
+                 .map { ExternalSubtitle(name: $0.lastPathComponent, url: $0) }
+             store.playing = Channel(name: url.lastPathComponent, group: "QA", url: url, resumePosition: resume > 0 ? resume : nil, subtitles: subtitles)
+         }
+-        // `-qaPlayChannel <index>` plays that channel of the subscription's first live playlist, picked from its list as
+-        // the Live tab does: Previous and Next Channel and the channel list go through the playlist (#1010).
+-        if let index = UserDefaults.standard.string(forKey: "qaPlayChannel").flatMap(Int.init),
+-           let source = store.liveSources.first(where: { !$0.isBuiltIn }) {
+-            do {
+-                let playlist = try await HTTPClient().playlist(source)
+-                let channels = playlist.channels
+-                let guide = LiveGuide.address(for: source, playlist: playlist.guide, in: store).map(LiveGuide.init)
+-                if let guide { Task { await guide.load(channels) } }
+-                if channels.indices.contains(index) {
+-                    store.watch(channels[index], in: LiveLineup(title: source.name, channels: channels), guide: guide)
+-                }
+-            } catch {
+-                Diagnostics.shared.record(.warning, "qa", "playlist not loaded: \(error.localizedDescription)")
+-            }
+-        }
+         // `-qaPlay <site key>:<video id>[:<episode index>]` opens that source's video in the player.
+         if let target = UserDefaults.standard.string(forKey: "qaPlay"), let config = store.subscription {
+             let parts = target.split(separator: ":", maxSplits: 2).map(String.init)
+@@ -397,10 +373,6 @@ enum QALaunch {
+             case "chapters":
+                 QABilibiliChapters(part: parts.dropFirst().first.flatMap(BilibiliAPI.Part.init(address:)))
+             #endif
+-            case "channels":
+-                if let index = Int(parts.dropFirst().first ?? ""), config.lives.indices.contains(index) {
+-                    ChannelListView(source: config.lives[index])
+-                }
+             // `-qaPage folder:<quark|uc|alist|drive key>:<folder>` opens that Cloud Files folder; `-qaFilesPosters 1` as posters.
+             case "folder":
+                 if parts.count == 3, let drive = filesDrive(parts[1]) {
+@@ -450,24 +422,6 @@ enum QALaunch {
+                     DouyinHandoffView(link: link)
+                 }
+             #endif
+-            case "bilibili-live": if let platform = LivePlatform(rawValue: "bilibili") { LivePlatformView(platform: platform) }
+-            // `-qaPage live:<douyu|huya|douyin|bilibili>`, with `-qaQuery <text>` to show its search.
+-            case "live":
+-                if let platform = parts.dropFirst().first.flatMap(LivePlatform.init(rawValue:)) {
+-                    LivePlatformView(platform: platform, initialQuery: UserDefaults.standard.string(forKey: "qaQuery") ?? "")
+-                }
+-            // `-qaPage live-plugins` (`-qaQuery <source key>` adds that source), `-qaPage live-plugin:<pluginId>`.
+-            case "live-plugins": LivePluginsView(initialSource: UserDefaults.standard.string(forKey: "qaQuery"))
+-            case "live-plugin":
+-                if let plugin = parts.dropFirst().first.flatMap({ LivePlugins.shared.installed($0) }) { LivePluginPage(plugin: plugin) }
+-            #if !os(tvOS)
+-            // `-qaPage live-plugin-sign-in:<pluginId>`: the plugin's web sign-in sheet.
+-            case "live-plugin-sign-in":
+-                if let plugin = parts.dropFirst().first.flatMap({ LivePlugins.shared.installed($0) }) { QALivePluginSignIn(plugin: plugin) }
+-            #endif
+-            // `-qaPage live-plugin-qr:<pluginId>`: the plugin's QR sign-in, in the page itself.
+-            case "live-plugin-qr":
+-                if let plugin = parts.dropFirst().first.flatMap({ LivePlugins.shared.installed($0) }) { QALivePluginQR(plugin: plugin) }
+             case "danmaku-list": QADanmakuList()
+             case "danmaku-settings": QADanmakuSettings()
+             // `-qaPage cloud-login:<quark|uc|baidu|aliyun|pan115|tianyi|pan123|guangya>`; `cloud-accounts` shows the accounts page.
+@@ -754,35 +708,3 @@ private struct QABilibiliChapters: View {
+ }
+ #endif
+ 
+-#if DEBUG && !os(tvOS)
+-/// A live plugin's web sign-in sheet, once its manifest is read.
+-private struct QALivePluginSignIn: View {
+-    let plugin: LivePlugins.Installed
+-    @State private var flow: LivePluginLoginFlow?
+-    var body: some View {
+-        Color.clear
+-            .task { flow = await LivePlugins.shared.loginFlow(plugin.pluginId) }
+-            .sheet(isPresented: .constant(flow != nil)) { if let flow { LivePluginWebSignIn(plugin: plugin, flow: flow) } }
+-    }
+-}
+-#endif
+-
+-#if DEBUG
+-
+-/// A live plugin's QR sign-in, once its manifest is read.
+-private struct QALivePluginQR: View {
+-    let plugin: LivePlugins.Installed
+-    @State private var plan: LivePluginQRPlan?
+-    @State private var device = false
+-    var body: some View {
+-        ZStack {
+-            if let plan { LivePluginQRPage(plugin: plugin, plan: plan, useWebPage: {}) }
+-            else if device { LivePluginDevicePage(plugin: plugin) }
+-        }
+-        .task {
+-            plan = await LivePlugins.shared.qrLogin(plugin.pluginId)
+-            device = await LivePlugins.shared.signsInByDeviceCode(plugin.pluginId)
+-        }
+-    }
+-}
+-#endif
+diff --git a/App/SettingsView.swift b/App/SettingsView.swift
+index a42d1c0..93ee043 100644
+--- a/App/SettingsView.swift
++++ b/App/SettingsView.swift
+@@ -203,10 +203,9 @@ extension Store {
+ /// or Remove Subscriptions with the subscriptions.
+ enum SubscriptionExtra: Identifiable, Hashable {
+     case lxSource(LXSource)
+-    case livePlugin(LivePlugins.Installed)
+ 
+     @MainActor static func all(_ store: Store) -> [SubscriptionExtra] {
+-        store.lxSources.map(SubscriptionExtra.lxSource) + store.livePlugins.map(SubscriptionExtra.livePlugin)
++        store.lxSources.map(SubscriptionExtra.lxSource)
+     }
+ 
+     /// Removes the subscriptions (by address) and the other entries (by `id`) among `keys`.
+@@ -219,39 +218,33 @@ enum SubscriptionExtra: Identifiable, Hashable {
+     var id: String {
+         switch self {
+         case .lxSource(let source): "lx " + source.id
+-        case .livePlugin(let plugin): "plugin " + plugin.pluginId
+         }
+     }
+     @MainActor var title: String {
+         switch self {
+         case .lxSource(let source): source.info.name
+-        case .livePlugin(let plugin): plugin.name
+         }
+     }
+     /// What it feeds, as a subscription's row shows its count, or Off.
+     var value: String {
+         switch self {
+         case .lxSource(let source): source.enabled ? L10n.text("Music") : L10n.text("Off")
+-        case .livePlugin: L10n.text("Live Plugins")
+         }
+     }
+     /// The value in its kind's section, where the kind goes without saying (#1261): a book list's size, or Off.
+     @MainActor var sectionValue: String? {
+         switch self {
+         case .lxSource(let source): source.enabled ? nil : L10n.text("Off")
+-        case .livePlugin: nil
+         }
+     }
+     var symbol: String {
+         switch self {
+         case .lxSource: "music.note"
+-        case .livePlugin: "puzzlepiece.extension.fill"
+         }
+     }
+     var tint: Color {
+         switch self {
+         case .lxSource(let source): source.enabled ? .pink : .gray
+-        case .livePlugin: .purple
+         }
+     }
+     var lxSource: LXSource? {
+@@ -265,14 +258,12 @@ enum SubscriptionExtra: Identifiable, Hashable {
+     @MainActor @ViewBuilder var page: some View {
+         switch self {
+         case .lxSource(let source): LXSourcePage(source: source)
+-        case .livePlugin(let plugin): LivePluginPage(plugin: plugin)
+         }
+     }
+ 
+     @MainActor func remove() {
+         switch self {
+         case .lxSource(let source): LXSourceLibrary.shared.remove(source.id)
+-        case .livePlugin(let plugin): LivePlugins.shared.uninstall(plugin.pluginId)
+         }
+     }
+ }
+@@ -554,7 +545,6 @@ struct FormSettingsView: View {
+     #endif
+     /// `HiddenSourcesEditor`, opened from the subscriptions.
+     @State private var editingSources = false
+-    @State private var editingLive = false
+     /// A subscription its menu asked to remove, waiting for the confirmation.
+     @State private var removingSubscription: SubscriptionEntry?
+     /// A source list, LX Music source or live plugin its menu asked to remove, waiting for the confirmation.
+@@ -679,26 +669,6 @@ struct FormSettingsView: View {
+                     .accessibilityIdentifier("settings.hiddenSources")
+                     .settingsAnchor(.hiddenSources)
+                 }
+-                // The same for Live TV: the built-in platforms aren't in any subscription that can be removed (#837).
+-                if !store.allLiveSources.isEmpty {
+-                    let hidden = store.allLiveSources.filter(store.hiddenLiveSources.contains).count
+-                    Button { editingLive = true } label: {
+-                        HStack(spacing: 8) {
+-                            FormLabel(symbol: "tv.fill", tint: .red, title: L10n.text("Hide or Show Live TV")).lineLimit(1).layoutPriority(1)
+-                                .foregroundStyle(.primary)
+-                            Spacer(minLength: 0)
+-                            if hidden > 0 { Text(L10n.text("%lld hidden", hidden)).lineLimit(1).foregroundStyle(.secondary) }
+-                            #if os(iOS)
+-                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+-                            #endif
+-                        }
+-                        .contentShape(Rectangle())
+-                    }
+-                    .formRowButton()
+-                    .tint(.primary)
+-                    .accessibilityIdentifier("settings.hiddenLive")
+-                    .settingsAnchor(.hiddenLive)
+-                }
+                 // Dragging, rather than Move Up and Move Down on each one's page (#1184).
+                 if store.subscriptions.count > 1 {
+                     FormLink(symbol: "arrow.up.arrow.down", tint: .indigo, title: L10n.text("Arrange Subscriptions")) { ArrangeSubscriptionsView() }
+@@ -746,18 +716,6 @@ struct FormSettingsView: View {
+                 if let message = store.importError ?? store.notice { Text(message) }
+             }
+ 
+-            // Live plugins and music sources are added with Add Subscription too, but each is listed in
+-            // its own kind's section rather than mixed in with the subscriptions (#1261), and managed and removed there.
+-            if store.extrasUnlocked || !store.livePlugins.isEmpty {
+-                Section {
+-                    ForEach(store.livePlugins.map(SubscriptionExtra.livePlugin)) { extraRow($0).settingsAnchor(.extra($0)) }
+-                    let count = store.livePluginPlatforms.count
+-                    FormLink(symbol: "dot.radiowaves.left.and.right", tint: .red, title: L10n.text("Live Plugins"),
+-                             value: count == 0 ? nil : String(count)) { LivePluginsView() }
+-                        .id("settings.livePlugins")
+-                } footer: {
+-                    Text(L10n.text("Live platforms added as AngelLive plugins show in Live TV."))
+-                }
+             }
+ 
+             if !store.lxSources.isEmpty {
+@@ -1090,7 +1048,6 @@ struct FormSettingsView: View {
+         .settingsForm(L10n.text("Settings"))
+         .searchable(text: $searchQuery, isPresented: $searching, prompt: Text(L10n.text("Search settings")))
+         .sheet(isPresented: $editingSources) { HiddenSourcesEditor() }
+-        .sheet(isPresented: $editingLive) { LiveSourcesEditor() }
+         // An alert rather than a dialog: a dialog on the row never appeared after a swipe, and on the page it pointed
+         // at the top of Settings.
+         .alert(L10n.text("Remove “%@”", removingSubscription?.title ?? ""),
+@@ -1219,12 +1176,9 @@ private enum SettingsSearchTarget: Hashable, Sendable {
+     case feedback
+     case telegram
+     case subscription(String)
+-    case hiddenSources
+-    case hiddenLive
+-    case arrangeSubscriptions
++    case hiddenSources    case arrangeSubscriptions
+     case removeSubscriptions
+     case addSubscription
+-    case livePlugins
+     case extra(SubscriptionExtra)
+     case bilibili
+     case douyin
+@@ -1271,7 +1225,6 @@ private enum SettingsSearchTarget: Hashable, Sendable {
+         case .extra(let extra): return "settings.extra " + extra.id
+         case .sourceSignIn(let id): return "settings.signIn " + id
+         case .language: return "settings.language"
+-        case .livePlugins: return "settings.livePlugins"
+         case .profiles: return "settings.profiles"
+         case .licenses: return "settings.end"
+         #if os(iOS)
+@@ -1374,10 +1327,6 @@ private extension FormSettingsView {
+             add(.hiddenSources, title: L10n.text("Hide or Show Sources"), section: secSubs,
+                 keywords: ["hide", "show", "sources", "隐藏", "显示", "片源"])
+         }
+-        if !store.allLiveSources.isEmpty {
+-            add(.hiddenLive, title: L10n.text("Hide or Show Live TV"), section: secSubs,
+-                keywords: ["live", "tv", "hide", "直播", "频道"])
+-        }
+         if store.subscriptions.count > 1 {
+             add(.arrangeSubscriptions, title: L10n.text("Arrange Subscriptions"), section: secSubs,
+                 keywords: ["arrange", "reorder", "sort", "排序", "订阅"])
+@@ -1391,14 +1340,6 @@ private extension FormSettingsView {
+             keywords: ["add", "url", "import", "添加", "导入", "订阅"])
+         #endif
+ 
+-        if store.extrasUnlocked || !store.livePlugins.isEmpty {
+-            for plugin in store.livePlugins {
+-                add(.extra(.livePlugin(plugin)), title: plugin.name, section: L10n.text("Live Plugins"),
+-                    keywords: ["live", "plugin", "直播", "插件"])
+-            }
+-            add(.livePlugins, title: L10n.text("Live Plugins"), section: L10n.text("Live Plugins"),
+-                keywords: ["live", "plugin", "angellive", "直播", "插件"])
+-        }
+         for source in store.lxSources {
+             add(.extra(.lxSource(source)), title: source.info.name, section: L10n.text("Music"),
+                 keywords: ["music", "lx", "洛雪", "音乐"])
+@@ -2462,13 +2403,6 @@ struct TVSettingsView: View {
+             }
+             subscriptionSection
+             // Each kind in its own section rather than mixed in with the subscriptions (#1261).
+-            if store.extrasUnlocked || !store.livePlugins.isEmpty {
+-                TVSettingsSection(footer: L10n.text("Live platforms added as AngelLive plugins show in Live TV.")) {
+-                    extraLinks(store.livePlugins.map(SubscriptionExtra.livePlugin))
+-                    let count = store.livePluginPlatforms.count
+-                    TVSettingsLink(title: L10n.text("Live Plugins"), value: count == 0 ? nil : String(count)) { LivePluginsView() }
+-                }
+-            }
+             if !store.lxSources.isEmpty {
+                 TVSettingsSection(title: L10n.text("Music")) { extraLinks(store.lxSources.map(SubscriptionExtra.lxSource)) }
+             }
+@@ -2571,10 +2505,6 @@ struct TVSettingsView: View {
+                 TVSettingsLink(title: entry.title, value: store.subscriptionValue(entry), warning: failed) { TVSubscriptionPage(entry: entry) }
+             }
+             TVSettingsLink(title: L10n.text("Add Subscription")) { TVAddSubscriptionPage() }
+-            if !store.allLiveSources.isEmpty {
+-                let hidden = store.allLiveSources.filter(store.hiddenLiveSources.contains).count
+-                TVSettingsLink(title: L10n.text("Hide or Show Live TV"), value: hidden > 0 ? L10n.text("%lld hidden", hidden) : nil) { LiveSourcesEditor() }
+-            }
+             if store.subscriptions.count + SubscriptionExtra.all(store).count > 1 {
+                 TVSettingsLink(title: L10n.text("Remove Subscriptions")) { TVRemoveSubscriptionsPage() }
+             }
+diff --git a/App/Store.swift b/App/Store.swift
+index d5eb9bb..d3db28c 100644
+--- a/App/Store.swift
++++ b/App/Store.swift
+@@ -24,7 +24,6 @@ import TVCore
+     private(set) var pinnedSources: PinnedSources
+     private(set) var hiddenSources: HiddenSources
+     /// Live platforms and playlists the viewer turned off (#601, #837).
+-    private(set) var hiddenLiveSources: HiddenLiveSources
+     private(set) var sourceOrder: SourceOrder
+     /// Keeps the viewer's library the same on their other devices; nil for tests and QA's isolated data. Only the main
+     /// profile's library syncs: it is suspended while another profile is open.
+@@ -148,25 +147,8 @@ import TVCore
+     /// Not observed: views fill these while drawing, and a write would draw every reader again.
+     @ObservationIgnored private var siteListStamp = ""
+     @ObservationIgnored private var cloudDrivesObserver: NSObjectProtocol?
+-    @ObservationIgnored private var livePluginsObserver: NSObjectProtocol?
+-    /// The installed live plugins' platforms, shown in Live TV even without a subscription.
+-    private(set) var livePluginPlatforms = LivePlugins.shared.platforms
+-    /// The installed live plugins and the LX Music sources, listed under Settings › Subscriptions with the subscriptions.
+-    private(set) var livePlugins = LivePlugins.shared.installed
+     private(set) var lxSources = LXSourceLibrary.shared.sources
+     @ObservationIgnored private var lxSourcesObserver: NSObjectProtocol?
+-    /// Every live source, hidden ones too: the subscription's (with the plugins' platforms), or the plugins' alone.
+-    var allLiveSources: [LiveSource] { subscription?.lives ?? livePluginPlatforms.map(\.source) }
+-    /// Live TV's sources: the ones the viewer hasn't hidden.
+-    var liveSources: [LiveSource] { allLiveSources.filter { !hiddenLiveSources.contains($0) } }
+-    /// The live playlists among `sources` by the subscription that lists them (#815).
+-    func livePlaylistGroups(_ sources: [LiveSource]) -> [LivePlaylistGroup] {
+-        LivePlaylistGroup.make(sources, subscriptions: subscriptions.filter(\.enabled).compactMap { entry in documents[entry.address].map { (entry, $0) } })
+-    }
+-    /// The subscription that is just this playlist, which removing the playlist removes.
+-    func playlistSubscription(_ source: LiveSource) -> SubscriptionEntry? {
+-        subscriptions.first { entry in documents[entry.address].map { $0.isPlaylistOnly && $0.lives.contains { $0.url == source.url } } == true }
+-    }
+     @ObservationIgnored private var automaticCache: [Site]?
+     @ObservationIgnored private var orderedCache: [Site]?
+     @ObservationIgnored private var recommendationCache: [Site]?
+@@ -215,7 +197,6 @@ import TVCore
+         profileFolder = library.folder
+         pinnedSources = PinnedSources(defaults: library.playback)
+         hiddenSources = HiddenSources(defaults: library.playback)
+-        hiddenLiveSources = HiddenLiveSources(defaults: library.playback)
+         #if os(macOS) || os(iOS)
+         WebSniff.install(WKWebSniffer())
+         #endif
+@@ -231,15 +212,6 @@ import TVCore
+         cloudDrivesObserver = NotificationCenter.default.addObserver(forName: CloudFiles.drivesChanged, object: nil, queue: .main) { [weak self] _ in
+             MainActor.assumeIsolated { self?.refreshCloudFilesSources() }
+         }
+-        // Installing or removing a live plugin adds or takes away its platform.
+-        livePluginsObserver = NotificationCenter.default.addObserver(forName: LivePlugins.changed, object: nil, queue: .main) { [weak self] _ in
+-            MainActor.assumeIsolated {
+-                guard let self else { return }
+-                self.livePluginPlatforms = LivePlugins.shared.platforms
+-                self.livePlugins = LivePlugins.shared.installed
+-                self.rebuildSubscription(resetting: false)
+-            }
+-        }
+         lxSourcesObserver = NotificationCenter.default.addObserver(forName: LXSourceLibrary.changed, object: nil, queue: .main) { [weak self] _ in
+             MainActor.assumeIsolated { self?.lxSources = LXSourceLibrary.shared.sources }
+         }
+@@ -305,7 +277,6 @@ import TVCore
+         profileFolder = library.folder
+         pinnedSources = PinnedSources(defaults: library.playback)
+         hiddenSources = HiddenSources(defaults: library.playback)
+-        hiddenLiveSources = HiddenLiveSources(defaults: library.playback)
+         sourceOrder = SourceOrder(defaults: library.playback)
+         favorites = Favorites(defaults: library.defaults)
+         playlists = MusicPlaylists(defaults: library.defaults)
+@@ -712,7 +683,6 @@ import TVCore
+     private func setUpCloudSync() {
+         guard let sync = cloudSync else { return }
+         let favorites = favorites, history = playbackHistory, pinned = pinnedSources, hidden = hiddenSources, order = sourceOrder
+-        let hiddenLive = hiddenLiveSources
+         let followed = followedShows
+         sync.register("favorites", current: { favorites.syncValues }, apply: { favorites.adopt($0) })
+         sync.register("followedShows", current: { followed.syncValues }, apply: { followed.adopt($0) })
+@@ -729,8 +699,6 @@ import TVCore
+         sync.register("pinnedSources", current: { CloudSync.ranks(pinned.savedKeys) }, apply: { pinned.adopt(CloudSync.ordered($0)) })
+         sync.register("hiddenSources", current: { Dictionary(hidden.savedKeys.map { ($0, true) }, uniquingKeysWith: { first, _ in first }) },
+                       apply: { hidden.adopt($0.sorted { ($0.stamp, $0.id) < ($1.stamp, $1.id) }.map(\.id)) })
+-        sync.register("hiddenLiveSources", current: { Dictionary(hiddenLive.savedKeys.map { ($0, true) }, uniquingKeysWith: { first, _ in first }) },
+-                      apply: { hiddenLive.adopt($0.sorted { ($0.stamp, $0.id) < ($1.stamp, $1.id) }.map(\.id)) })
+         sync.register("sourceOrder", current: { CloudSync.ranks(order.savedKeys) }, apply: { order.adopt(CloudSync.ordered($0)) })
+         // Only "on" is an item: a new device's default (off) is no change, so it can't switch the order off everywhere.
+         sync.register("sourceOrderOn", current: { order.enabled ? ["on": true] : [:] }, apply: { if order.enabled == $0.isEmpty { order.enabled = !$0.isEmpty } })
+@@ -739,7 +707,6 @@ import TVCore
+         history.onChange = { sync.changed("history") }
+         pinned.onChange = { sync.changed("pinnedSources") }
+         hidden.onChange = { sync.changed("hiddenSources") }
+-        hiddenLive.onChange = { sync.changed("hiddenLiveSources") }
+         order.onChange = { sync.changed("sourceOrder"); sync.changed("sourceOrderOn") }
+     }
+     private var syncedSubscriptions: [String: SyncedSubscription] {
+@@ -767,7 +734,7 @@ import TVCore
+         let enabled = subscriptions.filter(\.enabled).compactMap { documents[$0.address] }
+         // Only an explicitly enabled subscription may supply service metadata. Ignore the old automatic cache.
+         CloudSources.current = enabled.first(where: CloudSources.accepts)
+-        subscription = Subscription.merge(enabled)?.withCloudFiles().withLivePlugins()
++        subscription = Subscription.merge(enabled)?.withCloudFiles()
+         if let subscription {
+             // Older downloads only had the last episode in Continue Watching. Keep that position before the
+             // viewer moves on to another episode and the show-level entry is replaced.
+diff --git a/Sources/TVBoxProbe/main.swift b/Sources/TVBoxProbe/main.swift
+index 17056ef..e619852 100644
+--- a/Sources/TVBoxProbe/main.swift
++++ b/Sources/TVBoxProbe/main.swift
+@@ -126,7 +126,7 @@ import TVCore
+     static func main() async throws {
+         let args = CommandLine.arguments
+         // Yingxia's own sources and live platforms come from its subscription.
+-        if args.count >= 2, args[1] == "--live" || args[1] == "--cloud-site" || args[1].hasPrefix("--bili") || args[1] == "--download" {
++        if args.count >= 2, args[1] == "--cloud-site" || args[1].hasPrefix("--bili") || args[1] == "--download" {
+             CloudSources.current = try await CloudSources.fetch(http: HTTPClient(), address: Self.sourcesAddress())
+         }
+         guard args.count >= 2 else {
+@@ -154,23 +154,6 @@ import TVCore
+             print("aid", await Bilibili.castVideo(cid: cid, title: args[3]).map(String.init) ?? "not found")
+             return
+         }
+-        if args[1] == "--bili-chat", args.count >= 3, let room = Int(args[2]) {
+-            // --bili-chat <room> [seconds]: prints a live room's comments as they arrive.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            let chat = BilibiliLiveChat(room: room)
+-            chat.start { text, color, position in print("danmaku \(String(format: "%06x", color)) \(position) \(text)") }
+-            try await Task.sleep(for: .seconds(args.count > 3 ? Double(args[3]) ?? 20 : 20))
+-            chat.stop()
+-            return
+-        }
+-        if args[1] == "--live-chat", args.count >= 4, let chat = LiveChats.make(args[2], room: args[3]) {
+-            // --live-chat <bilibili|douyu|huya> <room> [seconds]: prints a live room's comments as they arrive.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            chat.start { text, color, position in print("danmaku \(String(format: "%06x", color)) \(position) \(text)") }
+-            try await Task.sleep(for: .seconds(args.count > 4 ? Double(args[4]) ?? 20 : 20))
+-            chat.stop()
+-            return
+-        }
+         if args[1] == "--douyin-handoff" {
+             // --douyin-handoff: a TV-side receiver and an iPhone-side send over the LAN address, plus a
+             // forged send (wrong key) that must be refused.
+@@ -190,177 +173,6 @@ import TVCore
+             receiver.stop()
+             return
+         }
+-        if args[1] == "--live", args.count >= 3, let platform = LivePlatform(rawValue: args[2]) {
+-            // --live <bilibili|douyu|huya|douyin> [keyword|room:<id>]: areas, the first area's rooms (or the
+-            // search results), then the first room's stream through AVPlayer for a few seconds.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            var rooms: [LiveRoom] = []
+-            if args.count > 3, args[3].hasPrefix("room:") {
+-                rooms = [] // played directly below
+-            } else if args.count > 3 {
+-                rooms = try await LiveCatalog.search(platform, keyword: args[3])
+-                print("search \(args[3]): \(rooms.count) rooms")
+-            } else {
+-                let areas = try await LiveCatalog.areas(platform)
+-                print("areas \(areas.map(\.name).joined(separator: " "))")
+-                let first = try await LiveCatalog.rooms(platform, area: areas[0], page: 1)
+-                let second = try await LiveCatalog.rooms(platform, area: areas[0], page: 2)
+-                print("\(areas[0].name): page 1 \(first.count) rooms, page 2 \(second.count)")
+-                if areas.count > 1 { print("\(areas[1].name): \(try await LiveCatalog.rooms(platform, area: areas[1], page: 1).count) rooms") }
+-                rooms = first
+-            }
+-            for room in rooms.prefix(4) { print("  \(room.roomID) | \(room.host) | \(room.title) | \(room.online) | \(room.area) | \(room.cover?.absoluteString.prefix(50) ?? "-")") }
+-            let address = args.count > 3 && args[3].hasPrefix("room:") ? URL(string: "\(platform.scheme)://room/\(args[3].dropFirst(5))")! : rooms.first?.url
+-            guard let address else { return }
+-            let live = try await LiveCatalog.resolve(Channel(name: "", url: address))
+-            print("resolved \(live.channel.name) \(live.channel.url.absoluteString.prefix(110))")
+-            print("qualities \(live.qualities.map { "\($0.id) \($0.label)" }) current \(live.current ?? -1)")
+-            if let folder = ProcessInfo.processInfo.environment["LIVE_DUMP"], live.channel.url.lastPathComponent == "master.m3u8" {
+-                // The local HLS files as the player gets them.
+-                let base = live.channel.url.deletingLastPathComponent()
+-                for name in ["master.m3u8", "0.m3u8", "0-0.mp4", "0-0.m4s", "0-1.m4s"] {
+-                    let (data, _) = try await URLSession.shared.data(from: base.appending(path: name))
+-                    try data.write(to: URL(fileURLWithPath: folder).appending(path: name))
+-                    print("dumped \(name) \(data.count)")
+-                }
+-            }
+-            let item = AVPlayerItem(asset: CENCStreams.asset(for: live.channel.url) ?? LiveRepair.asset(for: live.channel.url)
+-                ?? AVURLAsset(url: live.channel.url, options: ["AVURLAssetHTTPHeaderFieldsKey": live.channel.headers]))
+-            // As a player layer would: a video-only HLS item without any video output never starts.
+-            item.add(AVPlayerItemVideoOutput(pixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]))
+-            let player = AVPlayer(playerItem: item); player.isMuted = true; player.play()
+-            for second in 1...(Int(ProcessInfo.processInfo.environment["LIVE_SECONDS"] ?? "") ?? 10) {
+-                try await Task.sleep(for: .seconds(1))
+-                CENCStreams.updatePosition(for: live.channel.url, seconds: player.currentTime().seconds)
+-                if ProcessInfo.processInfo.environment["LIVE_DUMP"] != nil {
+-                    let buffered = item.loadedTimeRanges.map { String(format: "%.1f+%.1f", $0.timeRangeValue.start.seconds, $0.timeRangeValue.duration.seconds) }
+-                    print("  rate=\(player.rate) waiting=\(player.reasonForWaitingToPlay?.rawValue ?? "-") buffered=\(buffered) errors=\(item.errorLog()?.events.map { "\($0.errorStatusCode) \($0.errorComment ?? "")" } ?? [])")
+-                }
+-                print("t=\(second) status=\(item.status.rawValue) time=\(String(format: "%.1f", player.currentTime().seconds)) size=\(Int(item.presentationSize.width))x\(Int(item.presentationSize.height)) error=\(item.error.map { "\($0)" } ?? "-")")
+-            }
+-            // Recoverable problems too, such as a playlist contradicting an earlier reload (-12312).
+-            for event in item.errorLog()?.events ?? [] { print("errorlog \(event.errorStatusCode) \(event.errorComment ?? "-")") }
+-            // As the player does before it opens the room again: the next run reads this server through the loader.
+-            if (item.error as NSError?)?.code == -12312 { LiveRepair.noteContradiction(live.channel.url); print("noted contradiction") }
+-            return
+-        }
+-        if args[1] == "--plugin-call", args.count > 3 {
+-            // --plugin-call <pluginId> <method> [JSON payload]: one call into an installed live plugin, its reply as JSON.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            let payload = args.count > 4 ? try JSONDecoder().decode([String: JSONValue].self, from: Data(args[4].utf8)) : [:]
+-            do {
+-                let reply = try await LivePluginRuntime.shared.call(args[2], args[3], payload)
+-                let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+-                print(String(decoding: try encoder.encode(reply), as: UTF8.self))
+-            } catch { print("error \(error)") }
+-            return
+-        }
+-        // --plugin-qr <plugin> [seconds]: a QR sign-in up to the code and a few polls (scan it to go all the way).
+-        if args[1] == "--plugin-qr", args.count > 2 {
+-            guard let plan = await LivePlugins.shared.qrLogin(args[2]) else { print("no QR sign-in"); return }
+-            print("plan poll=\(plan.pollInterval)s timeout=\(plan.timeout)s refreshes=\(plan.maxRefreshes) verifies=\(plan.verifies) hint=\(plan.hint)")
+-            let session = LivePluginQRSession(plugin: args[2], plan: plan)
+-            let challenge = try await session.start()
+-            print("code \(challenge.content.prefix(70))… (\(challenge.content.count) chars) expires=\(challenge.expires.map { Int($0.timeIntervalSinceNow) } ?? -1)s poll=\(challenge.pollInterval)s")
+-            if let folder = ProcessInfo.processInfo.environment["QR_SAVE"] { try challenge.content.write(toFile: folder + "/qr.txt", atomically: true, encoding: .utf8) }
+-            let end = Date().addingTimeInterval(args.count > 3 ? Double(args[3]) ?? 8 : 8)
+-            try await Task.sleep(for: .seconds(challenge.firstPollDelay))
+-            while Date() < end {
+-                try await Task.sleep(for: .seconds(challenge.pollInterval))
+-                let state = try await session.poll()
+-                print("state \(state)")
+-                if state == .confirmed || state == .expired { break }
+-                if case .failed = state { break }
+-            }
+-            await session.cancel()
+-            print("signed in: \(LivePluginAccounts.isSignedIn(args[2]))")
+-            return
+-        }
+-        // --plugin-device <plugin> [seconds]: a device-code sign-in up to the code and a few polls.
+-        if args[1] == "--plugin-device", args.count > 2 {
+-            guard await LivePlugins.shared.signsInByDeviceCode(args[2]) else { print("no device-code sign-in"); return }
+-            let session = LivePluginDeviceSession(plugin: args[2])
+-            let code = try await session.start()
+-            print("code length=\(code.code.count) page=\(code.page.host() ?? "-")\(code.page.path()) carriesCode=\(code.page.query()?.contains(code.code) ?? false) expires=\(Int(code.expires.timeIntervalSinceNow))s interval=\(code.interval)s")
+-            let end = Date().addingTimeInterval(args.count > 3 ? Double(args[3]) ?? 12 : 12)
+-            while Date() < end {
+-                try await Task.sleep(for: .seconds(code.interval))
+-                let state = try await session.poll()
+-                print("state \(state)")
+-                if state != .waiting { break }
+-            }
+-            await session.cancel()
+-            print("signed in: \(LivePluginAccounts.isSignedIn(args[2]))")
+-            return
+-        }
+-        if args[1] == "--plugin-danmaku", args.count > 2 {
+-            // --plugin-danmaku <pluginId> [roomId [userId]] [seconds]: listens to a room's chat through the plugin's danmaku
+-            // driver and prints each comment; without a room, the first room of the plugin's first area.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            guard let platform = LivePlatform(rawValue: "plugin." + args[2]) else { print("plugin \(args[2]) isn't installed"); return }
+-            var room = args.count > 3 ? args[3] : "", user = args.count > 4 ? args[4] : ""
+-            if room.isEmpty {
+-                guard let area = try await LiveCatalog.areas(platform).first else { print("no areas"); return }
+-                let first = try await LiveCatalog.rooms(platform, area: area, page: 1).first
+-                room = first?.roomID ?? ""; user = first?.userID ?? ""
+-                print("room \(room) user \(user) \(first?.host ?? "") \(first?.title ?? "")")
+-            }
+-            let seconds = args.count > 5 ? Int(args[5]) ?? 30 : 30
+-            let chat = LivePluginChat(plugin: args[2], room: room, user: user)
+-            let count = ManagedAtomicCounter()
+-            chat.start { text, color, _ in print(String(format: "  #%06X %@", color, text)); count.add() }
+-            try await Task.sleep(for: .seconds(seconds))
+-            chat.stop()
+-            print("comments \(count.value) in \(seconds) s")
+-            try await Task.sleep(for: .seconds(1))
+-            return
+-        }
+-        if args[1] == "--plugin-install", args.count > 2 {
+-            // --plugin-install <source address, angellive:// link or key> [pluginId ...]: installs live plugins
+-            // (all of the source's without ids); then `--live plugin.<id> [keyword|room:<id>]` tries one.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            guard let address = LivePlugins.sourceAddress(args[2]) else { throw LivePlugins.Failure.notASource }
+-            let (name, entries) = try await LivePlugins.shared.index(address)
+-            print("source \(name): \(entries.map { "\($0.pluginId) \($0.version)" }.joined(separator: ", "))")
+-            LivePlugins.shared.addSource(address, name: name)
+-            let wanted = Set(args.dropFirst(3))
+-            for entry in entries where wanted.isEmpty || wanted.contains(entry.pluginId) {
+-                do {
+-                    try await LivePlugins.shared.install(entry, from: address)
+-                    let record = LivePlugins.shared.installed(entry.pluginId)
+-                    print("installed \(entry.pluginId) \(record?.version ?? "-") tint=\(record?.tint ?? "-")")
+-                } catch {
+-                    print("failed \(entry.pluginId): \(error.localizedDescription)")
+-                }
+-            }
+-            print("platforms \(LivePlugins.shared.platforms.map { "\($0.id) \($0.scheme)" })")
+-            return
+-        }
+-        if args[1] == "--flv-live", args.count > 2 {
+-            // --flv-live <url> [Name: value ...]: plays a live FLV stream through FLVLive for 20 s.
+-            setvbuf(stdout, nil, _IONBF, 0)
+-            var headers: [String: String] = [:]
+-            for field in args.dropFirst(3) {
+-                let parts = field.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+-                if parts.count == 2 { headers[parts[0]] = parts[1] }
+-            }
+-            let began = Date()
+-            let address = try await FLVLive.open(URL(string: args[2])!, headers: headers)
+-            print("open ms=\(Int(Date().timeIntervalSince(began) * 1000)) \(address)")
+-            let master = try await URLSession.shared.data(from: address).0
+-            print(String(decoding: master, as: UTF8.self))
+-            let media = try await URLSession.shared.data(from: address.deletingLastPathComponent().appending(path: "0.m3u8")).0
+-            print(String(decoding: media, as: UTF8.self))
+-            let item = AVPlayerItem(url: address)
+-            let player = AVPlayer(playerItem: item); player.isMuted = true; player.play()
+-            for second in 1...20 {
+-                try await Task.sleep(for: .seconds(1))
+-                print("t=\(second) status=\(item.status.rawValue) time=\(String(format: "%.1f", player.currentTime().seconds)) rate=\(player.rate) size=\(Int(item.presentationSize.width))x\(Int(item.presentationSize.height)) error=\(item.error.map { "\($0)" } ?? "-")")
+-            }
+-            for event in item.errorLog()?.events ?? [] { print("errorlog \(event.errorStatusCode) \(event.errorComment ?? "-")") }
+-            for event in (item.accessLog()?.events ?? []).suffix(1) { print("access stalls=\(event.numberOfStalls) dropped=\(event.numberOfDroppedVideoFrames) indicated=\(Int(event.indicatedBitrate))") }
+-            return
+-        }
+         if args[1] == "--cast-listen" {
+             // --cast-listen [seconds]: runs the Bilibili cast receiver and prints what phones send.
+             setvbuf(stdout, nil, _IONBF, 0)
+@@ -920,23 +732,6 @@ import TVCore
+             }
+             return
+         }
+-        if args[1] == "--live-check" {
+-            let origin = URL(string: "https://raw.githubusercontent.com/qist/tvbox/master/fty.json")!
+-            let config = try await HTTPClient().subscription(origin)
+-            print("Subscription: \(config.sites.count) sites, \(config.lives.count) live lists")
+-            await withTaskGroup(of: String.self) { group in
+-                for source in config.lives {
+-                    group.addTask {
+-                        do {
+-                            let channels = try await HTTPClient().channels(source)
+-                            return "\(source.name): \(channels.count) parsed channels (playback not verified)"
+-                        } catch { return "\(source.name): \(error.localizedDescription)" }
+-                    }
+-                }
+-                for await result in group { print(result) }
+-            }
+-            return
+-        }
+         let data = try Data(contentsOf: URL(fileURLWithPath: args[1]))
+         let runtime = JarRuntime()
+         let report: JarReport
+diff --git a/Sources/TVCore/Network.swift b/Sources/TVCore/Network.swift
+index 2915d76..9cb6a35 100644
+--- a/Sources/TVCore/Network.swift
++++ b/Sources/TVCore/Network.swift
+@@ -37,12 +37,4 @@ public struct HTTPClient: Sendable {
+         if let bundle = CatPawOpen.bundle(data, at: finalURL) { return try await CatPawOpen.subscription(bundle: bundle, origin: finalURL, http: self) }
+         return try await Subscription.parse(data, origin: finalURL).sniffingScripts(http: self)
+     }
+-    public func channels(_ source: LiveSource) async throws -> [Channel] { try await playlist(source).channels }
+-    /// A live source's channels, and the XMLTV guide its M3U header names, if any (#802).
+-    public func playlist(_ source: LiveSource) async throws -> (channels: [Channel], guide: String?) {
+-        let (data, finalURL) = try await get(source.url, headers: source.headers)
+-        guard let text = String(data: data, encoding: .utf8) else { throw TVError.unsupported(L10n.text("Live playlists must use UTF-8 encoding.")) }
+-        let guide = Playlist.guideAddress(in: text).flatMap { try? WebAddress.resolve($0, relativeTo: finalURL).absoluteString }
+-        return (try Playlist.parse(text, origin: finalURL, headers: source.headers), guide)
+-    }
+ }
+diff --git a/Tests/TVCoreTests/NetworkTests.swift b/Tests/TVCoreTests/NetworkTests.swift
+index 2fec7d8..72a1a90 100644
+--- a/Tests/TVCoreTests/NetworkTests.swift
++++ b/Tests/TVCoreTests/NetworkTests.swift
+@@ -74,12 +74,6 @@ private func client() -> HTTPClient {
+ @Test func httpErrorsSurfaceStatus() async {
+     await #expect(throws: (any Error).self) { try await client().get(URL(string: "https://example.com/failure")!) }
+ }
+-@Test func subscriptionUserAgentIsSentToPlaylist() async throws {
+-    let source = LiveSource(name: "Live", url: URL(string: "https://example.com/headers")!, headers: ["User-Agent": "Custom"])
+-    let channels = try await client().channels(source)
+-    #expect(channels.count == 1)
+-    #expect(channels[0].headers["User-Agent"] == "Custom")
+-}
+ @Test func standardCatalogAndPlaybackContract() async throws {
+     let base = URL(string: "https://example.com/config.json")!
+     let sub = try Subscription.parse(Data(#"{"sites":[{"key":"a","type":4,"api":"/api","header":{"User-Agent":"SiteAgent"}},{"key":"b","type":4,"api":"/parse"}]}"#.utf8), origin: base)
