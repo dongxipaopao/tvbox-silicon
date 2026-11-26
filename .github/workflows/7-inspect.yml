@@ -39,6 +39,24 @@ jobs:
           github-token: ${{ github.token }}
           path: named-ios
         continue-on-error: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: tests-full-log
+          run-id: ${{ inputs.ios_run }}
+          github-token: ${{ github.token }}
+          path: t-full
+        continue-on-error: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: tests-log
+          run-id: ${{ inputs.ios_run }}
+          github-token: ${{ github.token }}
+          path: t-log
+        continue-on-error: true
+      - name: Test counts
+        continue-on-error: true
+        run: |
+          { echo "## test logs (iOS run ${{ inputs.ios_run }})"; echo '```'; for f in t-log/* t-full/*; do echo "== $f"; grep -a -E "Executed [0-9]+ test|with [0-9]+ test|Test run with|Suite .* (passed|failed)|error:|failed" "$f" | tail -25 | cut -c1-200; done; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Icons actually packed (iOS)
         continue-on-error: true
         run: |
