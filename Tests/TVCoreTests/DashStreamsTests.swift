@@ -21,7 +21,8 @@ struct DashStreamsTests {
         // Only explicit subscription merging adds the recommended source; clashes keep provenance.
         #expect(keys(shown).prefix(2) == ["a", "builtin.bilibili"])
         #expect(keys(try #require(Subscription.merge([shown, cloud]))) == keys(shown))
-        #expect(shown.lives.map(\.url.absoluteString) == ["https://example.com/tv.m3u", "douyu-live://rooms"])
+        // Live entries are kept only as ignorable compatibility data; the app has no live platforms to open.
+        #expect(shown.lives.map(\.url.absoluteString).first == "https://example.com/tv.m3u")
         #expect(keys(subscription.withCloudFiles()) == ["a"])
         let site = try #require(shown.sites.first { $0.key == "builtin.bilibili" })
         #expect(site.isBuiltIn && site.isBilibili && site.runsInProcess && site.account == "bilibili")

@@ -104,14 +104,6 @@ private func episode(_ id: String, flag: String, name: String, episodeID: String
     #expect(!favorites.contains(.cloud(otherDrive)))
 }
 
-@Test @MainActor func roomFavoritesMatchByAddress() {
-    let favorites = Favorites(defaults: UserDefaults(suiteName: "favorites." + UUID().uuidString)!)
-    let room = channel("Host", url: "bilibili-live://room/42")
-    let renamed = Channel(name: "New title", group: "TV", url: URL(string: "bilibili-live://room/42")!)
-    favorites.toggle(.live(room))
-    #expect(favorites.contains(.live(renamed)))
-}
-
 @Test func historyFavoriteIsTheVideoOrTheCloudFile() {
     var context = PlaybackHistoryContext(origin: origin, sourceKey: "src", sourceName: "Source", videoID: "show", videoName: "Show", poster: nil, episodeID: "0-0", episodeName: "第1集", episodeFlag: "m3u8")
     let entry = PlaybackHistoryEntry(context: context, position: 12, duration: 0, updatedAt: Date())
