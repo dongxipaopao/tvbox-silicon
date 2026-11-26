@@ -1,0 +1,26 @@
+diff --git a/Sources/TVCore/Account.swift b/Sources/TVCore/Account.swift
+index a530c31..208fc14 100644
+--- a/Sources/TVCore/Account.swift
++++ b/Sources/TVCore/Account.swift
+@@ -322,7 +322,7 @@ extension Data {
+ /// The session token, in the keychain (this device only). QA runs with `-qaIsolatedData` keep their own.
+ public enum AccountKeychain {
+     static var service: String {
+-        "com.jo32.yingxia.account" + (UserDefaults.standard.bool(forKey: "qaIsolatedData") ? ".qa" : "")
++        "com.dongxipaopao.xiplayer.account" + (UserDefaults.standard.bool(forKey: "qaIsolatedData") ? ".qa" : "")
+     }
+ 
+     private static var query: [String: Any] {
+diff --git a/Sources/TVCore/SubtitleSources.swift b/Sources/TVCore/SubtitleSources.swift
+index 5b4039d..12dc627 100644
+--- a/Sources/TVCore/SubtitleSources.swift
++++ b/Sources/TVCore/SubtitleSources.swift
+@@ -187,7 +187,7 @@ public protocol SubtitleCredentialStore: Sendable {
+ /// TV or Mac has been asleep).
+ public struct KeychainSubtitleCredentials: SubtitleCredentialStore {
+     let service: String
+-    public init(service: String = "com.jo32.yingxia.subtitle-sources") { self.service = service }
++    public init(service: String = "com.dongxipaopao.xiplayer.subtitle-sources") { self.service = service }
+ 
+     public func values(for provider: String) -> [String: String] {
+         var query = base(provider)
