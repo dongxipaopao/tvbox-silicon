@@ -1,0 +1,13 @@
+diff --git a/App/DiscoverView.swift b/App/DiscoverView.swift
+index fcf1020..25d97a1 100644
+--- a/App/DiscoverView.swift
++++ b/App/DiscoverView.swift
+@@ -258,6 +258,8 @@ struct DiscoverView: View {
+         .onAppear { onScreen = true }
+         .onDisappear { onScreen = false }
+         .task { await model.load() }
++        // `-qaEditLayout 1` opens Edit Layout once the page is up, for screenshots.
++        .task { if UserDefaults.standard.bool(forKey: "qaEditLayout") { try? await Task.sleep(for: .seconds(3)); editing = true } }
+         .task(id: doubanShown) { if doubanShown { await model.loadDouban() } }
+         .task(id: store.followedShows.shows.map(\.id)) { if visible(.following) { await model.loadFollowing(store.followedShows.shows.map(\.id)) } }
+         .modifier(DiscoverToastHost())
