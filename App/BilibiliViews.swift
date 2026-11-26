@@ -11,11 +11,8 @@ import TVCore
              folder: Video(id: "up_\(mid)", name: name, category: "folder"))
 }
 
-/// A live room of Bilibili's, as the Live tab plays it.
-func bilibiliLiveChannel(room: Int, host: String) -> Channel? {
-    let scheme = LivePlatform(rawValue: "bilibili")?.scheme ?? "bilibili-live"
-    return URL(string: "\(scheme)://room/\(room)").map { Channel(name: host, group: L10n.text("Bilibili Live"), url: $0) }
-}
+/// Live rooms are not played in this app: always nil, so the live buttons next to a creator stay hidden.
+func bilibiliLiveChannel(room: Int, host: String) -> Channel? { nil }
 
 private enum BilibiliMetrics {
     #if os(tvOS)

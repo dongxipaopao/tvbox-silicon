@@ -305,12 +305,8 @@ import IOKit.pwr_mgt
     private var automatic: URL?
     /// The drive plays its transcoded copy, which has none of the file's subtitles (#1343).
     var playsDriveCopy: Bool { automatic.map(CloudStreams.isDriveCopy) ?? false }
-    /// The live room playing (at the quality chosen), when it opens again with a fresh address (`LiveReopen`), and
-    /// when its stream last became ready.
-    private var liveRoom: Channel?
-    private var liveReopen = LiveReopen()
+    /// When the stream last became ready.
     private var liveReadyAt: ContinuousClock.Instant?
-    private var liveRetrying = false
     /// The episode was already asked for again after its server ignored AVPlayer's byte range.
     private var rangeRetried = false
     /// When the loopback server behind the episode last listened again (`recoverLoopback`).
@@ -322,10 +318,6 @@ import IOKit.pwr_mgt
     private var checkingPicture = false
     /// The item whose HLS stream is being watched for sound without a picture (`checkSegmentedPicture`).
     private var checkingSegments: ObjectIdentifier?
-    /// A live stream is being moved to its live edge (`catchUpLive`).
-    private var catchingUpLive = false
-    /// A live room's chat, whose comments join `danmaku` as they are sent.
-    private var chat: (any LiveChat)?
     /// Download state while connecting or buffering, sampled once a second from AVFoundation's logs.
     struct Transfer {
         var received: Int64 = 0
@@ -386,21 +378,6 @@ import IOKit.pwr_mgt
         player.seek(to: CMTime(seconds: target, preferredTimescale: 600))
     }
 
-    /// Shows a live room's chat as danmaku: each comment enters as it arrives.
-    private func listen(_ chat: any LiveChat, generation active: UUID) {
-        self.chat = chat
-        chat.start { text, color, position in
-            Task { @MainActor [weak self] in
-                guard let self, self.generation == active else { return }
-                let now = self.player.currentTime().seconds
-                let time = max(now.isFinite ? now + 0.2 : 0, self.sourceDanmaku.last?.time ?? 0)
-                self.sourceDanmaku.append(Danmaku(time: time, position: position, color: color, text: text))
-                // Keep the recent chat; dropping the oldest restarts the overlay's layout once.
-                if self.sourceDanmaku.count > 4000 { self.sourceDanmaku.removeFirst(1000) }
-            }
-        }
-    }
-
     /// Plays the sound track `id` of a file whose tracks AVFoundation offers no choice between (`audioChoices`).
     func chooseAudio(_ id: CMPersistentTrackID) {
         guard let item else { return }
@@ -412,19 +389,6 @@ import IOKit.pwr_mgt
     func choose(quality: Int?) {
         guard let channel = playing, quality != self.quality,
               let url = quality.flatMap({ id in qualities.first { $0.id == id }?.url }) ?? automatic else { return }
-        if LiveCatalog.isRoom(url) {
-            // A live quality is another stream address, fetched now; live has no position to keep.
-            let active = generation
-            Task {
-                guard let resolved = try? await LiveCatalog.resolve(Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo)),
-                      self.generation == active else { return }
-                self.detachItem()
-                self.quality = resolved.current ?? quality
-                self.liveRoom = Channel(name: channel.name, group: channel.group, url: url, logo: channel.logo)
-                self.configure(resolved.channel, url: resolved.channel.url, generation: active)
-            }
-            return
-        }
         let time = player.currentTime(), paused = player.rate == 0
         detachItem()
         self.quality = quality
@@ -439,36 +403,6 @@ import IOKit.pwr_mgt
         if let failureObserver { NotificationCenter.default.removeObserver(failureObserver) }
         endObserver = nil; failureObserver = nil
         sampler?.cancel(); sampler = nil
-    }
-
-    /// A live room that stopped asks its platform for a fresh address and plays on, instead of waiting for the viewer
-    /// to try again: one that played a while each time (Huya refuses an address about two minutes in, #488), one
-    /// that hasn't once for a playlist that contradicted itself (`LiveReopen`).
-    private func retryLive(after failure: Error?) -> Bool {
-        if liveRetrying { return true } // The failed item's other report of the same failure.
-        let played = liveReadyAt.map { ContinuousClock.now - $0 }
-        guard let room = liveRoom, liveReopen.shouldReopen(after: failure, playedFor: played) else { return false }
-        liveRetrying = true; loading = true
-        if failure.map({ ($0 as NSError).domain == "CoreMediaErrorDomain" && ($0 as NSError).code == -12312 }) == true {
-            LiveRepair.noteContradiction((player.currentItem?.asset as? AVURLAsset)?.url)
-        }
-        detachItem(); observation = nil
-        let active = generation
-        Diagnostics.shared.record(.warning, "player", "live retry room=\(room.url.absoluteString) played=\(played.map { "\(Int($0.components.seconds))s" } ?? "-")")
-        note(L10n.text("The connection dropped. Reconnecting"))
-        Task {
-            do {
-                let resolved = try await LiveCatalog.resolve(room)
-                guard self.generation == active else { return }
-                self.liveRetrying = false
-                self.configure(resolved.channel, url: resolved.channel.url, generation: active)
-            } catch {
-                guard self.generation == active else { return }
-                self.liveRetrying = false
-                self.error = error.localizedDescription; self.loading = false
-            }
-        }
-        return true
     }
 
     /// A server that answers the first request for a file with the whole file, ignoring the two bytes
@@ -571,13 +505,11 @@ import IOKit.pwr_mgt
         detachItem(); observation = nil
         Diagnostics.shared.record(.warning, "player", "hdr refused captured=\(captured); converting to sdr \(failure.map(Self.describe) ?? "-")")
         Remux.stop(url)
-        let room = liveRoom
         preparation = Task { [weak self] in
             guard let self else { return }
             var channel = channel
             let prepared: Prepared
             do {
-                if let room { channel = try await LiveCatalog.resolve(room).channel }
                 prepared = try await self.prepare(channel)
             }
             catch {
@@ -932,10 +864,10 @@ import IOKit.pwr_mgt
     private func open(_ channel: Channel) {
         savedDownload = channel.url.scheme == DownloadLibrary.scheme
         stop(); error = nil; errorSymbol = "play.slash.fill"; loading = true; showsPicture = false; openedAt = .now; sourceDanmaku = []; qualities = []; quality = nil; switchNotice = nil
-        let live = LiveCatalog.isRoom(channel.url) || channel.group == L10n.text("Bilibili Live")
+        let live = false
         begin(channel, live: live)
         isLive = live
-        liveRoom = LiveCatalog.isRoom(channel.url) ? channel : nil; liveReopen = LiveReopen(); liveRetrying = false; rangeRetried = false
+        rangeRetried = false
         loopbackRecovered = nil; dropRecovery = PlaybackDropRecovery(); reopenedAfterDrop = false
         ErrorReports.shared.playing(live: isLive, format: channel.url.pathExtension, source: channel.historyContext?.sourceKey,
                                     danmaku: UserDefaults.standard.object(forKey: DanmakuPreference.key) == nil || UserDefaults.standard.bool(forKey: DanmakuPreference.key),
@@ -953,22 +885,7 @@ import IOKit.pwr_mgt
         Diagnostics.shared.record(.info, "player", "start name=\(channel.name) group=\(channel.group) url=\(channel.url.absoluteString) headers=\(channel.headers.keys.sorted().joined(separator: ","))")
         preparation = Task { [weak self] in
             guard let self else { return }
-            // A live room becomes its current stream address now; the address expires.
-            var channel = channel
-            var liveQualities: [StreamQuality] = [], liveQuality: Int?
-            if let (platform, id) = LiveCatalog.room(channel.url), let chat = LiveChats.make(platform, room: id, address: channel.url) { self.listen(chat, generation: activeGeneration) }
-            if LiveCatalog.isRoom(channel.url) {
-                self.note(L10n.text("Finding the live stream"))
-                do { (channel, liveQualities, liveQuality) = try await LiveCatalog.resolve(channel) }
-                catch {
-                    guard self.generation == activeGeneration, !Task.isCancelled else { return }
-                    Diagnostics.shared.failure("player", "live room=\(channel.url.absoluteString)", error)
-                    self.error = error.localizedDescription; self.loading = false; return
-                }
-            } else {
-                // A Huya stream a playlist reaches through an FLV relay plays as HLS.
-                channel = await LiveCatalog.playable(channel)
-            }
+            let channel = channel
             let prepared: Prepared
             do { prepared = try await self.prepare(channel) }
             catch {
@@ -996,8 +913,8 @@ import IOKit.pwr_mgt
             self.playing = channel; self.automatic = address
             self.externalSubtitles.begin(channel, playing: address)
             self.loadPartExtras(channel, generation: activeGeneration)
-            self.qualities = liveQualities.isEmpty ? DashStreams.qualities(for: address) : liveQualities
-            self.quality = liveQuality
+            self.qualities = DashStreams.qualities(for: address)
+            self.quality = nil
             if DanmakuSource.has(channel.url), let comments = await DanmakuSource.comments(for: channel.url),
                self.generation == activeGeneration { self.sourceDanmaku = comments }
         }
@@ -1280,7 +1197,6 @@ import IOKit.pwr_mgt
                     if self.recoverLoopback(Self.urlErrorCode(failure), channel: channel, url: url, generation: activeGeneration) { return }
                     if self.reopenedAfterDrop, self.resumeAfterDrop(failure, channel: channel, url: url, generation: activeGeneration) { return }
                     Diagnostics.shared.record(.error, "player", "failed host=\(self.transfer.host ?? channel.url.host() ?? "-") \(self.transfer.failure.map { "upstream=\($0) " } ?? "")\(detail) \(self.failureContext(channel, url: url, item: item))")
-                    if self.retryLive(after: failure) { return }
                     if self.tryNextLine(after: failure) { return }
                     // A refused link is usually an expired one: say so in plain words rather than the system's.
                     let expired = refused || [401, 403, 404, 410].contains(self.transfer.httpStatus ?? 0)
@@ -1300,7 +1216,6 @@ import IOKit.pwr_mgt
                 if self.recoverLoopback(Self.urlErrorCode(failure), channel: channel, url: url, generation: activeGeneration) { return }
                 if self.resumeAfterDrop(failure, channel: channel, url: url, generation: activeGeneration) { return }
                 Diagnostics.shared.record(.error, "player", "interrupted host=\(self.transfer.host ?? channel.url.host() ?? "-") at=\(Int(self.player.currentTime().seconds.isFinite ? self.player.currentTime().seconds : -1))s \(failure.map(Self.describe) ?? "-") \(self.failureContext(channel, url: url, item: item))")
-                if self.retryLive(after: failure) { return }
                 if self.tryNextLine(after: failure) { return }
                 self.error = message ?? L10n.text("Playback was interrupted."); self.loading = false
             }
@@ -1380,7 +1295,6 @@ import IOKit.pwr_mgt
         if pendingResume == nil, !restoringPosition { markClock() }
         updateSkipping(item)
         throttleBoost(item)
-        catchUpLive(item)
         queueUpcomingIfDue(item)
         if let url = playing?.url { CENCStreams.updatePosition(for: url, seconds: pendingResume ?? player.currentTime().seconds) }
         if tick % 5 == 0 { saveHistory() }
@@ -1450,17 +1364,6 @@ import IOKit.pwr_mgt
         }
         return true
     }
-    /// A live stream playing before everything its playlist still lists shows a frozen picture (`LiveEdge`); it
-    /// jumps to the live edge, as a web player does, instead of waiting for someone to open it again.
-    private func catchUpLive(_ item: AVPlayerItem) {
-        guard !catchingUpLive, item.status == .readyToPlay, item.duration.isIndefinite, player.timeControlStatus == .playing,
-              let edge = LiveEdge.target(position: player.currentTime(), seekable: item.seekableTimeRanges.map(\.timeRangeValue)) else { return }
-        catchingUpLive = true
-        Diagnostics.shared.record(.info, "player", "live catch-up from=\(Int(player.currentTime().seconds))s to=\(Int(edge.seconds))s")
-        player.seek(to: edge) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.catchingUpLive = false }
-        }
-    }
     /// Domain and code of the error and its underlying cause: AVFoundation's messages alone
     /// ("The operation could not be completed") don't tell an HTTP 403 from a decoder failure.
     nonisolated static func describe(_ error: Error) -> String { Diagnostics.describe(error) }
@@ -1523,7 +1426,6 @@ import IOKit.pwr_mgt
             Diagnostics.shared.record(.info, "player", "stop at=\(seconds.isFinite ? Int(seconds) : -1)s")
         }
         generation = UUID()
-        chat?.stop(); chat = nil
         preparation?.cancel(); preparation = nil
         lineWatch?.cancel(); lineWatch = nil
         sampler?.cancel(); sampler = nil

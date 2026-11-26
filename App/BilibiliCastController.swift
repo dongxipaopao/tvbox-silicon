@@ -58,15 +58,8 @@ import TVCore
                     store?.playing = channel
                 } catch { BilibiliCastReceiver.log("play failed \(error)"); store?.error = error.localizedDescription }
             }
-        case .live(let room):
-            Task {
-                // The room plays through Yingxia's own Bilibili Live platform, which names it when it starts.
-                guard let platform = LivePlatform(rawValue: "bilibili"), let url = URL(string: "\(platform.scheme)://room/\(room)") else {
-                    store?.error = L10n.text("The phone sent a video this app can't open."); return
-                }
-                if store?.playing != nil { store?.playing = nil; try? await Task.sleep(for: .milliseconds(700)) }
-                store?.playing = Channel(name: "", group: platform.name, url: url)
-            }
+        case .live:
+            store?.error = L10n.text("The phone sent a video this app can't open.")
         case .media(let url, let title):
             Task {
                 // The phone casts Bilibili videos to DLNA TVs as a 720p MP4. When the part can be identified,

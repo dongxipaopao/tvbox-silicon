@@ -152,14 +152,6 @@ enum QALaunch {
             try? await Task.sleep(for: .seconds(2))
             store.searchVideos(String(page.dropFirst(7)))
         }
-        // `-qaPlayLive [<platform>:]<room>` opens a live room (Bilibili by default) in the player.
-        if let target = UserDefaults.standard.string(forKey: "qaPlayLive") {
-            let parts = target.split(separator: ":", maxSplits: 1).map(String.init)
-            if let platform = LivePlatform(rawValue: parts.count == 2 ? parts[0] : "bilibili"), let room = parts.last,
-               let url = URL(string: "\(platform.scheme)://room/\(room)") {
-                store.playing = Channel(name: "Live \(room)", group: platform.name, url: url)
-            }
-        }
         // `-qaSubtitleSource <address>` adds that subtitle-source script (#576 M2) before anything plays, and
         // `-qaSubtitleSourceKeys '{apiKey=value;}'` gives it its keys (a property-list dictionary: the argument domain
         // drops a JSON object it can't read).
@@ -182,22 +174,6 @@ enum QALaunch {
             let subtitles = (UserDefaults.standard.string(forKey: "qaSubtitleURLs") ?? "").split(separator: ",").compactMap { URL(string: String($0)) }
                 .map { ExternalSubtitle(name: $0.lastPathComponent, url: $0) }
             store.playing = Channel(name: url.lastPathComponent, group: "QA", url: url, resumePosition: resume > 0 ? resume : nil, subtitles: subtitles)
-        }
-        // `-qaPlayChannel <index>` plays that channel of the subscription's first live playlist, picked from its list as
-        // the Live tab does: Previous and Next Channel and the channel list go through the playlist (#1010).
-        if let index = UserDefaults.standard.string(forKey: "qaPlayChannel").flatMap(Int.init),
-           let source = store.liveSources.first(where: { !$0.isBuiltIn }) {
-            do {
-                let playlist = try await HTTPClient().playlist(source)
-                let channels = playlist.channels
-                let guide = LiveGuide.address(for: source, playlist: playlist.guide, in: store).map(LiveGuide.init)
-                if let guide { Task { await guide.load(channels) } }
-                if channels.indices.contains(index) {
-                    store.watch(channels[index], in: LiveLineup(title: source.name, channels: channels), guide: guide)
-                }
-            } catch {
-                Diagnostics.shared.record(.warning, "qa", "playlist not loaded: \(error.localizedDescription)")
-            }
         }
         // `-qaPlay <site key>:<video id>[:<episode index>]` opens that source's video in the player.
         if let target = UserDefaults.standard.string(forKey: "qaPlay"), let config = store.subscription {
@@ -397,10 +373,6 @@ enum QALaunch {
             case "chapters":
                 QABilibiliChapters(part: parts.dropFirst().first.flatMap(BilibiliAPI.Part.init(address:)))
             #endif
-            case "channels":
-                if let index = Int(parts.dropFirst().first ?? ""), config.lives.indices.contains(index) {
-                    ChannelListView(source: config.lives[index])
-                }
             // `-qaPage folder:<quark|uc|alist|drive key>:<folder>` opens that Cloud Files folder; `-qaFilesPosters 1` as posters.
             case "folder":
                 if parts.count == 3, let drive = filesDrive(parts[1]) {
@@ -450,24 +422,6 @@ enum QALaunch {
                     DouyinHandoffView(link: link)
                 }
             #endif
-            case "bilibili-live": if let platform = LivePlatform(rawValue: "bilibili") { LivePlatformView(platform: platform) }
-            // `-qaPage live:<douyu|huya|douyin|bilibili>`, with `-qaQuery <text>` to show its search.
-            case "live":
-                if let platform = parts.dropFirst().first.flatMap(LivePlatform.init(rawValue:)) {
-                    LivePlatformView(platform: platform, initialQuery: UserDefaults.standard.string(forKey: "qaQuery") ?? "")
-                }
-            // `-qaPage live-plugins` (`-qaQuery <source key>` adds that source), `-qaPage live-plugin:<pluginId>`.
-            case "live-plugins": LivePluginsView(initialSource: UserDefaults.standard.string(forKey: "qaQuery"))
-            case "live-plugin":
-                if let plugin = parts.dropFirst().first.flatMap({ LivePlugins.shared.installed($0) }) { LivePluginPage(plugin: plugin) }
-            #if !os(tvOS)
-            // `-qaPage live-plugin-sign-in:<pluginId>`: the plugin's web sign-in sheet.
-            case "live-plugin-sign-in":
-                if let plugin = parts.dropFirst().first.flatMap({ LivePlugins.shared.installed($0) }) { QALivePluginSignIn(plugin: plugin) }
-            #endif
-            // `-qaPage live-plugin-qr:<pluginId>`: the plugin's QR sign-in, in the page itself.
-            case "live-plugin-qr":
-                if let plugin = parts.dropFirst().first.flatMap({ LivePlugins.shared.installed($0) }) { QALivePluginQR(plugin: plugin) }
             case "danmaku-list": QADanmakuList()
             case "danmaku-settings": QADanmakuSettings()
             // `-qaPage cloud-login:<quark|uc|baidu|aliyun|pan115|tianyi|pan123|guangya>`; `cloud-accounts` shows the accounts page.
@@ -754,35 +708,3 @@ private struct QABilibiliChapters: View {
 }
 #endif
 
-#if DEBUG && !os(tvOS)
-/// A live plugin's web sign-in sheet, once its manifest is read.
-private struct QALivePluginSignIn: View {
-    let plugin: LivePlugins.Installed
-    @State private var flow: LivePluginLoginFlow?
-    var body: some View {
-        Color.clear
-            .task { flow = await LivePlugins.shared.loginFlow(plugin.pluginId) }
-            .sheet(isPresented: .constant(flow != nil)) { if let flow { LivePluginWebSignIn(plugin: plugin, flow: flow) } }
-    }
-}
-#endif
-
-#if DEBUG
-
-/// A live plugin's QR sign-in, once its manifest is read.
-private struct QALivePluginQR: View {
-    let plugin: LivePlugins.Installed
-    @State private var plan: LivePluginQRPlan?
-    @State private var device = false
-    var body: some View {
-        ZStack {
-            if let plan { LivePluginQRPage(plugin: plugin, plan: plan, useWebPage: {}) }
-            else if device { LivePluginDevicePage(plugin: plugin) }
-        }
-        .task {
-            plan = await LivePlugins.shared.qrLogin(plugin.pluginId)
-            device = await LivePlugins.shared.signsInByDeviceCode(plugin.pluginId)
-        }
-    }
-}
-#endif

@@ -24,7 +24,6 @@ import TVCore
     private(set) var pinnedSources: PinnedSources
     private(set) var hiddenSources: HiddenSources
     /// Live platforms and playlists the viewer turned off (#601, #837).
-    private(set) var hiddenLiveSources: HiddenLiveSources
     private(set) var sourceOrder: SourceOrder
     /// Keeps the viewer's library the same on their other devices; nil for tests and QA's isolated data. Only the main
     /// profile's library syncs: it is suspended while another profile is open.
@@ -148,25 +147,8 @@ import TVCore
     /// Not observed: views fill these while drawing, and a write would draw every reader again.
     @ObservationIgnored private var siteListStamp = ""
     @ObservationIgnored private var cloudDrivesObserver: NSObjectProtocol?
-    @ObservationIgnored private var livePluginsObserver: NSObjectProtocol?
-    /// The installed live plugins' platforms, shown in Live TV even without a subscription.
-    private(set) var livePluginPlatforms = LivePlugins.shared.platforms
-    /// The installed live plugins and the LX Music sources, listed under Settings › Subscriptions with the subscriptions.
-    private(set) var livePlugins = LivePlugins.shared.installed
     private(set) var lxSources = LXSourceLibrary.shared.sources
     @ObservationIgnored private var lxSourcesObserver: NSObjectProtocol?
-    /// Every live source, hidden ones too: the subscription's (with the plugins' platforms), or the plugins' alone.
-    var allLiveSources: [LiveSource] { subscription?.lives ?? livePluginPlatforms.map(\.source) }
-    /// Live TV's sources: the ones the viewer hasn't hidden.
-    var liveSources: [LiveSource] { allLiveSources.filter { !hiddenLiveSources.contains($0) } }
-    /// The live playlists among `sources` by the subscription that lists them (#815).
-    func livePlaylistGroups(_ sources: [LiveSource]) -> [LivePlaylistGroup] {
-        LivePlaylistGroup.make(sources, subscriptions: subscriptions.filter(\.enabled).compactMap { entry in documents[entry.address].map { (entry, $0) } })
-    }
-    /// The subscription that is just this playlist, which removing the playlist removes.
-    func playlistSubscription(_ source: LiveSource) -> SubscriptionEntry? {
-        subscriptions.first { entry in documents[entry.address].map { $0.isPlaylistOnly && $0.lives.contains { $0.url == source.url } } == true }
-    }
     @ObservationIgnored private var automaticCache: [Site]?
     @ObservationIgnored private var orderedCache: [Site]?
     @ObservationIgnored private var recommendationCache: [Site]?
@@ -215,7 +197,6 @@ import TVCore
         profileFolder = library.folder
         pinnedSources = PinnedSources(defaults: library.playback)
         hiddenSources = HiddenSources(defaults: library.playback)
-        hiddenLiveSources = HiddenLiveSources(defaults: library.playback)
         #if os(macOS) || os(iOS)
         WebSniff.install(WKWebSniffer())
         #endif
@@ -230,15 +211,6 @@ import TVCore
         // Signing in to a drive or adding a server adds its source; signing out or removing one takes it away.
         cloudDrivesObserver = NotificationCenter.default.addObserver(forName: CloudFiles.drivesChanged, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshCloudFilesSources() }
-        }
-        // Installing or removing a live plugin adds or takes away its platform.
-        livePluginsObserver = NotificationCenter.default.addObserver(forName: LivePlugins.changed, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                self.livePluginPlatforms = LivePlugins.shared.platforms
-                self.livePlugins = LivePlugins.shared.installed
-                self.rebuildSubscription(resetting: false)
-            }
         }
         lxSourcesObserver = NotificationCenter.default.addObserver(forName: LXSourceLibrary.changed, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.lxSources = LXSourceLibrary.shared.sources }
@@ -305,7 +277,6 @@ import TVCore
         profileFolder = library.folder
         pinnedSources = PinnedSources(defaults: library.playback)
         hiddenSources = HiddenSources(defaults: library.playback)
-        hiddenLiveSources = HiddenLiveSources(defaults: library.playback)
         sourceOrder = SourceOrder(defaults: library.playback)
         favorites = Favorites(defaults: library.defaults)
         playlists = MusicPlaylists(defaults: library.defaults)
@@ -712,7 +683,6 @@ import TVCore
     private func setUpCloudSync() {
         guard let sync = cloudSync else { return }
         let favorites = favorites, history = playbackHistory, pinned = pinnedSources, hidden = hiddenSources, order = sourceOrder
-        let hiddenLive = hiddenLiveSources
         let followed = followedShows
         sync.register("favorites", current: { favorites.syncValues }, apply: { favorites.adopt($0) })
         sync.register("followedShows", current: { followed.syncValues }, apply: { followed.adopt($0) })
@@ -729,8 +699,6 @@ import TVCore
         sync.register("pinnedSources", current: { CloudSync.ranks(pinned.savedKeys) }, apply: { pinned.adopt(CloudSync.ordered($0)) })
         sync.register("hiddenSources", current: { Dictionary(hidden.savedKeys.map { ($0, true) }, uniquingKeysWith: { first, _ in first }) },
                       apply: { hidden.adopt($0.sorted { ($0.stamp, $0.id) < ($1.stamp, $1.id) }.map(\.id)) })
-        sync.register("hiddenLiveSources", current: { Dictionary(hiddenLive.savedKeys.map { ($0, true) }, uniquingKeysWith: { first, _ in first }) },
-                      apply: { hiddenLive.adopt($0.sorted { ($0.stamp, $0.id) < ($1.stamp, $1.id) }.map(\.id)) })
         sync.register("sourceOrder", current: { CloudSync.ranks(order.savedKeys) }, apply: { order.adopt(CloudSync.ordered($0)) })
         // Only "on" is an item: a new device's default (off) is no change, so it can't switch the order off everywhere.
         sync.register("sourceOrderOn", current: { order.enabled ? ["on": true] : [:] }, apply: { if order.enabled == $0.isEmpty { order.enabled = !$0.isEmpty } })
@@ -739,7 +707,6 @@ import TVCore
         history.onChange = { sync.changed("history") }
         pinned.onChange = { sync.changed("pinnedSources") }
         hidden.onChange = { sync.changed("hiddenSources") }
-        hiddenLive.onChange = { sync.changed("hiddenLiveSources") }
         order.onChange = { sync.changed("sourceOrder"); sync.changed("sourceOrderOn") }
     }
     private var syncedSubscriptions: [String: SyncedSubscription] {
@@ -767,7 +734,7 @@ import TVCore
         let enabled = subscriptions.filter(\.enabled).compactMap { documents[$0.address] }
         // Only an explicitly enabled subscription may supply service metadata. Ignore the old automatic cache.
         CloudSources.current = enabled.first(where: CloudSources.accepts)
-        subscription = Subscription.merge(enabled)?.withCloudFiles().withLivePlugins()
+        subscription = Subscription.merge(enabled)?.withCloudFiles()
         if let subscription {
             // Older downloads only had the last episode in Continue Watching. Keep that position before the
             // viewer moves on to another episode and the show-level entry is replaced.

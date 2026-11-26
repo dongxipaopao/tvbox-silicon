@@ -126,7 +126,7 @@ import TVCore
     static func main() async throws {
         let args = CommandLine.arguments
         // Yingxia's own sources and live platforms come from its subscription.
-        if args.count >= 2, args[1] == "--live" || args[1] == "--cloud-site" || args[1].hasPrefix("--bili") || args[1] == "--download" {
+        if args.count >= 2, args[1] == "--cloud-site" || args[1].hasPrefix("--bili") || args[1] == "--download" {
             CloudSources.current = try await CloudSources.fetch(http: HTTPClient(), address: Self.sourcesAddress())
         }
         guard args.count >= 2 else {
@@ -154,23 +154,6 @@ import TVCore
             print("aid", await Bilibili.castVideo(cid: cid, title: args[3]).map(String.init) ?? "not found")
             return
         }
-        if args[1] == "--bili-chat", args.count >= 3, let room = Int(args[2]) {
-            // --bili-chat <room> [seconds]: prints a live room's comments as they arrive.
-            setvbuf(stdout, nil, _IONBF, 0)
-            let chat = BilibiliLiveChat(room: room)
-            chat.start { text, color, position in print("danmaku \(String(format: "%06x", color)) \(position) \(text)") }
-            try await Task.sleep(for: .seconds(args.count > 3 ? Double(args[3]) ?? 20 : 20))
-            chat.stop()
-            return
-        }
-        if args[1] == "--live-chat", args.count >= 4, let chat = LiveChats.make(args[2], room: args[3]) {
-            // --live-chat <bilibili|douyu|huya> <room> [seconds]: prints a live room's comments as they arrive.
-            setvbuf(stdout, nil, _IONBF, 0)
-            chat.start { text, color, position in print("danmaku \(String(format: "%06x", color)) \(position) \(text)") }
-            try await Task.sleep(for: .seconds(args.count > 4 ? Double(args[4]) ?? 20 : 20))
-            chat.stop()
-            return
-        }
         if args[1] == "--douyin-handoff" {
             // --douyin-handoff: a TV-side receiver and an iPhone-side send over the LAN address, plus a
             // forged send (wrong key) that must be refused.
@@ -188,177 +171,6 @@ import TVCore
             }
             for await account in got { print("received", account.name, account.cookie) }
             receiver.stop()
-            return
-        }
-        if args[1] == "--live", args.count >= 3, let platform = LivePlatform(rawValue: args[2]) {
-            // --live <bilibili|douyu|huya|douyin> [keyword|room:<id>]: areas, the first area's rooms (or the
-            // search results), then the first room's stream through AVPlayer for a few seconds.
-            setvbuf(stdout, nil, _IONBF, 0)
-            var rooms: [LiveRoom] = []
-            if args.count > 3, args[3].hasPrefix("room:") {
-                rooms = [] // played directly below
-            } else if args.count > 3 {
-                rooms = try await LiveCatalog.search(platform, keyword: args[3])
-                print("search \(args[3]): \(rooms.count) rooms")
-            } else {
-                let areas = try await LiveCatalog.areas(platform)
-                print("areas \(areas.map(\.name).joined(separator: " "))")
-                let first = try await LiveCatalog.rooms(platform, area: areas[0], page: 1)
-                let second = try await LiveCatalog.rooms(platform, area: areas[0], page: 2)
-                print("\(areas[0].name): page 1 \(first.count) rooms, page 2 \(second.count)")
-                if areas.count > 1 { print("\(areas[1].name): \(try await LiveCatalog.rooms(platform, area: areas[1], page: 1).count) rooms") }
-                rooms = first
-            }
-            for room in rooms.prefix(4) { print("  \(room.roomID) | \(room.host) | \(room.title) | \(room.online) | \(room.area) | \(room.cover?.absoluteString.prefix(50) ?? "-")") }
-            let address = args.count > 3 && args[3].hasPrefix("room:") ? URL(string: "\(platform.scheme)://room/\(args[3].dropFirst(5))")! : rooms.first?.url
-            guard let address else { return }
-            let live = try await LiveCatalog.resolve(Channel(name: "", url: address))
-            print("resolved \(live.channel.name) \(live.channel.url.absoluteString.prefix(110))")
-            print("qualities \(live.qualities.map { "\($0.id) \($0.label)" }) current \(live.current ?? -1)")
-            if let folder = ProcessInfo.processInfo.environment["LIVE_DUMP"], live.channel.url.lastPathComponent == "master.m3u8" {
-                // The local HLS files as the player gets them.
-                let base = live.channel.url.deletingLastPathComponent()
-                for name in ["master.m3u8", "0.m3u8", "0-0.mp4", "0-0.m4s", "0-1.m4s"] {
-                    let (data, _) = try await URLSession.shared.data(from: base.appending(path: name))
-                    try data.write(to: URL(fileURLWithPath: folder).appending(path: name))
-                    print("dumped \(name) \(data.count)")
-                }
-            }
-            let item = AVPlayerItem(asset: CENCStreams.asset(for: live.channel.url) ?? LiveRepair.asset(for: live.channel.url)
-                ?? AVURLAsset(url: live.channel.url, options: ["AVURLAssetHTTPHeaderFieldsKey": live.channel.headers]))
-            // As a player layer would: a video-only HLS item without any video output never starts.
-            item.add(AVPlayerItemVideoOutput(pixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]))
-            let player = AVPlayer(playerItem: item); player.isMuted = true; player.play()
-            for second in 1...(Int(ProcessInfo.processInfo.environment["LIVE_SECONDS"] ?? "") ?? 10) {
-                try await Task.sleep(for: .seconds(1))
-                CENCStreams.updatePosition(for: live.channel.url, seconds: player.currentTime().seconds)
-                if ProcessInfo.processInfo.environment["LIVE_DUMP"] != nil {
-                    let buffered = item.loadedTimeRanges.map { String(format: "%.1f+%.1f", $0.timeRangeValue.start.seconds, $0.timeRangeValue.duration.seconds) }
-                    print("  rate=\(player.rate) waiting=\(player.reasonForWaitingToPlay?.rawValue ?? "-") buffered=\(buffered) errors=\(item.errorLog()?.events.map { "\($0.errorStatusCode) \($0.errorComment ?? "")" } ?? [])")
-                }
-                print("t=\(second) status=\(item.status.rawValue) time=\(String(format: "%.1f", player.currentTime().seconds)) size=\(Int(item.presentationSize.width))x\(Int(item.presentationSize.height)) error=\(item.error.map { "\($0)" } ?? "-")")
-            }
-            // Recoverable problems too, such as a playlist contradicting an earlier reload (-12312).
-            for event in item.errorLog()?.events ?? [] { print("errorlog \(event.errorStatusCode) \(event.errorComment ?? "-")") }
-            // As the player does before it opens the room again: the next run reads this server through the loader.
-            if (item.error as NSError?)?.code == -12312 { LiveRepair.noteContradiction(live.channel.url); print("noted contradiction") }
-            return
-        }
-        if args[1] == "--plugin-call", args.count > 3 {
-            // --plugin-call <pluginId> <method> [JSON payload]: one call into an installed live plugin, its reply as JSON.
-            setvbuf(stdout, nil, _IONBF, 0)
-            let payload = args.count > 4 ? try JSONDecoder().decode([String: JSONValue].self, from: Data(args[4].utf8)) : [:]
-            do {
-                let reply = try await LivePluginRuntime.shared.call(args[2], args[3], payload)
-                let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-                print(String(decoding: try encoder.encode(reply), as: UTF8.self))
-            } catch { print("error \(error)") }
-            return
-        }
-        // --plugin-qr <plugin> [seconds]: a QR sign-in up to the code and a few polls (scan it to go all the way).
-        if args[1] == "--plugin-qr", args.count > 2 {
-            guard let plan = await LivePlugins.shared.qrLogin(args[2]) else { print("no QR sign-in"); return }
-            print("plan poll=\(plan.pollInterval)s timeout=\(plan.timeout)s refreshes=\(plan.maxRefreshes) verifies=\(plan.verifies) hint=\(plan.hint)")
-            let session = LivePluginQRSession(plugin: args[2], plan: plan)
-            let challenge = try await session.start()
-            print("code \(challenge.content.prefix(70))… (\(challenge.content.count) chars) expires=\(challenge.expires.map { Int($0.timeIntervalSinceNow) } ?? -1)s poll=\(challenge.pollInterval)s")
-            if let folder = ProcessInfo.processInfo.environment["QR_SAVE"] { try challenge.content.write(toFile: folder + "/qr.txt", atomically: true, encoding: .utf8) }
-            let end = Date().addingTimeInterval(args.count > 3 ? Double(args[3]) ?? 8 : 8)
-            try await Task.sleep(for: .seconds(challenge.firstPollDelay))
-            while Date() < end {
-                try await Task.sleep(for: .seconds(challenge.pollInterval))
-                let state = try await session.poll()
-                print("state \(state)")
-                if state == .confirmed || state == .expired { break }
-                if case .failed = state { break }
-            }
-            await session.cancel()
-            print("signed in: \(LivePluginAccounts.isSignedIn(args[2]))")
-            return
-        }
-        // --plugin-device <plugin> [seconds]: a device-code sign-in up to the code and a few polls.
-        if args[1] == "--plugin-device", args.count > 2 {
-            guard await LivePlugins.shared.signsInByDeviceCode(args[2]) else { print("no device-code sign-in"); return }
-            let session = LivePluginDeviceSession(plugin: args[2])
-            let code = try await session.start()
-            print("code length=\(code.code.count) page=\(code.page.host() ?? "-")\(code.page.path()) carriesCode=\(code.page.query()?.contains(code.code) ?? false) expires=\(Int(code.expires.timeIntervalSinceNow))s interval=\(code.interval)s")
-            let end = Date().addingTimeInterval(args.count > 3 ? Double(args[3]) ?? 12 : 12)
-            while Date() < end {
-                try await Task.sleep(for: .seconds(code.interval))
-                let state = try await session.poll()
-                print("state \(state)")
-                if state != .waiting { break }
-            }
-            await session.cancel()
-            print("signed in: \(LivePluginAccounts.isSignedIn(args[2]))")
-            return
-        }
-        if args[1] == "--plugin-danmaku", args.count > 2 {
-            // --plugin-danmaku <pluginId> [roomId [userId]] [seconds]: listens to a room's chat through the plugin's danmaku
-            // driver and prints each comment; without a room, the first room of the plugin's first area.
-            setvbuf(stdout, nil, _IONBF, 0)
-            guard let platform = LivePlatform(rawValue: "plugin." + args[2]) else { print("plugin \(args[2]) isn't installed"); return }
-            var room = args.count > 3 ? args[3] : "", user = args.count > 4 ? args[4] : ""
-            if room.isEmpty {
-                guard let area = try await LiveCatalog.areas(platform).first else { print("no areas"); return }
-                let first = try await LiveCatalog.rooms(platform, area: area, page: 1).first
-                room = first?.roomID ?? ""; user = first?.userID ?? ""
-                print("room \(room) user \(user) \(first?.host ?? "") \(first?.title ?? "")")
-            }
-            let seconds = args.count > 5 ? Int(args[5]) ?? 30 : 30
-            let chat = LivePluginChat(plugin: args[2], room: room, user: user)
-            let count = ManagedAtomicCounter()
-            chat.start { text, color, _ in print(String(format: "  #%06X %@", color, text)); count.add() }
-            try await Task.sleep(for: .seconds(seconds))
-            chat.stop()
-            print("comments \(count.value) in \(seconds) s")
-            try await Task.sleep(for: .seconds(1))
-            return
-        }
-        if args[1] == "--plugin-install", args.count > 2 {
-            // --plugin-install <source address, angellive:// link or key> [pluginId ...]: installs live plugins
-            // (all of the source's without ids); then `--live plugin.<id> [keyword|room:<id>]` tries one.
-            setvbuf(stdout, nil, _IONBF, 0)
-            guard let address = LivePlugins.sourceAddress(args[2]) else { throw LivePlugins.Failure.notASource }
-            let (name, entries) = try await LivePlugins.shared.index(address)
-            print("source \(name): \(entries.map { "\($0.pluginId) \($0.version)" }.joined(separator: ", "))")
-            LivePlugins.shared.addSource(address, name: name)
-            let wanted = Set(args.dropFirst(3))
-            for entry in entries where wanted.isEmpty || wanted.contains(entry.pluginId) {
-                do {
-                    try await LivePlugins.shared.install(entry, from: address)
-                    let record = LivePlugins.shared.installed(entry.pluginId)
-                    print("installed \(entry.pluginId) \(record?.version ?? "-") tint=\(record?.tint ?? "-")")
-                } catch {
-                    print("failed \(entry.pluginId): \(error.localizedDescription)")
-                }
-            }
-            print("platforms \(LivePlugins.shared.platforms.map { "\($0.id) \($0.scheme)" })")
-            return
-        }
-        if args[1] == "--flv-live", args.count > 2 {
-            // --flv-live <url> [Name: value ...]: plays a live FLV stream through FLVLive for 20 s.
-            setvbuf(stdout, nil, _IONBF, 0)
-            var headers: [String: String] = [:]
-            for field in args.dropFirst(3) {
-                let parts = field.split(separator: ":", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
-                if parts.count == 2 { headers[parts[0]] = parts[1] }
-            }
-            let began = Date()
-            let address = try await FLVLive.open(URL(string: args[2])!, headers: headers)
-            print("open ms=\(Int(Date().timeIntervalSince(began) * 1000)) \(address)")
-            let master = try await URLSession.shared.data(from: address).0
-            print(String(decoding: master, as: UTF8.self))
-            let media = try await URLSession.shared.data(from: address.deletingLastPathComponent().appending(path: "0.m3u8")).0
-            print(String(decoding: media, as: UTF8.self))
-            let item = AVPlayerItem(url: address)
-            let player = AVPlayer(playerItem: item); player.isMuted = true; player.play()
-            for second in 1...20 {
-                try await Task.sleep(for: .seconds(1))
-                print("t=\(second) status=\(item.status.rawValue) time=\(String(format: "%.1f", player.currentTime().seconds)) rate=\(player.rate) size=\(Int(item.presentationSize.width))x\(Int(item.presentationSize.height)) error=\(item.error.map { "\($0)" } ?? "-")")
-            }
-            for event in item.errorLog()?.events ?? [] { print("errorlog \(event.errorStatusCode) \(event.errorComment ?? "-")") }
-            for event in (item.accessLog()?.events ?? []).suffix(1) { print("access stalls=\(event.numberOfStalls) dropped=\(event.numberOfDroppedVideoFrames) indicated=\(Int(event.indicatedBitrate))") }
             return
         }
         if args[1] == "--cast-listen" {
@@ -917,23 +729,6 @@ import TVCore
             } catch {
                 FileHandle.standardError.write(Data((error.localizedDescription + "\n").utf8))
                 exit(1)
-            }
-            return
-        }
-        if args[1] == "--live-check" {
-            let origin = URL(string: "https://raw.githubusercontent.com/qist/tvbox/master/fty.json")!
-            let config = try await HTTPClient().subscription(origin)
-            print("Subscription: \(config.sites.count) sites, \(config.lives.count) live lists")
-            await withTaskGroup(of: String.self) { group in
-                for source in config.lives {
-                    group.addTask {
-                        do {
-                            let channels = try await HTTPClient().channels(source)
-                            return "\(source.name): \(channels.count) parsed channels (playback not verified)"
-                        } catch { return "\(source.name): \(error.localizedDescription)" }
-                    }
-                }
-                for await result in group { print(result) }
             }
             return
         }

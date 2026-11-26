@@ -74,12 +74,6 @@ private func client() -> HTTPClient {
 @Test func httpErrorsSurfaceStatus() async {
     await #expect(throws: (any Error).self) { try await client().get(URL(string: "https://example.com/failure")!) }
 }
-@Test func subscriptionUserAgentIsSentToPlaylist() async throws {
-    let source = LiveSource(name: "Live", url: URL(string: "https://example.com/headers")!, headers: ["User-Agent": "Custom"])
-    let channels = try await client().channels(source)
-    #expect(channels.count == 1)
-    #expect(channels[0].headers["User-Agent"] == "Custom")
-}
 @Test func standardCatalogAndPlaybackContract() async throws {
     let base = URL(string: "https://example.com/config.json")!
     let sub = try Subscription.parse(Data(#"{"sites":[{"key":"a","type":4,"api":"/api","header":{"User-Agent":"SiteAgent"}},{"key":"b","type":4,"api":"/parse"}]}"#.utf8), origin: base)

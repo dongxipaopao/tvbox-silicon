@@ -203,10 +203,9 @@ extension Store {
 /// or Remove Subscriptions with the subscriptions.
 enum SubscriptionExtra: Identifiable, Hashable {
     case lxSource(LXSource)
-    case livePlugin(LivePlugins.Installed)
 
     @MainActor static func all(_ store: Store) -> [SubscriptionExtra] {
-        store.lxSources.map(SubscriptionExtra.lxSource) + store.livePlugins.map(SubscriptionExtra.livePlugin)
+        store.lxSources.map(SubscriptionExtra.lxSource)
     }
 
     /// Removes the subscriptions (by address) and the other entries (by `id`) among `keys`.
@@ -219,39 +218,33 @@ enum SubscriptionExtra: Identifiable, Hashable {
     var id: String {
         switch self {
         case .lxSource(let source): "lx " + source.id
-        case .livePlugin(let plugin): "plugin " + plugin.pluginId
         }
     }
     @MainActor var title: String {
         switch self {
         case .lxSource(let source): source.info.name
-        case .livePlugin(let plugin): plugin.name
         }
     }
     /// What it feeds, as a subscription's row shows its count, or Off.
     var value: String {
         switch self {
         case .lxSource(let source): source.enabled ? L10n.text("Music") : L10n.text("Off")
-        case .livePlugin: L10n.text("Live Plugins")
         }
     }
     /// The value in its kind's section, where the kind goes without saying (#1261): a book list's size, or Off.
     @MainActor var sectionValue: String? {
         switch self {
         case .lxSource(let source): source.enabled ? nil : L10n.text("Off")
-        case .livePlugin: nil
         }
     }
     var symbol: String {
         switch self {
         case .lxSource: "music.note"
-        case .livePlugin: "puzzlepiece.extension.fill"
         }
     }
     var tint: Color {
         switch self {
         case .lxSource(let source): source.enabled ? .pink : .gray
-        case .livePlugin: .purple
         }
     }
     var lxSource: LXSource? {
@@ -265,14 +258,12 @@ enum SubscriptionExtra: Identifiable, Hashable {
     @MainActor @ViewBuilder var page: some View {
         switch self {
         case .lxSource(let source): LXSourcePage(source: source)
-        case .livePlugin(let plugin): LivePluginPage(plugin: plugin)
         }
     }
 
     @MainActor func remove() {
         switch self {
         case .lxSource(let source): LXSourceLibrary.shared.remove(source.id)
-        case .livePlugin(let plugin): LivePlugins.shared.uninstall(plugin.pluginId)
         }
     }
 }
@@ -554,7 +545,6 @@ struct FormSettingsView: View {
     #endif
     /// `HiddenSourcesEditor`, opened from the subscriptions.
     @State private var editingSources = false
-    @State private var editingLive = false
     /// A subscription its menu asked to remove, waiting for the confirmation.
     @State private var removingSubscription: SubscriptionEntry?
     /// A source list, LX Music source or live plugin its menu asked to remove, waiting for the confirmation.
@@ -679,26 +669,6 @@ struct FormSettingsView: View {
                     .accessibilityIdentifier("settings.hiddenSources")
                     .settingsAnchor(.hiddenSources)
                 }
-                // The same for Live TV: the built-in platforms aren't in any subscription that can be removed (#837).
-                if !store.allLiveSources.isEmpty {
-                    let hidden = store.allLiveSources.filter(store.hiddenLiveSources.contains).count
-                    Button { editingLive = true } label: {
-                        HStack(spacing: 8) {
-                            FormLabel(symbol: "tv.fill", tint: .red, title: L10n.text("Hide or Show Live TV")).lineLimit(1).layoutPriority(1)
-                                .foregroundStyle(.primary)
-                            Spacer(minLength: 0)
-                            if hidden > 0 { Text(L10n.text("%lld hidden", hidden)).lineLimit(1).foregroundStyle(.secondary) }
-                            #if os(iOS)
-                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                            #endif
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .formRowButton()
-                    .tint(.primary)
-                    .accessibilityIdentifier("settings.hiddenLive")
-                    .settingsAnchor(.hiddenLive)
-                }
                 // Dragging, rather than Move Up and Move Down on each one's page (#1184).
                 if store.subscriptions.count > 1 {
                     FormLink(symbol: "arrow.up.arrow.down", tint: .indigo, title: L10n.text("Arrange Subscriptions")) { ArrangeSubscriptionsView() }
@@ -746,18 +716,6 @@ struct FormSettingsView: View {
                 if let message = store.importError ?? store.notice { Text(message) }
             }
 
-            // Live plugins and music sources are added with Add Subscription too, but each is listed in
-            // its own kind's section rather than mixed in with the subscriptions (#1261), and managed and removed there.
-            if store.extrasUnlocked || !store.livePlugins.isEmpty {
-                Section {
-                    ForEach(store.livePlugins.map(SubscriptionExtra.livePlugin)) { extraRow($0).settingsAnchor(.extra($0)) }
-                    let count = store.livePluginPlatforms.count
-                    FormLink(symbol: "dot.radiowaves.left.and.right", tint: .red, title: L10n.text("Live Plugins"),
-                             value: count == 0 ? nil : String(count)) { LivePluginsView() }
-                        .id("settings.livePlugins")
-                } footer: {
-                    Text(L10n.text("Live platforms added as AngelLive plugins show in Live TV."))
-                }
             }
 
             if !store.lxSources.isEmpty {
@@ -1090,7 +1048,6 @@ struct FormSettingsView: View {
         .settingsForm(L10n.text("Settings"))
         .searchable(text: $searchQuery, isPresented: $searching, prompt: Text(L10n.text("Search settings")))
         .sheet(isPresented: $editingSources) { HiddenSourcesEditor() }
-        .sheet(isPresented: $editingLive) { LiveSourcesEditor() }
         // An alert rather than a dialog: a dialog on the row never appeared after a swipe, and on the page it pointed
         // at the top of Settings.
         .alert(L10n.text("Remove “%@”", removingSubscription?.title ?? ""),
@@ -1219,12 +1176,9 @@ private enum SettingsSearchTarget: Hashable, Sendable {
     case feedback
     case telegram
     case subscription(String)
-    case hiddenSources
-    case hiddenLive
-    case arrangeSubscriptions
+    case hiddenSources    case arrangeSubscriptions
     case removeSubscriptions
     case addSubscription
-    case livePlugins
     case extra(SubscriptionExtra)
     case bilibili
     case douyin
@@ -1271,7 +1225,6 @@ private enum SettingsSearchTarget: Hashable, Sendable {
         case .extra(let extra): return "settings.extra " + extra.id
         case .sourceSignIn(let id): return "settings.signIn " + id
         case .language: return "settings.language"
-        case .livePlugins: return "settings.livePlugins"
         case .profiles: return "settings.profiles"
         case .licenses: return "settings.end"
         #if os(iOS)
@@ -1374,10 +1327,6 @@ private extension FormSettingsView {
             add(.hiddenSources, title: L10n.text("Hide or Show Sources"), section: secSubs,
                 keywords: ["hide", "show", "sources", "隐藏", "显示", "片源"])
         }
-        if !store.allLiveSources.isEmpty {
-            add(.hiddenLive, title: L10n.text("Hide or Show Live TV"), section: secSubs,
-                keywords: ["live", "tv", "hide", "直播", "频道"])
-        }
         if store.subscriptions.count > 1 {
             add(.arrangeSubscriptions, title: L10n.text("Arrange Subscriptions"), section: secSubs,
                 keywords: ["arrange", "reorder", "sort", "排序", "订阅"])
@@ -1391,14 +1340,6 @@ private extension FormSettingsView {
             keywords: ["add", "url", "import", "添加", "导入", "订阅"])
         #endif
 
-        if store.extrasUnlocked || !store.livePlugins.isEmpty {
-            for plugin in store.livePlugins {
-                add(.extra(.livePlugin(plugin)), title: plugin.name, section: L10n.text("Live Plugins"),
-                    keywords: ["live", "plugin", "直播", "插件"])
-            }
-            add(.livePlugins, title: L10n.text("Live Plugins"), section: L10n.text("Live Plugins"),
-                keywords: ["live", "plugin", "angellive", "直播", "插件"])
-        }
         for source in store.lxSources {
             add(.extra(.lxSource(source)), title: source.info.name, section: L10n.text("Music"),
                 keywords: ["music", "lx", "洛雪", "音乐"])
@@ -2462,13 +2403,6 @@ struct TVSettingsView: View {
             }
             subscriptionSection
             // Each kind in its own section rather than mixed in with the subscriptions (#1261).
-            if store.extrasUnlocked || !store.livePlugins.isEmpty {
-                TVSettingsSection(footer: L10n.text("Live platforms added as AngelLive plugins show in Live TV.")) {
-                    extraLinks(store.livePlugins.map(SubscriptionExtra.livePlugin))
-                    let count = store.livePluginPlatforms.count
-                    TVSettingsLink(title: L10n.text("Live Plugins"), value: count == 0 ? nil : String(count)) { LivePluginsView() }
-                }
-            }
             if !store.lxSources.isEmpty {
                 TVSettingsSection(title: L10n.text("Music")) { extraLinks(store.lxSources.map(SubscriptionExtra.lxSource)) }
             }
@@ -2571,10 +2505,6 @@ struct TVSettingsView: View {
                 TVSettingsLink(title: entry.title, value: store.subscriptionValue(entry), warning: failed) { TVSubscriptionPage(entry: entry) }
             }
             TVSettingsLink(title: L10n.text("Add Subscription")) { TVAddSubscriptionPage() }
-            if !store.allLiveSources.isEmpty {
-                let hidden = store.allLiveSources.filter(store.hiddenLiveSources.contains).count
-                TVSettingsLink(title: L10n.text("Hide or Show Live TV"), value: hidden > 0 ? L10n.text("%lld hidden", hidden) : nil) { LiveSourcesEditor() }
-            }
             if store.subscriptions.count + SubscriptionExtra.all(store).count > 1 {
                 TVSettingsLink(title: L10n.text("Remove Subscriptions")) { TVRemoveSubscriptionsPage() }
             }

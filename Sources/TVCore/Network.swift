@@ -37,12 +37,4 @@ public struct HTTPClient: Sendable {
         if let bundle = CatPawOpen.bundle(data, at: finalURL) { return try await CatPawOpen.subscription(bundle: bundle, origin: finalURL, http: self) }
         return try await Subscription.parse(data, origin: finalURL).sniffingScripts(http: self)
     }
-    public func channels(_ source: LiveSource) async throws -> [Channel] { try await playlist(source).channels }
-    /// A live source's channels, and the XMLTV guide its M3U header names, if any (#802).
-    public func playlist(_ source: LiveSource) async throws -> (channels: [Channel], guide: String?) {
-        let (data, finalURL) = try await get(source.url, headers: source.headers)
-        guard let text = String(data: data, encoding: .utf8) else { throw TVError.unsupported(L10n.text("Live playlists must use UTF-8 encoding.")) }
-        let guide = Playlist.guideAddress(in: text).flatMap { try? WebAddress.resolve($0, relativeTo: finalURL).absoluteString }
-        return (try Playlist.parse(text, origin: finalURL, headers: source.headers), guide)
-    }
 }

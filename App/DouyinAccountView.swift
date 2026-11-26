@@ -147,7 +147,7 @@ extension DouyinAccount {
 struct DouyinSignInBanner: View {
     var body: some View {
         HStack(spacing: 16) {
-            if let douyin = LivePlatform(rawValue: "douyin") { LivePlatformMark(platform: douyin, size: 44) }
+            Image(systemName: "person.crop.circle").font(.system(size: 36))
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.text("Sign In to Douyin")).font(.headline)
                 Text(L10n.text("Douyin answers live searches only for signed-in accounts."))
@@ -182,7 +182,7 @@ struct DouyinLoginView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                if let douyin = LivePlatform(rawValue: "douyin") { LivePlatformMark(platform: douyin, size: 28) }
+                Image(systemName: "person.crop.circle").font(.system(size: 24))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(L10n.text("Sign In to Douyin")).font(.headline)
                     Text(L10n.text("Use Douyin's Log In button on the page.")).font(.caption).foregroundStyle(.secondary)
