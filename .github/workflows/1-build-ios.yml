@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
 jobs:
   runtime:
+    if: false
     runs-on: macos-15
     timeout-minutes: 350
     steps:
@@ -51,14 +52,16 @@ jobs:
           path: runtime.log
           if-no-files-found: ignore
   ipa:
-    needs: runtime
     runs-on: xcode-27
     timeout-minutes: 200
     steps:
       - uses: actions/checkout@v4
+      # The runtime tarball from run 45780599022 (same Java host and runtime scripts) is reused: the macos-15 pool did not pick the rebuild up.
       - uses: actions/download-artifact@v4
         with:
           name: runtime
+          run-id: 45780599022
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: mkdir -p build && tar -C build -xf runtime.tar
       - name: Select newest Xcode (27 beta on the xcode-27 image)
         run: |
