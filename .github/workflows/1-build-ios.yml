@@ -116,6 +116,13 @@ jobs:
           name: python-log
           path: python.log
           if-no-files-found: ignore
+      - name: XiPlayer icons
+        run: |
+          rm -rf /tmp/xi && mkdir /tmp/xi && unzip -qo Design/XiPlayer-icons.zip -d /tmp/xi
+          cp /tmp/xi/ios/AppIcon.png Config/iOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+          rm -rf "Config/tvOS/Assets.xcassets/App Icon & Top Shelf Image.brandassets"
+          cp -R "/tmp/xi/tvos/App Icon & Top Shelf Image.brandassets" Config/tvOS/Assets.xcassets/
+          git status --short | head
       - name: Generate project
         run: |
           mkdir -p build/ScriptHost build/PythonHost
@@ -145,7 +152,7 @@ jobs:
             echo "ipa bytes: $(stat -f%z Yingxia-custom-unsigned.ipa)"
             echo "source commit: ${{ github.sha }}"
             echo "app: $A"
-            for k in CFBundleIdentifier CFBundleShortVersionString CFBundleVersion MinimumOSVersion UIDeviceFamily DTPlatformName DTSDKName DTPlatformVersion UIRequiredDeviceCapabilities; do
+            for k in CFBundleDisplayName CFBundleIconName CFBundleIdentifier CFBundleShortVersionString CFBundleVersion MinimumOSVersion UIDeviceFamily DTPlatformName DTSDKName DTPlatformVersion UIRequiredDeviceCapabilities; do
               echo "$k = $(/usr/libexec/PlistBuddy -c "Print :$k" "$A/Info.plist" 2>&1 | tr '\n' ' ')"
             done
             EXE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$A/Info.plist")
@@ -155,10 +162,12 @@ jobs:
             echo "--- bundle top level"; ls -la "$A" | head -60
             echo "--- frameworks"; ls "$A/Frameworks" 2>/dev/null | head -40
             echo "--- biggest files"; find "$A" -type f -exec stat -f '%z %N' {} + | sort -rn | head -25
+            echo "--- icons in Assets.car"; xcrun assetutil --info "$A/Assets.car" 2>/dev/null | grep -E '"(Name|Idiom)"' | grep -E 'App ?Icon|Top Shelf' | sort | uniq -c | head -12
+            echo "--- url schemes"; /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$A/Info.plist" 2>&1 | head -14
             echo "--- file count: $(find "$A" -type f | wc -l)"
             echo "--- codesign"; codesign -dv "$A" 2>&1 | head -5 || true
           } 2>&1 | tee ipa-verify.txt
-          grep -E '^(ipa sha256|ipa bytes|DTPlatformName|CFBundleVersion|CFBundleShortVersionString|MinimumOSVersion|--- file count)|Python|PythonHost|NodeMobile' ipa-verify.txt | head -20 | while read -r l; do echo "::notice title=verify::$l"; done
+          grep -E '^(ipa sha256|ipa bytes|DTPlatformName|CFBundleVersion|CFBundleShortVersionString|MinimumOSVersion|--- file count|CFBundleDisplayName|CFBundleIconName|AppIcon|App Icon|Top Shelf|xiplayer)|Python|PythonHost|NodeMobile' ipa-verify.txt | head -40 | while read -r l; do echo "::notice title=verify::$l"; done
           grep -q "arm64" ipa-verify.txt
       - name: Name IPA into ipa/ (version, build, commit, platform)
         run: |
