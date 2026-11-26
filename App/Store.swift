@@ -57,7 +57,39 @@ import TVCore
     var notice: String?
     var playing: Channel? {
         // An episode of a listening source (audiobooks, radio, songs) plays in the music player instead (#289).
-        didSet { if let channel = playing, let queue = listeningQueue(for: channel) { playing = nil; listen(queue, from: channel) } }
+        didSet {
+            if oldValue != playing { failoverToken = UUID() }
+            if let channel = playing, let queue = listeningQueue(for: channel) { playing = nil; listen(queue, from: channel) }
+        }
+    }
+    /// Changes whenever something else starts playing: an automatic source switch still under way checks it after each
+    /// wait, and an old one never takes the player from what the viewer chose since.
+    @ObservationIgnored var failoverToken = UUID()
+    /// The title page's way to other sources of the video playing, while its episode plays.
+    @ObservationIgnored var alternateHooks: AlternateHooks?
+    /// Episodes the player already switched source for: once each, so two bad sources can't bounce forever.
+    @ObservationIgnored private var playerFailovers: Set<String> = []
+
+    /// The stream of `channel` never played on any of its lines: the same episode of the title's other sources, at most
+    /// two, when its number is found there for sure. False when nothing is tried (no other source, no hooks for this
+    /// video, already switched once for this episode); `failed` then gets the reason when the attempt finds nothing.
+    func failoverFromPlayer(_ channel: Channel, failed: @escaping (String) -> Void) -> Bool {
+        guard playing == channel, let hooks = alternateHooks, let context = channel.historyContext,
+              let catalog = catalog(for: channel), hooks.videoID == catalog.video.id,
+              let episode = catalog.video.episodes.first(where: { $0.id == context.episodeID }) else { return false }
+        guard playerFailovers.insert(context.id + "\u{1F}" + episode.id).inserted else { return false }
+        let list = catalog.video.episodes.filter { $0.flag == episode.flag }
+        let token = failoverToken
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let found = await SourceFailoverRunner.run(hooks: hooks, current: episode, currentCount: list.count, token: token, store: self)
+            guard self.failoverToken == token, self.playing == channel else { return }
+            guard let found else { return failed(L10n.text("No other source could play this episode. Choose a source to try.")) }
+            self.playing = self.catalogChannel(found.channel, video: found.detail, episode: found.episode, client: found.client,
+                                               resumePosition: channel.resumePosition)
+            hooks.adopt?(found.sourceID)
+        }
+        return true
     }
     /// Set while a listening source's episode goes to the video player on purpose.
     @ObservationIgnored private var playsAsVideo = false
