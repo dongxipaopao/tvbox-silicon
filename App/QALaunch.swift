@@ -129,6 +129,10 @@ enum QALaunch {
                 for entry in store.subscriptions where entry.address != subscription { store.removeSubscription(entry) }
             }
             await store.importSubscription(address: subscription)
+            // `-qaSubscriptionExtra <url,url>` adds more subscriptions, for the source switcher's chips.
+            if let extra = UserDefaults.standard.string(forKey: "qaSubscriptionExtra") {
+                for address in extra.split(separator: ",") { await store.importSubscription(address: String(address)) }
+            }
         }
         // `-qaOpenProfile <name>` opens that profile, adding it first if there is none by that name; `main` is the main one.
         if let name = UserDefaults.standard.string(forKey: "qaOpenProfile") {

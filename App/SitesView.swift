@@ -1210,10 +1210,48 @@ private struct HiddenSourceRow: View {
 }
 #endif
 
+/// A source's page, with the name in the bar opening a list of sources to switch to in place. The page below is
+/// rebuilt for the chosen source (`.id`), so nothing of the previous source's categories or search carries over.
 struct SiteView: View {
+    let origin: URL
+    let jarURL: URL?
+    var initialQuery: String = ""
+    var folder: Video? = nil
+    var preview: (videos: [Video], categories: [TVCore.Category])? = nil
+    var category: TVCore.Category? = nil
+    @State private var site: Site
+    /// Nil until the viewer switches: the page then shows the source it was opened with, as before.
+    @State private var switched = false
+
+    init(site: Site, origin: URL, jarURL: URL?, initialQuery: String = "", folder: Video? = nil,
+         preview: (videos: [Video], categories: [TVCore.Category])? = nil, category: TVCore.Category? = nil) {
+        _site = State(initialValue: site)
+        self.origin = origin; self.jarURL = jarURL; self.initialQuery = initialQuery
+        self.folder = folder; self.preview = preview; self.category = category
+    }
+
+    var body: some View {
+        SiteBrowseView(site: site, origin: origin, jarURL: jarURL,
+                       initialQuery: switched ? "" : initialQuery, folder: folder,
+                       preview: switched ? nil : preview, category: switched ? nil : category,
+                       switcher: folder == nil ? { chosen in
+                           guard chosen.key != site.key else { return }
+                           switched = true
+                           site = chosen
+                       } : nil)
+            .id(site.key)
+    }
+}
+
+struct SiteBrowseView: View {
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
     let site: Site
+    /// Picks another source without leaving the page; nil for a folder's page.
+    var switcher: ((Site) -> Void)? = nil
+    #if !os(tvOS)
+    @State private var switching = false
+    #endif
     let origin: URL
     let jarURL: URL?
     var initialQuery: String = ""
@@ -1357,6 +1395,23 @@ struct SiteView: View {
         .toolbar {
             // Handed the store: UIKit can size a bar item before SwiftUI gives it the page's environment, and these
             // buttons read Store first thing (a TestFlight crash on iPhone).
+            #if !os(tvOS)
+            if switcher != nil, folder == nil, !isBilibiliSpace, !showsBilibiliTVSpace {
+                ToolbarItem(placement: .principal) {
+                    Button { switching = true } label: {
+                        HStack(spacing: 4) {
+                            Text(site.name).font(.headline).lineLimit(1)
+                            Image(systemName: "chevron.down").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.text("Switch Source"))
+                    .accessibilityValue(site.name)
+                    .accessibilityIdentifier("site.switcher")
+                }
+            }
+            #endif
             if !showsBilibiliTVSpace {
                 Group {
                     PinSourceButton(site: site, origin: origin)
@@ -1366,6 +1421,11 @@ struct SiteView: View {
             }
         }
         .screenBackdrop()
+        #if !os(tvOS)
+        .sheet(isPresented: $switching) {
+            if let switcher { SourceSwitchSheet(current: site, choose: switcher).environment(store) }
+        }
+        #endif
         .onAppear {
             guard site.isBilibili, browser.loaded else { return }
             let login = BilibiliAccount.load().cookie
@@ -1374,6 +1434,10 @@ struct SiteView: View {
         // An UP主's space names them in its hero; a title over it only repeated it.
         .screenTitle(isBilibiliSpace ? "" : folder?.name ?? site.name, shown: showsTopTitle).task {
             store.searchModel.suspend()
+            #if DEBUG && !os(tvOS)
+            // `-qaSwitchSheet 1` opens the source switcher, for screenshots.
+            if UserDefaults.standard.bool(forKey: "qaSwitchSheet"), switcher != nil, !QASwitchOnce.opened { QASwitchOnce.opened = true; switching = true }
+            #endif
             if let preview, folder == nil, initialQuery.isEmpty {
                 if category != nil { browser.seed(categories: preview.categories) }
                 else { browser.seed(videos: preview.videos, categories: preview.categories) }
@@ -4595,7 +4659,7 @@ extension VideoDetailView {
 }
 #endif
 
-extension SiteView {
+extension SiteBrowseView {
     /// An UP主's space (`up_<mid>` and its other listings).
     var isBilibiliSpace: Bool { site.isBilibili && folder.flatMap { BilibiliAPI.creator(category: $0.id) } != nil }
 
@@ -4628,7 +4692,7 @@ extension SiteView {
 }
 
 #if os(tvOS)
-extension SiteView {
+extension SiteBrowseView {
     @ViewBuilder var bilibiliTVSpace: some View {
         if let folder, let mid = BilibiliAPI.creator(category: folder.id) {
             BilibiliTVSpacePage(mid: mid, name: folder.name, tabs: BilibiliSpaceHeader.tabs(mid),
@@ -4675,7 +4739,7 @@ extension SiteView {
     }
 }
 #else
-extension SiteView {
+extension SiteBrowseView {
     var bilibiliTVSpace: some View { EmptyView() }
 }
 #endif
@@ -5231,3 +5295,82 @@ private struct SeasonsSheet: View {
         }
     }
 }
+
+#if !os(tvOS)
+/// The list of sources behind a source page's name: a row of subscription chips, then that subscription's sources.
+/// Groups are the sources page's own, so they are told apart by subscription address and never merged by name.
+struct SourceSwitchSheet: View {
+    @Environment(Store.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    let current: Site
+    let choose: (Site) -> Void
+    @State private var group: String?
+    #if DEBUG
+    @State private var qaDone = false
+    #endif
+
+    private func selected(_ groups: [SourceGroup]) -> String {
+        if let group, groups.contains(where: { $0.id == group }) { return group }
+        if let holding = groups.first(where: { $0.kind != .pinned && $0.sites.contains { $0.key == current.key } }) { return holding.id }
+        return groups.first?.id ?? ""
+    }
+
+    var body: some View {
+        let groups = store.sourceGroups(includeHidden: false)
+        let id = selected(groups)
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    SourceStrip(items: groups.map { .init(id: $0.id, name: L10n.text($0.title), count: $0.sites.count) },
+                                selection: id, select: { group = $0 })
+                        .accessibilityIdentifier("site.switch.groups")
+                    LazyVStack(spacing: 0) {
+                        ForEach(groups.first { $0.id == id }?.sites ?? []) { site in
+                            Button { choose(site); dismiss() } label: {
+                                HStack {
+                                    Text(site.name).lineLimit(1)
+                                    Spacer(minLength: 8)
+                                    if site.key == current.key { Image(systemName: "checkmark").foregroundStyle(.tint) }
+                                }
+                                .padding(.vertical, 12)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(site.key == current.key ? .isSelected : [])
+                            .accessibilityIdentifier("site.switch.row." + site.key)
+                            Divider()
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .navigationTitle(L10n.text("Switch Source"))
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { dismiss() } }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        #if DEBUG
+        // `-qaSwitchGroup <n>` shows the n-th chip's sources; `-qaSwitchPick <source key>` then chooses that source after a
+        // pause, as a tap on its row does (the same `choose`), since the simulator run has no touch input.
+        .task {
+            guard !qaDone else { return }
+            qaDone = true
+            let all = store.sourceGroups(includeHidden: false)
+            if let n = UserDefaults.standard.object(forKey: "qaSwitchGroup") as? Int, all.indices.contains(n) { group = all[n].id }
+            if let key = UserDefaults.standard.string(forKey: "qaSwitchPick") {
+                try? await Task.sleep(for: .seconds(6))
+                if let site = all.flatMap(\.sites).first(where: { $0.key == key }) { choose(site); dismiss() }
+            }
+        }
+        #endif
+    }
+}
+#endif
+
+#if DEBUG && !os(tvOS)
+@MainActor enum QASwitchOnce { static var opened = false }
+#endif
