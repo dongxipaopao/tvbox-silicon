@@ -1404,11 +1404,19 @@ struct SiteBrowseView: View {
                         }
                     }.pageContainer()
                 }
+                #if os(tvOS)
+                // Opens on the first cover; only the magnifier brings up the keyboard.
+                .tvSearchEntry(text: Binding(get: { query }, set: { value in
+                    query = value
+                    if value.isEmpty && !browser.query.isEmpty { startRequest { await home() } }
+                }), prompt: L10n.text("Search videos")) { startRequest { await search() } }
+                #else
                 .catalogSearchable(text: Binding(get: { query }, set: { value in
                     query = value
                     if value.isEmpty && !browser.query.isEmpty { startRequest { await home() } }
                 }), prompt: L10n.text("Search videos"), endsWhenIdle: true)
                 .onSubmit(of: .search) { startRequest { await search() } }
+                #endif
             }
         }
         .onDisappear { requestTask?.cancel(); browser.cancel() }

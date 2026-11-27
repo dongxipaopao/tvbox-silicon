@@ -782,6 +782,7 @@ struct TVSearchEntry: ViewModifier {
                         .accessibilityLabel(prompt)
                         .accessibilityIdentifier("search.entry")
                 }
+                .frame(maxWidth: .infinity)
                 .focusSection()
                 .padding(.trailing, Layout.gutter).padding(.top, 8).padding(.bottom, 8)
             }

@@ -319,16 +319,6 @@ private struct MusicHome: View {
         let resumable = store.music.track == nil ? library.resumePoint : nil
         let downloads = !MusicDownloadLibrary.shared.items.isEmpty
         let empty = library.history.isEmpty && resumable == nil && !downloads && browse.sections.isEmpty && !browse.loading && store.playlists.playlists.isEmpty
-        #if os(tvOS)
-        // Apple TV has no toolbar button for Music Settings (where music sources are added), so the page offers it
-        // here once there is something to show; the empty page below has its own (#1024).
-        if !empty {
-            Button(action: openSettings) { Label(L10n.text("Music Settings"), systemImage: "slider.horizontal.3") }
-                .glassPill()
-                .accessibilityIdentifier("music.settings")
-                .padding(.bottom, 20)
-        }
-        #endif
         if let point = resumable, let track = point.queue.current {
             MusicContinueCard(point: point, track: track).padding(.bottom, 20)
         }
@@ -358,6 +348,17 @@ private struct MusicHome: View {
             #endif
             .padding(.bottom, 20)
         }
+        #if os(tvOS)
+        // Apple TV has no toolbar button for Music Settings (where music sources are added), so the page offers it
+        // here once there is something to show; the empty page below has its own (#1024). After the shelves, so the
+        // page opens on its first playlist rather than on this button.
+        if !empty {
+            Button(action: openSettings) { Label(L10n.text("Music Settings"), systemImage: "slider.horizontal.3") }
+                .glassPill()
+                .accessibilityIdentifier("music.settings")
+                .padding(.top, 8).padding(.bottom, 20)
+        }
+        #endif
         if !library.history.isEmpty {
             HStack {
                 SectionHeader(title: L10n.text("Recently Played"))

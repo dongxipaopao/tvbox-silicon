@@ -151,8 +151,10 @@ final class TVNavigationUITests: XCTestCase {
         // Focus starts in the tab sidebar; right moves it into the search keyboard.
         remote.press(.right); sleep(1)
         XCTAssertFalse(shown("hello 01", in: app).exists, "The search ran before it was submitted")
-        // Down from the keyboard lands on the Search button.
-        remote.press(.down); sleep(1)
+        XCTAssertEqual(app.keyboards.count, 0, "The source page showed the keyboard")
+        // The Search button leads the content: Up from the first cover reaches it.
+        for _ in 0..<4 where !submit.hasFocus { remote.press(.up); sleep(1) }
+        XCTAssertTrue(submit.hasFocus, "The remote did not reach the Search button: \(focusInfo(app))")
         remote.press(.select)
         XCTAssertTrue(shown("hello 01", in: app).waitForExistence(timeout: 20), "Pressing Search did not show results")
         XCTAssertFalse(submit.exists, "The Search button stayed after its query ran")
@@ -609,6 +611,10 @@ final class TVNavigationUITests: XCTestCase {
         guard focused.exists else { return "none" }
         return "id=\(focused.identifier) label=\(focused.label)"
     }
+    private func focusFrame(_ app: XCUIApplication) -> CGRect {
+        let focused = app.descendants(matching: .any).matching(NSPredicate(format: "hasFocus == true")).firstMatch
+        return focused.exists ? focused.frame : .zero
+    }
     private func describe(_ element: XCUIElement) -> String {
         guard element.exists else { return "missing" }
         let f = element.frame
@@ -618,7 +624,7 @@ final class TVNavigationUITests: XCTestCase {
     private func trace(_ app: XCUIApplication, _ target: XCUIElement, _ label: String) {
         let remote = XCUIRemote.shared
         var lines = ["\(label) target: \(describe(target))", "start: \(focusInfo(app))"]
-        for (name, key) in [("up", XCUIRemote.Button.up), ("up", .up), ("right", .right), ("up", .up), ("left", .left), ("up", .up), ("up", .up)] {
+        for (name, key) in [("up", XCUIRemote.Button.up), ("up", .up), ("right", .right), ("up", .up), ("left", .left), ("up", .up), ("up", .up), ("up", .up), ("up", .up), ("up", .up)] {
             remote.press(key); sleep(1)
             lines.append("\(name): \(focusInfo(app)) | target focus=\(target.hasFocus)")
             if target.hasFocus { break }
@@ -677,8 +683,25 @@ final class TVNavigationUITests: XCTestCase {
         snap(app, "music-initial")
         XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening the Music page")
         let focus = focusInfo(app)
+        let frame = focusFrame(app)
+        let settings = app.buttons["music.settings"]
+        note("Music initial focus frame=\(frame) settings=\(describe(settings))")
         XCTAssertFalse(focus.contains("Music Settings"), "Music opened with focus on Music Settings, not the first playlist: \(focus)")
         XCTAssertFalse(focus.hasPrefix("none"), "Music opened with nothing focused")
+        // Positive: the focused item is a cover in the content (right of the sidebar, below the magnifier row, above the
+        // Music Settings button that now follows the shelves), at the left end of the first shelf.
+        XCTAssertTrue(frame.minX > 100 && frame.minX < 700 && frame.minY > 150 && (!settings.exists || frame.minY < settings.frame.minY),
+                      "Focus is not on the first playlist cover: \(focus) frame=\(frame)")
+        // The magnifier is reachable from the content with Up, Select opens the search, Menu returns to the page.
+        let remote = XCUIRemote.shared
+        for _ in 0..<4 where !entry.hasFocus { remote.press(.up); sleep(1) }
+        snap(app, "music-magnifier-focused")
+        XCTAssertTrue(entry.hasFocus, "Up from the first playlist did not reach the magnifier: \(focusInfo(app))")
+        remote.press(.select); sleep(3)
+        snap(app, "music-search-open")
+        XCTAssertTrue(app.keyboards.count > 0 || app.searchFields.count > 0, "Select on the Music magnifier did not open the search")
+        remote.press(.menu); sleep(2)
+        XCTAssertTrue(entry.exists && app.keyboards.count == 0, "Back from the Music search did not return to the page")
     }
 
     /// Music Settings lists Music Extensions, with the address row (Apple TV adds by address, there is no file picker).
@@ -705,6 +728,8 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertTrue(switcher.waitForExistence(timeout: 10), "The source page has no switcher")
         let remote = XCUIRemote.shared
         snap(app, "source-page")
+        XCTAssertEqual(app.keyboards.count, 0, "The source page opened with the keyboard")
+        XCTAssertFalse(app.buttons["search.entry"].hasFocus, "The source page opened on the magnifier")
         trace(app, switcher, "source page")
         note("switcher focus attempt: \(focusInfo(app))")
         XCTAssertTrue(switcher.hasFocus, "The remote did not reach the source name button")
