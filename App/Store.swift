@@ -136,11 +136,9 @@ import TVCore
     var extrasUnlocked: Bool {
         subscriptions.contains { $0.enabled && documents[$0.address].map { !$0.sites.isEmpty || !$0.lives.isEmpty } == true }
     }
-    /// Sections kept out of the tab bar and sidebar until then.
-    var hiddenSections: [AppSection] {
-        let hidden: [AppSection] = extrasUnlocked ? [] : [.music]
-        return hidden
-    }
+    /// Sections kept out of the tab bar and sidebar. Music is built in like video: deleting every source or
+    /// subscription no longer removes it.
+    var hiddenSections: [AppSection] { [] }
     /// The open profile's defaults: the main defaults for the main profile.
     private var defaults: UserDefaults
     /// The main defaults, which QA's switches are read from.

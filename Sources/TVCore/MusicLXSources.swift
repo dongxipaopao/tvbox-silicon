@@ -139,6 +139,28 @@ public final class LXSourceLibrary: @unchecked Sendable {
     static let defaultsKey = "musicLXSources"
     /// LX Music refuses larger scripts too.
     static let scriptLimit = 9_000_000
+    /// The one source inside the app, so music plays before anything is imported or subscribed.
+    static let bundledID = "bundled-dujiav8"
+    /// Set once the bundled source seeded; deleting or turning it off is the listener's choice and is never undone.
+    static let bundledSeededKey = "musicLXSourcesBundledSeeded"
+
+    /// The bundled 独家音源 (v8) script, shipped inside the app.
+    static var bundledScript: String? {
+        ScriptAssets.bundled("assets://music/dujiav8.js").flatMap { script(in: Data($0.utf8)) }
+    }
+
+    /// Adds the bundled source the first time it starts successfully, and never again: a source the listener
+    /// removed or turned off stays that way, across launches and updates.
+    @discardableResult
+    public func ensureBundled(runtime: LXSourceRuntime = .shared) async -> Bool {
+        guard !defaults.bool(forKey: Self.bundledSeededKey) else { return false }
+        guard let script = Self.bundledScript else { return false }
+        do {
+            try await add(script: script, origin: nil, id: Self.bundledID, runtime: runtime)
+            defaults.set(true, forKey: Self.bundledSeededKey)
+            return true
+        } catch { return false }
+    }
 
     /// The text of `data` when it reads as an LX Music source: a script that opens with the comment LX Music reads, naming
     /// the source (published ones all do, obfuscated ones too). A Listenify music extension can open with the same
@@ -169,7 +191,7 @@ public final class LXSourceLibrary: @unchecked Sendable {
 
     /// Starts `script`, keeps it when it declares at least one catalog the app searches, and returns it.
     @discardableResult
-    public func add(script: String, origin: URL?, runtime: LXSourceRuntime = .shared) async throws -> LXSource {
+    public func add(script: String, origin: URL?, id: String? = nil, runtime: LXSourceRuntime = .shared) async throws -> LXSource {
         guard !script.isEmpty, script.utf8.count <= Self.scriptLimit else { throw TVError.unsupported(L10n.text("This file is not an LX Music source.")) }
         // Adding a source again keeps one entry (#1177: people added the same file three times). The same text only turns
         // it back on; a newer text from the address it came from replaces it in its place.
@@ -179,7 +201,7 @@ public final class LXSourceLibrary: @unchecked Sendable {
             return sources.first { $0.id == previous.id } ?? previous
         }
         let info = LXSourceInfo(script: script)
-        var source = LXSource(id: previous?.id ?? UUID().uuidString, info: info, sources: [:], origin: origin ?? previous?.origin,
+        var source = LXSource(id: id ?? previous?.id ?? UUID().uuidString, info: info, sources: [:], origin: origin ?? previous?.origin,
                               added: previous?.added ?? Date())
         if let previous { await runtime.close(previous.id) }
         let declared = try await runtime.start(source, script: script)

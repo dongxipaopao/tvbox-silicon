@@ -125,10 +125,11 @@ public struct CloudMusicProvider: MusicStreamProvider {
                         raw: ["yingxia": .object(["builtin": .bool(true)]), "ext": .object([:])])
         let reply: [String: JSONValue]
         do {
-            // The bundled channels name an assets:// script inside the app; a subscription's script is a web address.
-            let scriptURL = api.hasPrefix("assets://") ? URL(string: api)! : try WebAddress.resolve(api, relativeTo: CloudSources.musicOrigin)
+            // The channels come from a subscription's listing; its address bases and signs the script calls.
+            guard let musicOrigin = CloudSources.musicOrigin else { throw MusicProviderError.noChannels }
+            let scriptURL = api.hasPrefix("assets://") ? URL(string: api)! : try WebAddress.resolve(api, relativeTo: musicOrigin)
             reply = try await ScriptRuntime.shared.request(site: site, scriptURL: scriptURL,
-                                                           params: ["play": songID, "flag": flag], http: HTTPClient(), origin: CloudSources.musicOrigin)
+                                                           params: ["play": songID, "flag": flag], http: HTTPClient(), origin: musicOrigin)
         } catch let error as TVError {
             // The script could not be fetched or did not run; its own text never reaches the listener.
             if case .http = error { throw MusicProviderError.network("script") }

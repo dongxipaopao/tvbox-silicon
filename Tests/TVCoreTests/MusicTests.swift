@@ -771,24 +771,17 @@ private struct FakeCatalog: MusicCatalogSource {
     #expect(await provider.ordered(for: .qq).map(\.info.name) == ["first", "second", "third"])
 }
 
-@Test func builtInMusicShipsAndOnlyFillsInForSubscriptionsWithoutMusic() throws {
-    // The bundled listing and its script are inside the app, so music works before any subscription is added.
-    let listing = try #require(BuiltInMusic.listing)
-    #expect(listing.api == "assets://music/builtin-music.js")
-    #expect(listing.channels.map(\.id.rawValue) == ["migu", "nianxin", "vkeys", "gdstudio", "xinghai", "hyw"])
-    #expect(!listing.routes.order.isEmpty)
-    #expect(ScriptAssets.bundled("assets://music/builtin-music.js")?.isEmpty == false)
-
-    // No subscription at all: the bundled listing answers.
+@Test func musicListingComesOnlyFromSubscriptions() throws {
+    // Music is built into the app like video; only a subscription supplies a channel listing.
     CloudSources.current = nil
-    #expect(CloudSources.music?.api == "assets://music/builtin-music.js")
+    #expect(CloudSources.music == nil)
 
-    // A plain subscription without yingxiaMusic does not hide the bundled channels.
+    // A plain subscription without yingxiaMusic lists nothing.
     let plain = try Subscription.parse(Data(#"{"sites":[{"key":"p","name":"P","type":3,"api":"https://x/p.js"}]}"#.utf8), origin: URL(string: "https://plain.example/tvbox.json")!)
     CloudSources.current = plain
-    #expect(CloudSources.music?.api == "assets://music/builtin-music.js")
+    #expect(CloudSources.music == nil)
 
-    // A subscription with its own yingxiaMusic wins over the bundled one.
+    // A subscription with its own yingxiaMusic lists its channels.
     let withMusic = try Subscription.parse(Data(#"""
     {"yingxia":{"version":1},"sites":[{"key":"s","name":"S","type":3,"api":"https://x/s.js"}],
      "yingxiaMusic":{"api":"https://music.example/m.js","channels":[{"id":"sub","name":"Sub","platforms":["qq"]}]}}
@@ -796,4 +789,27 @@ private struct FakeCatalog: MusicCatalogSource {
     CloudSources.current = withMusic
     #expect(CloudSources.music?.api == "https://music.example/m.js")
     CloudSources.current = nil
+}
+
+@Test func bundledDujiaV8SeedsOnceRunsAndStaysRemoved() async throws {
+    // The 独家音源 v8 script ships inside the app and really starts in the LX runtime.
+    let script = try #require(LXSourceLibrary.bundledScript)
+    #expect(LXSourceInfo(script: script).name == "独家音源")
+    let library = LXSourceLibrary(folder: FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory),
+                                  defaults: UserDefaults(suiteName: "b40-" + UUID().uuidString)!)
+    #expect(await library.ensureBundled())
+    let seeded = try #require(library.sources.first)
+    #expect(seeded.id == LXSourceLibrary.bundledID)
+    #expect(seeded.enabled)
+    #expect(!seeded.sources.isEmpty)  // the script ran and declared the catalogs it plays
+    #expect(await library.ensureBundled() == false)
+
+    // Turning it off or removing it is the listener's choice; no launch or update brings it back.
+    library.setEnabled(seeded.id, false)
+    #expect(await library.ensureBundled() == false)
+    #expect(library.sources.first?.enabled == false)
+    library.remove(seeded.id)
+    #expect(library.sources.isEmpty)
+    #expect(await library.ensureBundled() == false)
+    #expect(library.sources.isEmpty)
 }

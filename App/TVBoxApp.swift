@@ -45,6 +45,7 @@ import TVCore
                 #endif
                 .task { Diagnostics.shared.record(.info, "app", "Application scene opened") }
                 .task { await ErrorReports.shared.start() }
+                .task { await LXSourceLibrary.shared.ensureBundled() }
                 .task {
                     #if DEBUG
                     if QALaunch.section != nil || QALaunch.page != nil { await QALaunch.start(store); return }

@@ -1,3 +1,0 @@
-Sources/TVCore/BuiltInMusic.swift
-Sources/TVCore/ScriptAssets/music/builtin-music.js
-Sources/TVCore/ScriptAssets/music/builtin-music.json
