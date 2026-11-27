@@ -52,7 +52,7 @@ public struct SearchSourceActivity: Identifiable, Sendable {
 public enum GlobalSearch {
     /// Limit simultaneous plugin processes and publish each source independently.
     public static func search(sites: [Site], origin: URL, jarURL: URL?, query: String,
-                              http: HTTPClient = HTTPClient(), concurrency: Int = 4,
+                              http: HTTPClient = HTTPClient(), concurrency: Int = 4, nativeConcurrency: Int? = nil,
                               onStart: @escaping @Sendable (Site) async -> Void = { _ in },
                               onResult: @escaping @Sendable (SearchSourceResult) async -> Void) async {
         let keyword = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -69,7 +69,7 @@ public enum GlobalSearch {
                                       keyword: keyword, http: http, onStart: onStart, onResult: onResult)
         async let scripts: Void = run(eligible.filter { $0.preferredRuntime == .javascript || $0.preferredRuntime == .python }, concurrency: concurrency,
                                       origin: origin, jarURL: jarURL, keyword: keyword, http: http, onStart: onStart, onResult: onResult)
-        await run(eligible.filter(\.native), concurrency: concurrency, origin: origin, jarURL: jarURL,
+        await run(eligible.filter(\.native), concurrency: nativeConcurrency ?? concurrency, origin: origin, jarURL: jarURL,
                   keyword: keyword, http: http, onStart: onStart, onResult: onResult)
         await scripts
         await plugins

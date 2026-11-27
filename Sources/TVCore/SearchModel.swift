@@ -38,6 +38,8 @@ import Observation
     public private(set) var runStart: (date: Date, completed: Int)?
     private var generation = UUID()
     private(set) var task: Task<Void, Never>?
+    /// How many plain HTTP sources are asked at once, when a page wants more than the default; nil keeps it.
+    public var nativeConcurrency: Int?
 
     private let http: HTTPClient
     private struct Cached {
@@ -235,7 +237,7 @@ import Observation
             let ordered = preferred.filter { !failing($0) } + preferred.filter(failing)
             guard self.generation == token else { return }
             self.waitingSources = ordered
-            await GlobalSearch.search(sites: ordered, origin: config.origin, jarURL: config.spiderURL, query: keyword, http: self.http, onStart: { site in
+            await GlobalSearch.search(sites: ordered, origin: config.origin, jarURL: config.spiderURL, query: keyword, http: self.http, nativeConcurrency: self.nativeConcurrency, onStart: { site in
                 await self.started(site, token: token)
             }) { result in
                 await self.receive(result, token: token)

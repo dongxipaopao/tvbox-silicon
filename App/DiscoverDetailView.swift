@@ -757,6 +757,7 @@ private struct DiscoverMacSeasonButton: View {
         let identity = "\(config.origin)|\(config.importedAt.timeIntervalSince1970)"
         if subscription != identity {
             subscription = identity
+            began = ContinuousClock.now
             generation += 1; pending = 0
             grace?.cancel(); grace = nil
             found = []; matches = []; chosen = nil; finished = false
@@ -764,6 +765,8 @@ private struct DiscoverMacSeasonButton: View {
         }
         order = Dictionary(store.recommendationSites(config).enumerated().map { ($1.key, $0) }) { first, _ in first }
         search.order = store.sourceOrder
+        // The title's page waits on this search: plain HTTP sources get a wider (still bounded) lane than the default four.
+        search.nativeConcurrency = 8
         search.onResult = { [weak self] in self?.absorb($0) }
         if search.keyword.isEmpty {
             let hidden = store.hiddenSources
@@ -793,12 +796,16 @@ private struct DiscoverMacSeasonButton: View {
         // Picking a source by hand, or the player landing on one that plays, trusts it again: a later automatic
         // switch may try it once more. Only the automatic search keeps the mark, so it still cannot loop.
         failedIDs.remove(candidate.id)
+        if chosen == nil, let began {
+            Diagnostics.shared.record(.info, "perf", "discover source chosen after \(ContinuousClock.now - began), searched \(search.completed)/\(search.total)")
+        }
         chosen = candidate
     }
 
     /// Sources that couldn't play an episode of this title since the page opened: the automatic switch skips them.
     /// Choosing one by hand (or one that ends up playing) un-marks it; leaving the page forgets them all.
     @ObservationIgnored private var failedIDs: Set<String> = []
+    @ObservationIgnored private var began: ContinuousClock.Instant?
 
     private static func entry(_ candidate: SourceTitleMatch.Candidate) -> SourceFailover.Entry {
         SourceFailover.Entry(id: candidate.id, siteKey: candidate.site.key, season: SeasonTitles.parse(candidate.video.name).season ?? 1)
@@ -847,7 +854,7 @@ private struct DiscoverMacSeasonButton: View {
     }
 
     /// The best match shows once nothing can beat it (the title itself, from its year), once every source answered, or
-    /// four seconds after the first match, so a slow source doesn't hold the page up. Then it stays: a better match
+    /// two seconds after the first match, so a slow source doesn't hold the page up. Then it stays: a better match
     /// that comes later goes under Change Source rather than swapping the episodes under the viewer.
     private func settle() {
         let done = pending == 0 && !search.suspended && search.completed >= search.total
@@ -856,7 +863,7 @@ private struct DiscoverMacSeasonButton: View {
         if done || best.decisive { choose(best); return }
         guard grace == nil else { return }
         grace = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(4))
+            try? await Task.sleep(for: .seconds(2))
             guard !Task.isCancelled, let self, self.chosen == nil, let best = self.matches.first else { return }
             self.choose(best)
         }
