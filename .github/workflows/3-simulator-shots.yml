@@ -133,6 +133,7 @@ jobs:
             sleep "$wait"
             xcrun simctl io "$UDID" screenshot "shots/$name.png" || true
           }
+          if [ "${{ inputs.scenes }}" = "rex" ]; then SCENES=rex . Scripts/qa-scenes-extra.sh; ls -l shots; exit 0; fi
           if [ "${{ inputs.scenes }}" = "targeted" ]; then
             shot 20a-settings-zh 12 -qaSection settings -AppleLanguages "(zh-Hans)"
             shot 20b-whatsnew-zh 25 -qaWhatsNew 1 -AppleLanguages "(zh-Hans)"
