@@ -592,6 +592,33 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertFalse(panel.exists, "The Episodes tab stayed open after choosing an episode")
     }
 
+    /// A dead first line falls through to the second line of the same source on its own: the fixture's first line
+    /// points at a 404, so the server must see that address asked for and then the working clip, and a picture must show.
+    func testDeadFirstLineSwitchesToSecondLine() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-fo", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/fo-config.json", "-autoPlayNextEpisode", "NO",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let waiting = app.descendants(matching: .any)["player.waiting"]
+        _ = waiting.waitForExistence(timeout: 15)
+        var seconds = 0
+        for _ in 0..<60 where waiting.exists || seconds == 0 { sleep(1); seconds += 1 }
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "after dead line"; shot.lifetime = .keepAlways; add(shot)
+        var counts: [String: Int] = [:]
+        let semaphore = DispatchSemaphore(value: 0)
+        URLSession.shared.dataTask(with: URL(string: "http://127.0.0.1:8776/counts")!) { data, _, _ in
+            if let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Int] { counts = json }
+            semaphore.signal()
+        }.resume()
+        _ = semaphore.wait(timeout: .now() + 10)
+        add(XCTAttachment(string: "waited \(seconds)s; counts missing=\(counts["/missing.mp4"] ?? 0) clip=\(counts["/clip.mp4"] ?? 0) fo-plays=\(counts["/fo"] ?? 0)"))
+        XCTAssertGreaterThan(counts["/missing.mp4"] ?? 0, 0, "The dead first line was never tried: \(counts)")
+        XCTAssertGreaterThan(counts["/clip.mp4"] ?? 0, 0, "The second line was never asked for: \(counts)")
+        XCTAssertFalse(waiting.exists, "The wait screen is still up after \(seconds)s: no picture on the second line")
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
     // MARK: Apple TV parity checks (T1 to T3). They record what is on screen and where focus is, as screenshots and
     // attachments, and report each mismatch without stopping at the first one.
 

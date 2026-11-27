@@ -80,6 +80,14 @@ class Spider(Spider):
     def playerContent(self, flag, id, vipFlags):
         return {'parse': 0, 'url': id}
 """,mime='text/x-python')
+        # Same-source line failover: line one's only episode points at a dead address, line two's plays.
+        if path == '/fo-config.json': return self.send({'sites': [{'key':'qa-fo','name':'线路切换 / Lines','type':4,'api':base+'/fo'}], 'lives': []})
+        if path == '/fo':
+            if 'play' in q: return self.send({'parse':0,'url':base+('/missing.mp4' if q['play'] == 'dead-1' else '/clip.mp4')})
+            if 'ids' in q:
+                return self.send({'list':[{'vod_id':q['ids'],'vod_name':'线路测试影片','vod_pic':base+'/poster.png',
+                    'vod_play_from':'坏线路$$$好线路','vod_play_url':'第1集$dead-1$$$第1集$episode-1'}]})
+            return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'fo1','vod_name':'线路测试影片','vod_pic':base+'/poster.png'}]})
         if path == '/empty-config.json': return self.send({'sites': [], 'lives': [{'name':'测试频道','url':base+'/live.m3u'}]})
         # A source whose video details never arrive, for Back while a page is still loading.
         # Also one whose details fail, and one whose video has no episodes, for Back once the page has given up.
