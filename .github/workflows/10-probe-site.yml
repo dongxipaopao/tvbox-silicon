@@ -45,8 +45,18 @@ jobs:
         run: swift build -c release --product TVBoxProbe 2>&1 | tail -30
       - name: Link Java host for the probe
         run: |
+          set -e
           ln -sfn "$PWD/build/JavaHost" .build/release/JavaHost
-          ls -l .build/release/JavaHost/jre/bin/java
+          REAL=$(cd .build/release && pwd -P)
+          cat > /tmp/resprobe.swift <<SWIFT
+          import Foundation
+          print("resourceURL=" + (Bundle.main.resourceURL?.path ?? "nil"))
+          SWIFT
+          swiftc /tmp/resprobe.swift -o "$REAL/resprobe"
+          RESDIR=$("$REAL/resprobe" | sed "s/^resourceURL=//")
+          echo "probe Bundle.main.resourceURL=$RESDIR"
+          ln -sfn "$PWD/build/JavaHost" "$RESDIR/JavaHost"
+          test -x "$RESDIR/JavaHost/jre/bin/java" && echo "java executable at probe resourceURL: OK" || { echo "java NOT executable at $RESDIR"; exit 1; }
       - name: Site play, source A
         continue-on-error: true
         env:
