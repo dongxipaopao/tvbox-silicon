@@ -1,0 +1,87 @@
+diff --git a/App/MusicMacBrowse.swift b/App/MusicMacBrowse.swift
+index 14c92850..9655ee5d 100644
+--- a/App/MusicMacBrowse.swift
++++ b/App/MusicMacBrowse.swift
+@@ -116,7 +116,7 @@ struct MusicCollectionTile: View {
+         .cardButton()
+         .contextMenu { MusicCollectionLikeButton(collection: collection) }
+         if let firstFocusIn {
+-            if let pageFocus { card.prefersDefaultFocus(true, in: firstFocusIn).focused(pageFocus, equals: "music.firstCover") }
++            if let pageFocus { card.prefersDefaultFocus(true, in: firstFocusIn).focused(pageFocus, equals: "music.firstCover").accessibilityIdentifier("music.firstCover") }
+             else { card.prefersDefaultFocus(true, in: firstFocusIn) }
+         } else { card }
+         #else
+@@ -158,6 +158,9 @@ struct MusicBrowseShelves: View {
+     #if os(tvOS)
+     @Environment(\.resetFocus) private var resetFocus
+     @FocusState private var pageFocus: String?
++    /// The first cover is focused once, when the page first opens; coming back from a list keeps the user's place.
++    @State private var focusedFirst = false
++    @State private var moved = false
+     #endif
+ 
+     var body: some View {
+@@ -178,11 +181,16 @@ struct MusicBrowseShelves: View {
+         .padding(.horizontal, -MusicBrowseMetrics.inset)
+         // The shelves load after the page opens, by which time the Music Settings button above has taken focus:
+         // ask the page's scope again so the first cover of the first shelf (its default) gets it.
+-        .onAppear { if let focusScope { resetFocus(in: focusScope) } }
+-        // The first cover itself, not See All: set explicitly once the rail has laid out.
++        .onMoveCommand { _ in moved = true }
++        .onAppear { if !focusedFirst, let focusScope { resetFocus(in: focusScope) } }
++        // The first cover itself, not See All: set explicitly once the rail has laid out, once, and never after the
++        // user has moved.
+         .task {
++            guard !focusedFirst else { return }
+             try? await Task.sleep(for: .milliseconds(400))
+-            if pageFocus == nil { pageFocus = "music.firstCover" }
++            guard !focusedFirst, !moved else { return }
++            focusedFirst = true
++            pageFocus = "music.firstCover"
+         }
+         #else
+         VStack(alignment: .leading, spacing: MusicBrowseMetrics.sectionSpacing) {
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index 2826544a..960f9685 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -688,11 +688,8 @@ final class TVNavigationUITests: XCTestCase {
+         note("Music initial focus frame=\(frame) settings=\(describe(settings))")
+         XCTAssertFalse(focus.contains("Music Settings"), "Music opened with focus on Music Settings, not the first playlist: \(focus)")
+         XCTAssertFalse(focus.hasPrefix("none"), "Music opened with nothing focused")
++        XCTAssertTrue(focus.contains("id=music.firstCover"), "Focus is not the first playlist cover (id music.firstCover): \(focus)")
+         XCTAssertFalse(focus.contains("See All") || focus.contains("watchnow.more"), "Music opened on a shelf's See All, not its first playlist cover: \(focus)")
+-        // Positive: the focused item is a cover in the content (right of the sidebar, below the magnifier row, above the
+-        // Music Settings button that now follows the shelves), at the left end of the first shelf.
+-        XCTAssertTrue(frame.minX > 100 && frame.minX < 700 && frame.minY > 150 && (!settings.exists || frame.minY < settings.frame.minY),
+-                      "Focus is not on the first playlist cover: \(focus) frame=\(frame)")
+         // The magnifier is reachable from the content with Up, Select opens the search, Menu returns to the page.
+         let remote = XCUIRemote.shared
+         for _ in 0..<4 where !entry.hasFocus { remote.press(.up); sleep(1) }
+@@ -702,7 +699,13 @@ final class TVNavigationUITests: XCTestCase {
+         snap(app, "music-search-open")
+         XCTAssertTrue(app.keyboards.count > 0 || app.searchFields.count > 0, "Select on the Music magnifier did not open the search")
+         remote.press(.menu); sleep(2)
++        snap(app, "music-after-back")
+         XCTAssertTrue(entry.exists && app.keyboards.count == 0, "Back from the Music search did not return to the page")
++        XCTAssertTrue(app.buttons["music.firstCover"].exists, "The Music page is not showing after Back")
++        // Down from the magnifier returns to the content, and Back from the keyboard leaves the focus on the page.
++        remote.press(.down); sleep(1)
++        note("Music after Down from the magnifier: \(focusInfo(app))")
++        XCTAssertFalse(entry.hasFocus, "Down did not leave the magnifier")
+     }
+ 
+     /// Music Settings lists Music Extensions, with the address row (Apple TV adds by address, there is no file picker).
+@@ -730,6 +733,12 @@ final class TVNavigationUITests: XCTestCase {
+         let remote = XCUIRemote.shared
+         snap(app, "source-page")
+         XCTAssertEqual(app.keyboards.count, 0, "The source page opened with the keyboard")
++        // Into the content from the sidebar as a user does: Right must land on the first poster.
++        let firstPoster = shown("测试影片 01", in: app)
++        remote.press(.right); sleep(2)
++        note("source page after Right: \(focusInfo(app)) firstPoster=\(describe(firstPoster))")
++        snap(app, "source-page-content-focus")
++        XCTAssertTrue(focusInfo(app).contains("测试影片 01") || firstPoster.hasFocus, "Right did not land on the first poster: \(focusInfo(app))")
+         XCTAssertFalse(app.buttons["search.entry"].hasFocus, "The source page opened on the magnifier")
+         trace(app, switcher, "source page")
+         note("switcher focus attempt: \(focusInfo(app))")
