@@ -1,0 +1,46 @@
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index 665001b8..e2153a5c 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -609,6 +609,22 @@ final class TVNavigationUITests: XCTestCase {
+         guard focused.exists else { return "none" }
+         return "id=\(focused.identifier) label=\(focused.label)"
+     }
++    private func describe(_ element: XCUIElement) -> String {
++        guard element.exists else { return "missing" }
++        let f = element.frame
++        return "enabled=\(element.isEnabled) hittable=\(element.isHittable) hasFocus=\(element.hasFocus) frame=(\(Int(f.minX)),\(Int(f.minY)),\(Int(f.width)),\(Int(f.height)))"
++    }
++    /// Presses each direction in turn and records where focus went, so a missing path is visible as a trace.
++    private func trace(_ app: XCUIApplication, _ target: XCUIElement, _ label: String) {
++        let remote = XCUIRemote.shared
++        var lines = ["\(label) target: \(describe(target))", "start: \(focusInfo(app))"]
++        for (name, key) in [("up", XCUIRemote.Button.up), ("up", .up), ("right", .right), ("up", .up), ("left", .left), ("up", .up), ("up", .up)] {
++            remote.press(key); sleep(1)
++            lines.append("\(name): \(focusInfo(app)) | target focus=\(target.hasFocus)")
++            if target.hasFocus { break }
++        }
++        note(lines.joined(separator: "\n"))
++    }
+     private func note(_ text: String) {
+         let item = XCTAttachment(string: text)
+         item.name = "note"; item.lifetime = .keepAlways
+@@ -627,7 +643,8 @@ final class TVNavigationUITests: XCTestCase {
+         XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening the Sources page")
+         XCTAssertFalse(entry.hasFocus, "The magnifier, not the first source, has the initial focus")
+         let remote = XCUIRemote.shared
+-        for _ in 0..<5 where !entry.hasFocus { remote.press(.up); sleep(1) }
++        note("magnifier: \(describe(entry))")
++        trace(app, entry, "sources")
+         note("after Up: \(focusInfo(app))")
+         snap(app, "sources-magnifier-focused")
+         XCTAssertTrue(entry.hasFocus, "Up from the sources did not reach the magnifier")
+@@ -679,7 +696,7 @@ final class TVNavigationUITests: XCTestCase {
+         XCTAssertTrue(switcher.waitForExistence(timeout: 10), "The source page has no switcher")
+         let remote = XCUIRemote.shared
+         snap(app, "source-page")
+-        for _ in 0..<6 where !switcher.hasFocus { remote.press(.up); sleep(1) }
++        trace(app, switcher, "source page")
+         note("switcher focus attempt: \(focusInfo(app))")
+         XCTAssertTrue(switcher.hasFocus, "The remote did not reach the source name button")
+         let before = switcher.value as? String ?? ""
