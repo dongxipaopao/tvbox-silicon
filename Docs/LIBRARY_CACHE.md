@@ -1,4 +1,4 @@
-# Catalog danmaku and the playback library
+# The playback library
 
 Catalog videos now retain their last episode and playback position. Watch Now
 offers a Continue Watching section, and Playback History supports search,
@@ -13,78 +13,35 @@ episodes; automatic skipping has a global enable switch. The outro is stored as
 time remaining. Invalid durations, overly long segments and overlapping settings
 are rejected, and each segment is skipped once per play-through. Loop playback
 takes precedence over automatic next episode. tvOS keeps its native transport
-menus; history resume, automatic next and automatic danmaku use the same session.
+menus; history resume and automatic next use the same session.
 
 With automatic next on, the next episode is resolved 30 seconds before the
 episode (or its skipped outro) ends and queued behind it in the player's
 `AVQueuePlayer`, so it loads while this one finishes and plays straight on: no
 waiting screen, no new player. The session then takes the queued episode over
-(history, intro/outro times, danmaku) and the store makes it the playing one.
+(history and intro/outro times) and the store makes it the playing one.
 The Next Episode button plays a queued episode the same way. Streams that pass
 through a plugin's proxy and MKV originals are never queued, and a queued item
 that fails is dropped; those episodes switch the old way when one ends. On iOS
 and tvOS the player's cover keeps one identity across episodes; keyed by the
 channel, it would be dismissed and presented again for every episode.
 
-## Automatic catalog danmaku
-
-For subscription-source catalog videos, the app searches the official Dandanplay API
-(using the private build configuration in [DANDANPLAY.md](DANDANPLAY.md)) and, when
-official-page lookup is enabled, IQiyi and Tencent Video. A validated official
-episode page can also be used directly. Matching checks normalized title,
-episode number and available year/season information, then asks the configured
-dmku endpoint for that episode's comments. Dandanplay is tried first (up to five
-seconds); if it has no usable track, the first nonempty fallback result wins;
-unmatched episodes and unavailable services leave the video playing without an
-overlay or an alert.
-
-On macOS, Settings → Danmaku Service configures a Dandanplay-compatible server,
-including self-hosted `danmu_api` services. The same page is available in iOS
-Playback settings and from the player's Danmaku Settings menu. Enter the server
-root, an optional token path, or an address ending in `/api/v2`, then save. The
-address stays in this device's preferences; no personal service is bundled.
-
-With a custom server, automatic matching searches only that service using the
-video's title, year and episode. The source picker selects Automatic, iQIYI,
-Tencent Video, Bilibili, Youku, Mango TV, Migu or Dandanplay. Availability depends
-on which providers the service offers. Changing the service or source reloads
-the current episode and uses a separate cache. Uncertain titles, seasons and
-episodes remain unmatched; use manual search and episode selection when needed.
-
-The player's sheet also offers XML/JSON import, display area, text size, opacity,
-scroll speed, scrolling/top/bottom comment switches, and timing adjustment. Advance
-comments when they appear late, delay them when they appear early, or reset the
-offset. Comments follow the video's clock while pausing, seeking or changing
-playback speed. Show Danmaku and automatic matching can each be disabled.
-
-Matching sends title/episode information to the configured service. With the
-default service, official lookup can query the platforms' public endpoints and
-send validated public episode-page URLs to the comment server. Resolved media
-URLs and media authorization headers are not sent to these services.
-
-Catalog comments adapt into the existing `DanmakuOverlay` renderer. Bilibili VOD,
-live chat, quality selection and casting retain their existing resolution and
-comment paths; they do not use the new catalog resolver.
-
 ## Disposable cache
 
 The on-disk cache is bounded to 256 MiB, with an 8 MiB limit per entry. Artwork
-expires after 30 days, episode danmaku after 7 days, and catalog detail after
-6 hours. Successful title-to-track mappings expire after 30 days and are limited
+expires after 30 days and catalog detail after 6 hours. Successful title-to-track mappings expire after 30 days and are limited
 to the latest 20 works. Negative results last 5 minutes; provider failures last
 30 seconds. Explicit retry removes the episode's cached result.
 
 History titles and their artwork take eviction priority over other content.
 After the current track loads, only the next episode on the same line is
-prefetched. Prefetching is cancelled when playback changes or matching is
-disabled. Cache generation tickets prevent an in-flight response from restoring
+prefetched. Prefetching is cancelled when playback changes. Cache generation tickets prevent an in-flight response from restoring
 content that was deleted in the meantime.
 
-Deleting a history title removes its catalog detail, episode danmaku, artwork
+Deleting a history title removes its catalog detail, artwork
 and intro/outro times. Shared recent work mappings remain bounded independently.
 Settings → Local Cache reports usage and clears all disposable data while keeping
-history, subscriptions, pins and skip settings. The cache contains metadata and
-comments, not downloaded video. Cached source metadata can include source
+history, subscriptions, pins and skip settings. The cache contains metadata, not downloaded video. Cached source metadata can include source
 episode addresses; resume refreshes direct-file APIs and re-resolves plugin/API
 playback, retrying with fresh detail when a cached episode fails.
 

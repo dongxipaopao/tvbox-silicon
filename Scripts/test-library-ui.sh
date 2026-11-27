@@ -1,6 +1,6 @@
 #!/bin/bash
 # Unified acceptance in a separate simulator bundle. Never installs a stub
-# runtime into the user's device app. Deterministic local danmaku and fixture playback.
+# runtime into the user's device app. Deterministic local fixture playback.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 SIMULATOR_ID="${1:?Usage: Scripts/test-library-ui.sh <iPad simulator UUID>}"

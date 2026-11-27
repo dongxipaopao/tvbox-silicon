@@ -28,8 +28,6 @@ public struct PlaybackInfo: Equatable, Sendable {
     public var droppedDolbyVisionProfile: Int?
     /// Whether this device decodes the video's format in hardware; nil when unknown.
     public var hardwareDecoding: Bool?
-    /// The rate frames reach the screen when Smooth Motion adds in-between frames (60), else nil.
-    public var smoothedFrameRate: Double?
 
     public init() {}
 
@@ -73,8 +71,8 @@ public struct PlaybackInfo: Equatable, Sendable {
     }
 
     /// The tags over the seek bar, in MiraPlay's order: how the video is decoded, its range, its format, its size,
-    /// its frame rate and its bitrate. ["HW", "DV P8", "H265", "4K", "24FPS", "25Mbps"]; with Smooth Motion
-    /// "24→60FPS" (#519); profile 7 played as its HDR10 base "DV P7→HDR10".
+    /// its frame rate and its bitrate. ["HW", "DV P8", "H265", "4K", "24FPS", "25Mbps"];
+    /// profile 7 played as its HDR10 base "DV P7→HDR10".
     public var badges: [String] {
         var tags: [String] = []
         if let hardwareDecoding, videoCodec != nil { tags.append(hardwareDecoding ? "HW" : "SW") }
@@ -87,12 +85,7 @@ public struct PlaybackInfo: Equatable, Sendable {
         if let code, let short = Self.shortVideoName(code) { tags.append(short) }
         if let size = Self.sizeName(width: width, height: height) { tags.append(size) }
         if let frameRate, frameRate.isFinite, frameRate > 0 {
-            let source = Self.roundedRate(frameRate)
-            if let smoothedFrameRate, smoothedFrameRate.isFinite, Self.roundedRate(smoothedFrameRate) > source {
-                tags.append("\(source)→\(Self.roundedRate(smoothedFrameRate))FPS")
-            } else {
-                tags.append("\(source)FPS")
-            }
+            tags.append("\(Self.roundedRate(frameRate))FPS")
         }
         if let bitrate, bitrate.isFinite, bitrate > 0 { tags.append(Self.shortBits(bitrate)) }
         return tags

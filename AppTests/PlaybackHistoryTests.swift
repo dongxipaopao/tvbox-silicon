@@ -33,8 +33,6 @@ final class PlaybackHistoryTests: XCTestCase {
 
     @MainActor private func fixture() -> (PlaybackSession, PlaybackHistory, URL) {
         // These defaults belong to the isolated test host, never the installed app.
-        UserDefaults.standard.set(false, forKey: DanmakuService.automaticKey)
-        UserDefaults.standard.set(false, forKey: "danmakuEnabled")
         let file = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString + ".json")
         let history = PlaybackHistory(file: file)
         let session = PlaybackSession()

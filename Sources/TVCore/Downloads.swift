@@ -29,7 +29,6 @@ extension DownloadItem {
                                              videoID: source.videoID, videoName: title, poster: poster,
                                              episodeID: source.episodeID, episodeName: source.episodeName, episodeFlag: source.flag)
         context.posterHeaders = posterHeaders.isEmpty ? nil : posterHeaders
-        context.officialPage = OfficialVideoPage.validated(source.address)
         return context
     }
 }
@@ -78,7 +77,6 @@ public struct DownloadItem: Codable, Identifiable, Hashable, Sendable {
     /// Bytes on disk once finished.
     public internal(set) var size: Int64 = 0
     public internal(set) var finished: Date?
-    public internal(set) var cid: String?
     public internal(set) var duration: Double?
     /// Whether it can play before it is whole (`TransferPlan.streams`); nil until its link has been looked at.
     public internal(set) var streams: Bool?
@@ -319,7 +317,7 @@ public struct DownloadItem: Codable, Identifiable, Hashable, Sendable {
         case .prepared(let plan):
             update(id) {
                 $0.kind = DownloadItem.Kind(rawValue: plan.kind.rawValue)
-                $0.quality = plan.label; $0.cid = plan.cid; $0.duration = plan.duration
+                $0.quality = plan.label; $0.duration = plan.duration
                 $0.expected = plan.expected
                 $0.streams = plan.streams
             }
@@ -421,7 +419,6 @@ public struct DownloadItem: Codable, Identifiable, Hashable, Sendable {
                 save()
             }
         }
-        if let cid = item.cid { DanmakuSource.register(url, bilibiliCID: cid, duration: item.duration) }
         if media.hasSuffix(".m3u8") { return try await LocalMediaServer.shared.address(of: file, root: root) }
         return file
     }

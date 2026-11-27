@@ -539,7 +539,6 @@ public struct CatalogClient: Sendable {
         defer { Diagnostics.shared.record(.info, "play.timing", "phase=prepare source=\(site.key) type=\(site.type) duration=\(timingStart.duration(to: .now))") }
         var headers = site.raw["header"]?.object?.compactMapValues(\.string) ?? [:]
         if site.type == 4 || site.type == 3 {
-            if !forDownload { CatPawDanmaku.remember(self) }
             var params = ["play": episode.address, "flag": episode.flag]
             if site.type == 3 { params["detailID"] = episode.videoID }
             let result = try await request(params)
@@ -557,12 +556,10 @@ public struct CatalogClient: Sendable {
             }
             var choices = PlaybackChoice.parse(result["url"], prefix: prefix, fallbackName: episode.name)
             guard !choices.isEmpty else { throw TVError.unsupported(L10n.text("The API did not return a single playback URL.")) }
-            let duration = result["duration"]?.double.flatMap { $0 > 0 ? $0 : nil }
-            let danmaku = result["danmaku"]?.string
             // Separate video and audio files (DASH), which the app describes as HLS for the player.
             if let dash = result["dash"]?.object {
                 do {
-                    guard let master = try await DashStreams.stream(dash, headers: headers, danmaku: danmaku, session: http.session) else {
+                    guard let master = try await DashStreams.stream(dash, headers: headers, session: http.session) else {
                         throw TVError.unsupported(L10n.text("The API did not return a single playback URL."))
                     }
                     return PlaybackPlan(choices: [PlaybackChoice(id: 0, name: episode.name, address: master.absoluteString)], headers: headers,
@@ -592,8 +589,6 @@ public struct CatalogClient: Sendable {
                     if error is CancellationError || Task.isCancelled { throw CancellationError() }
                     throw TVError.unsupported(L10n.text("This video could not be prepared for playback. Please try again."))
                 }
-            } else if danmaku != nil, let url = try? WebAddress.resolve(choices[0].address) {
-                DanmakuSource.register(url, feed: danmaku, duration: duration)
             }
             return PlaybackPlan(choices: choices, headers: headers, group: episode.flag,
                                 requiresWebDetection: (result["parse"]?.int ?? 0) != 0 || (result["jx"]?.int ?? 0) != 0 || !prefix.isEmpty, click: click, webPlayURL: "",

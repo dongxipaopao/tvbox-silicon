@@ -95,10 +95,10 @@ public final class ErrorReports: @unchecked Sendable {
     }
 
     /// What the player shows, for a later "quit unexpectedly" report. No title or address: only its kind.
-    public func playing(live: Bool, format: String, source: String?, danmaku: Bool, sharper: Bool) {
+    public func playing(live: Bool, format: String, source: String?) {
         let since = Int(Date().timeIntervalSince1970)
         note { $0.playback = QuitContext.Playback(live: live, format: format.isEmpty ? "-" : String(format.lowercased().prefix(5)),
-                                                  source: source ?? "-", since: since, danmaku: danmaku, sharper: sharper) }
+                                                  source: source ?? "-", since: since) }
     }
 
     public func stoppedPlaying() { note { $0.playback = nil } }

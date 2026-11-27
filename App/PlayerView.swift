@@ -36,14 +36,8 @@ struct PlaybackView: View {
     /// A watch page starts playing by itself, so its controls wait for a tap (`-qaPlayerControls` keeps them up).
     @State private var quietStart = !UserDefaults.standard.bool(forKey: "qaPlayerControls")
     #endif
-    @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
-    @AppStorage(DanmakuArea.key) private var danmakuArea = DanmakuArea.standard
-    @State private var showsDanmakuList = false
-    @State private var showsDanmakuSettings = false
     @State private var showsEpisodes = false
     @State private var showsChannels = false
-    @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
-    @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
     #if os(tvOS)
     @AppStorage(PlaybackInfo.key) private var showsPlaybackInfo = false
     @State private var playbackSpeed: Float = 1
@@ -77,13 +71,13 @@ struct PlaybackView: View {
             #if os(tvOS)
             // Remove the native focus environment while recovery controls are shown.
             if session.error == nil {
-                NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
+                NativePlayerView(player: session.player,
                                  subtitles: session.subtitles, qualities: session.qualities, quality: session.quality, choose: { session.choose(quality: $0) },
                                  audio: session.audioChoices, audioChoice: session.audioChoice, chooseAudio: { session.chooseAudio($0) },
                                  live: session.isLive, previous: episodeAction(store.step(back: true, from: channel, session: session)),
                                  next: episodeAction(store.step(back: false, from: channel, session: session)), waiting: waitContent,
-                                 enhancer: session.enhancer, upscale: $upscalesVideo, smooth: $smoothsVideo, info: $showsPlaybackInfo,
-                                 speed: playbackSpeed, setSpeed: { playbackSpeed = $0; session.setSpeed($0) }, fills: $fillsScreen, danmakuArea: $danmakuArea,
+                                 info: $showsPlaybackInfo,
+                                 speed: playbackSpeed, setSpeed: { playbackSpeed = $0; session.setSpeed($0) }, fills: $fillsScreen,
                                  external: session.externalSubtitles, ownSubtitles: session.hasOwnSubtitles, skip: session.skipOffer, skipSource: { session.skipSourceSegment() },
                                  skipping: session.canSkip ? session.skipSettings : nil, setSkipping: { session.applySkipSettings($0) },
                                  markSkip: { session.markSkip(intro: $0) },
@@ -91,8 +85,7 @@ struct PlaybackView: View {
                                  exitWhileWaiting: session.showsPicture ? nil : { dismiss() }, episodes: episodeChoices, channels: channelChoices,
                                  lines: session.lines.indices.map { L10n.text("Line %@", "\($0 + 1)") }, line: session.line,
                                  chooseLine: { session.choose(line: $0) }, transportBar: transportBar,
-                                 titleRow: AnyView(TVPlayerTitleRow(channel: channel, session: session, transportBar: transportBar).environment(store)),
-                                 findDanmaku: danmakuFinder).ignoresSafeArea()
+                                 titleRow: AnyView(TVPlayerTitleRow(channel: channel, session: session, transportBar: transportBar).environment(store))).ignoresSafeArea()
                     .onAppear { playbackSpeed = session.player.defaultRate }
             }
             // Until the picture starts, AVKit's player keeps the Back press to itself, so a stream that never
@@ -112,11 +105,11 @@ struct PlaybackView: View {
             }
             .animation(.easeInOut(duration: 0.3), value: transportBar.visible)
             #elseif os(iOS)
-            MobilePlayerView(channel: channel, session: session, pip: pip, showsDanmaku: $showsDanmaku, upscalesVideo: $upscalesVideo, smoothsVideo: $smoothsVideo,
+            MobilePlayerView(channel: channel, session: session, pip: pip,
                              waiting: waitContent, chromeVisible: chromeVisible, toggleChrome: toggleChrome, poke: poke, hold: holdChrome,
                              close: exit, layout: playerLayout, toggleFullScreen: watch.map { _ in toggleFullScreen })
             #else
-            NativePlayerView(player: session.player, comments: session.danmaku, showsDanmaku: $showsDanmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision,
+            NativePlayerView(player: session.player,
                              subtitles: session.subtitles).ignoresSafeArea()
             chrome.opacity(chromeVisible ? 1 : 0).allowsHitTesting(chromeVisible)
             #endif
@@ -128,9 +121,6 @@ struct PlaybackView: View {
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "qaPlaybackProbe") {
                 VStack {
-                    Text(session.catalogDanmaku.automaticState)
-                        .accessibilityIdentifier("player.qa.danmaku")
-                        .accessibilityValue("\(session.danmaku.count)")
                     Text("Playback position").accessibilityIdentifier("player.qa.position")
                         .accessibilityValue("\(session.position)")
                     Text("Playback paused").accessibilityIdentifier("player.qa.paused")
@@ -141,15 +131,6 @@ struct PlaybackView: View {
                 .font(.caption2).foregroundStyle(.white)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 .allowsHitTesting(false)
-            }
-            // `-qaEnhanceHUD 1`: what the enhancer is doing, the frame rate it draws, and the screen's own rate.
-            if UserDefaults.standard.bool(forKey: "qaEnhanceHUD") {
-                Text(enhanceHUD)
-                    .font(.system(size: 22, weight: .medium, design: .monospaced)).foregroundStyle(.white)
-                    .padding(12).background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
-                    .padding(60)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .allowsHitTesting(false)
             }
             #endif
         }
@@ -216,8 +197,6 @@ struct PlaybackView: View {
         .onChange(of: session.showsPicture || session.error != nil, initial: true) { _, started in watch?.started(started) }
         .onAppear { watch?.opened(session) }
         #endif
-        .onChange(of: showsDanmaku) { _, value in session.catalogDanmaku.enabled = value }
-        .onChange(of: session.catalogDanmaku.enabled) { _, value in showsDanmaku = value }
         .onDisappear {
             hideTask?.cancel(); store.cancelEpisodeSelection()
             #if os(iOS)
@@ -239,30 +218,9 @@ struct PlaybackView: View {
         #endif
     }
 
-    #if DEBUG
-    private var enhanceHUD: String {
-        var lines = ["Sharper \(UserDefaults.standard.bool(forKey: VideoEnhancement.upscaleKey) ? "on" : "off") · Smooth \(UserDefaults.standard.bool(forKey: VideoEnhancement.smoothKey) ? "on" : "off")"
-                     + " · drawing: \(session.enhancer.status.upscaling ? "upscaled " : "")\(session.enhancer.status.smoothing ? "smoothed" : session.enhancer.status.active ? "" : "AVKit picture")",
-                     session.enhancer.summary]
-        #if !os(macOS)
-        if let screen = UIApplication.shared.appWindowScene?.screen {
-            lines.append("screen \(screen.maximumFramesPerSecond) Hz \(Int(screen.nativeBounds.width))×\(Int(screen.nativeBounds.height))")
-        }
-        #endif
-        return lines.joined(separator: "\n")
-    }
-    #endif
-
     #if os(tvOS)
     private func episodeAction(_ step: PlayerStep?) -> EpisodeAction? {
         step.map { EpisodeAction(name: $0.name, busy: $0.busy, channel: $0.channel, play: $0.go) }
-    }
-
-    /// Finding danmaku by hand from the player's Danmaku menu (#1089). None for live channels: their comments are the room's.
-    private var danmakuFinder: (() -> AnyView)? {
-        guard !session.isLive else { return nil }
-        let model = session.catalogDanmaku, name = channel.name
-        return { AnyView(CatalogDanmakuSettingsView(model: model, channelName: name)) }
     }
 
     /// The video's lines and episodes for the player's Episodes menu and info-panel tab: nil for one episode.
@@ -297,13 +255,6 @@ struct PlaybackView: View {
         .subtitleImport(files: $importsSubtitleFile, address: $asksSubtitleAddress, search: $searchesSubtitles, subtitles: session.externalSubtitles)
         .playerEpisodesSheet(isPresented: $showsEpisodes, channel: channel)
         .playerChannelsSheet(isPresented: $showsChannels, channel: channel, session: session)
-        .sheet(isPresented: $showsDanmakuList) {
-            DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
-                .danmakuListPresentation()
-        }
-        .sheet(isPresented: $showsDanmakuSettings) {
-            CatalogDanmakuSettingsView(model: session.catalogDanmaku, channelName: channel.name).playerSheet()
-        }
     }
 
     private var chromeTitle: some View {
@@ -370,22 +321,6 @@ struct PlaybackView: View {
             }
             .chromeButton()
             .accessibilityLabel(L10n.text("Subtitle Files"))
-            // Settings stay reachable before comments load, including when automatic matching found none.
-            Menu {
-                Toggle(isOn: $showsDanmaku) { Label(L10n.text("Show Danmaku"), systemImage: "text.bubble") }
-                Picker(selection: $danmakuArea) {
-                    ForEach(DanmakuArea.allCases, id: \.self) { Text($0.title).tag($0) }
-                } label: { Label(L10n.text("Danmaku Area"), systemImage: "rectangle.tophalf.inset.filled") }
-                .pickerStyle(.menu)
-                DanmakuStylePickers(model: session.catalogDanmaku)
-                Button(L10n.text("Danmaku Settings…")) { showsDanmakuSettings = true }
-                Button { showsDanmakuList = true } label: { Label(L10n.text("Danmaku List"), systemImage: "list.bullet.rectangle") }
-                    .disabled(session.danmaku.isEmpty)
-            } label: {
-                Image(systemName: DanmakuPreference.symbol).font(.headline).frame(width: 22, height: 22)
-            }
-            .chromeButton()
-            .accessibilityLabel(L10n.text("Danmaku"))
         }
         .chromeGroup(inset: 3)
     }
@@ -709,15 +644,10 @@ private struct TVPlaybackFailureView: View {
 #if os(macOS)
 private struct NativePlayerView: View {
     let player: AVPlayer
-    let comments: [Danmaku]
-    @Binding var showsDanmaku: Bool
-    var opacity = 0.9
-    var revision = ""
     var subtitles: SubtitleCues? = nil
     var body: some View {
         ZStack {
             PlayerSurface(player: player)
-            if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision).ignoresSafeArea() }
             if let subtitles { SubtitleOverlay(cues: subtitles).ignoresSafeArea() }
         }
     }
@@ -809,14 +739,9 @@ struct ChannelChoices {
     let panel: @MainActor () -> AnyView
 }
 
-/// AVPlayerViewController itself, for its transport-bar menu: the Danmaku switch lives there, next to
-/// subtitles and audio, where a remote can reach it. Comments draw in the content overlay, under the controls.
+/// AVPlayerViewController itself, for its transport-bar menu, where a remote can reach the subtitles and audio.
 private struct NativePlayerView: UIViewControllerRepresentable {
     let player: AVPlayer
-    let comments: [Danmaku]
-    @Binding var showsDanmaku: Bool
-    var opacity = 0.9
-    var revision = ""
     var subtitles: SubtitleCues? = nil
     var qualities: [StreamQuality] = []
     var quality: Int? = nil
@@ -830,22 +755,12 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     var previous: EpisodeAction? = nil
     var next: EpisodeAction? = nil
     var waiting: PlaybackWaitContent? = nil
-    var enhancer: VideoEnhancer? = nil
-    var upscale: Binding<Bool> = .constant(false)
-    var smooth: Binding<Bool> = .constant(false)
     var info: Binding<Bool> = .constant(false)
     /// The speed picked in the Playback Speed menu, which `setSpeed` makes the player's default rate.
     var speed: Float = 1
     var setSpeed: @MainActor (Float) -> Void = { _ in }
     /// Fill Screen: the picture is cropped to the whole screen rather than fitted inside it, as on iPhone.
     var fills: Binding<Bool> = .constant(false)
-    var danmakuArea: Binding<DanmakuArea> = .constant(.standard)
-    /// The danmaku look from Settings › Danmaku, which the transport bar's Danmaku menu sets too (#789).
-    @AppStorage(DanmakuStyle.fontSizeKey) private var danmakuFontSize = DanmakuStyle.standardFontSize
-    @AppStorage(DanmakuStyle.opacityKey) private var danmakuOpacity = DanmakuStyle.standardOpacity
-    @AppStorage(DanmakuStyle.speedKey) private var danmakuSpeed = DanmakuStyle.standardSpeed
-    @AppStorage(DanmakuStyle.spacingKey) private var danmakuSpacing = DanmakuStyle.standardSpacing
-    @AppStorage(DanmakuDensity.key) private var danmakuDensity = DanmakuDensity.standard
     /// Subtitle files beside the video (#576); the item's own are in AVKit's Subtitles menu.
     var external: ExternalSubtitles? = nil
     /// The item has subtitle tracks of its own: Subtitle Files says where they are (#1524).
@@ -857,7 +772,7 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     var skipping: EpisodeSkipSettings? = nil
     var setSkipping: @MainActor (EpisodeSkipSettings) -> Void = { _ in }
     var markSkip: @MainActor (_ intro: Bool) -> Void = { _ in }
-    /// The part's chapters (Bilibili's 分段章节): a Chapters tab in the info panel, beside Danmaku.
+    /// The part's chapters (Bilibili's 分段章节): a Chapters tab in the info panel.
     var chapters: [PlaybackChapter] = []
     private static let speeds: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4]
     private static func speedLabel(_ speed: Float) -> String {
@@ -876,10 +791,8 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     var transportBar: TransportBarVisibility? = nil
     /// The title's logo and the video's tags, over the transport bar while it shows (#758).
     var titleRow: AnyView? = nil
-    /// The danmaku picker (#1089), last in the Danmaku menu, which it brings even before any comments load.
-    var findDanmaku: (() -> AnyView)? = nil
     final class Coordinator: NSObject, UIGestureRecognizerDelegate, @preconcurrency AVPlayerViewControllerDelegate {
-        var host: UIHostingController<AnyView>?; var listed = ""; var criteria: DisplayCriteriaKeeper?
+        var host: UIHostingController<AnyView>?; var listed = ""
         var exit: (() -> Void)?
         var subtitles: SubtitleCues?
         var transportBar: TransportBarVisibility?
@@ -903,8 +816,6 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let controller = TitleSafePlayerController()
-        // Decided before the controller is presented: AVKit refuses the change during playback.
-        if VideoEnhancement.canSmooth, let enhancer { context.coordinator.criteria = DisplayCriteriaKeeper(controller: controller, player: player, enhancer: enhancer) }
         controller.player = player
         controller.delegate = context.coordinator
         context.coordinator.subtitles = subtitles
@@ -912,7 +823,7 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         let host = UIHostingController(rootView: overlay)
         host.view.backgroundColor = .clear
         host.view.isUserInteractionEnabled = false
-        // Comments use the whole picture, not the TV's title-safe area.
+        // The overlay uses the whole picture, not the TV's title-safe area.
         host.safeAreaRegions = []
         // The content overlay exists only once the controller's view has loaded.
         controller.loadViewIfNeeded()
@@ -937,8 +848,8 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         context.coordinator.host?.rootView = overlay
         context.coordinator.exit = exitWhileWaiting
         context.coordinator.back.isEnabled = exitWhileWaiting != nil
-        // The episodes, the chapters and the comment list are tabs in the info panel (swipe down), beside the video's own info.
-        let listed = "\(revision):\(comments.count):\(chapters.map(\.start)):\(episodes?.key ?? ""):\(channels?.key ?? "")"
+        // The episodes and the chapters are tabs in the info panel (swipe down), beside the video's own info.
+        let listed = "\(chapters.map(\.start)):\(episodes?.key ?? ""):\(channels?.key ?? "")"
         if context.coordinator.listed != listed {
             context.coordinator.listed = listed
             var tabs: [UIViewController] = []
@@ -968,61 +879,9 @@ private struct NativePlayerView: UIViewControllerRepresentable {
                 list.preferredContentSize = CGSize(width: 0, height: 330)
                 tabs.append(list)
             }
-            if !comments.isEmpty {
-                // Capped in the view as well: AVKit can size a tab by its content, and a scroll view's content is all of its
-                // rows, so the panel ran thousands of points past the top of the screen, its tabs and the focused row out of
-                // sight, and the remote seemed to do nothing (#1836).
-                let list = UIHostingController(rootView: DanmakuListView(player: player, comments: comments).frame(maxHeight: 480))
-                list.title = L10n.text("Danmaku")
-                list.preferredContentSize = CGSize(width: 0, height: 480)
-                tabs.append(list)
-            }
             controller.customInfoViewControllers = tabs
         }
-        let binding = $showsDanmaku
         var items: [UIMenuElement] = []
-        var find: [UIMenuElement] = []
-        if let findDanmaku, !live {
-            find.append(UIAction(title: L10n.text("Find Danmaku…"), image: UIImage(systemName: "magnifyingglass")) { [weak controller] _ in
-                if let controller { Self.present(UIHostingController(rootView: findDanmaku()), over: controller) }
-            })
-        }
-        if !comments.isEmpty {
-            let area = danmakuArea
-            let areas = DanmakuArea.allCases.map { option in
-                UIAction(title: option.title, state: area.wrappedValue == option ? .on : .off) { _ in area.wrappedValue = option }
-            }
-            // Size, opacity and speed too: on a TV this menu is all a remote reaches while watching (#789).
-            let fontSize = $danmakuFontSize, opacity = $danmakuOpacity, speed = $danmakuSpeed
-            let sizes = DanmakuStyle.fontSizes(including: danmakuFontSize).map { option in
-                UIAction(title: DanmakuStyle.sizeTitle(option), state: abs(option - danmakuFontSize) < 0.001 ? .on : .off) { _ in fontSize.wrappedValue = option }
-            }
-            let opacities = DanmakuStyle.opacities(including: danmakuOpacity).map { option in
-                UIAction(title: DanmakuStyle.percent(option), state: abs(option - danmakuOpacity) < 0.001 ? .on : .off) { _ in opacity.wrappedValue = option }
-            }
-            let current = DanmakuStyle.clampedSpeed(danmakuSpeed)
-            let speeds = DanmakuStyle.speeds(including: danmakuSpeed).map { option in
-                UIAction(title: DanmakuStyle.speedTitle(option), state: abs(option - current) < 0.001 ? .on : .off) { _ in speed.wrappedValue = option }
-            }
-            let spacing = $danmakuSpacing, density = $danmakuDensity, currentSpacing = DanmakuStyle.lineSpacing(danmakuSpacing)
-            let spacings = DanmakuStyle.spacings.map { option in
-                UIAction(title: DanmakuStyle.spacingTitle(option), state: option == currentSpacing ? .on : .off) { _ in spacing.wrappedValue = option }
-            }
-            let densities = DanmakuDensity.allCases.map { option in
-                UIAction(title: option.title, state: option == danmakuDensity ? .on : .off) { _ in density.wrappedValue = option }
-            }
-            items.append(UIMenu(title: L10n.text("Danmaku"), image: UIImage(systemName: DanmakuPreference.symbol), children: [
-                UIAction(title: L10n.text("Show Danmaku"), state: showsDanmaku ? .on : .off) { _ in binding.wrappedValue.toggle() },
-                UIMenu(title: L10n.text("Danmaku Area"), image: UIImage(systemName: "rectangle.tophalf.inset.filled"), children: areas),
-                UIMenu(title: L10n.text("Text Size"), image: UIImage(systemName: "textformat.size"), children: sizes),
-                UIMenu(title: L10n.text("Opacity"), image: UIImage(systemName: "circle.lefthalf.filled"), children: opacities),
-                UIMenu(title: L10n.text("Scroll Speed"), image: UIImage(systemName: "speedometer"), children: speeds),
-                UIMenu(title: L10n.text("Line Spacing"), image: UIImage(systemName: "arrow.up.and.down"), children: spacings),
-                UIMenu(title: L10n.text("Density"), image: UIImage(systemName: "line.3.horizontal.decrease"), children: densities),
-            ] + find))
-        } else if !find.isEmpty {
-            items.append(UIMenu(title: L10n.text("Danmaku"), image: UIImage(systemName: DanmakuPreference.symbol), children: find))
-        }
         if qualities.count > 1 {
             let choose = choose
             let current = qualities.first { $0.id == quality }?.label ?? L10n.text("Auto")
@@ -1083,19 +942,12 @@ private struct NativePlayerView: UIViewControllerRepresentable {
             items.insert(UIMenu(title: L10n.text("Episodes"), image: UIImage(systemName: "rectangle.stack"), children: children), at: at)
         }
         do {
-            let upscale = upscale, smooth = smooth, fills = fills
+            let fills = fills
             var options: [UIMenuElement] = [
                 UIAction(title: L10n.text("Fill Screen"), image: UIImage(systemName: "arrow.up.left.and.arrow.down.right"),
                          state: fills.wrappedValue ? .on : .off) { _ in fills.wrappedValue.toggle() },
             ]
-            if VideoEnhancement.canUpscale {
-                options.append(UIAction(title: L10n.text("Sharper Picture"), state: upscale.wrappedValue ? .on : .off) { _ in upscale.wrappedValue.toggle() })
-            }
-            if VideoEnhancement.canSmooth {
-                options.append(UIAction(title: L10n.text("Smooth Motion (60 fps)"), state: smooth.wrappedValue ? .on : .off) { _ in smooth.wrappedValue.toggle() })
-            }
-            let enhances = VideoEnhancement.canUpscale || VideoEnhancement.canSmooth
-            items.append(UIMenu(title: L10n.text("Picture"), image: UIImage(systemName: enhances ? "wand.and.sparkles" : "aspectratio"), children: options))
+            items.append(UIMenu(title: L10n.text("Picture"), image: UIImage(systemName: "aspectratio"), children: options))
         }
         items.append(SleepTimer.shared.uiMenu(item: .episode, offersEnd: !live))
         let info = info
@@ -1225,8 +1077,6 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     }
     private var overlay: AnyView {
         AnyView(ZStack {
-            if let enhancer { EnhancedVideoSurface(enhancer: enhancer, fills: fills.wrappedValue) }
-            if showsDanmaku && !comments.isEmpty { DanmakuOverlay(player: player, comments: comments, opacity: opacity, revision: revision).ignoresSafeArea() }
             if let subtitles { SubtitleOverlay(cues: subtitles, fills: fills.wrappedValue) }
             if let titleRow { titleRow }
             if let waiting { waiting.view.transition(PlaybackWaitContent.transition) }
@@ -1713,9 +1563,6 @@ private struct DesktopPlaybackView: View {
     @State private var idle = ChromeIdle()
     /// Save Frame in the options (#1342).
     @State private var frames = FrameSaver()
-    @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
-    @State private var showsDanmakuList = false
-    @State private var showsDanmakuSettings = false
     @State private var showsSkip = false
     @State private var showsEpisodes = false
     @State private var showsChannels = false
@@ -1746,10 +1593,9 @@ private struct DesktopPlaybackView: View {
                 Color.black
                 let bare = session.isLive || !session.hasTimeline
                 // A new player view whenever the controls come or go (see DesktopNativePlayer).
-                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: bare, waiting: waitContent, enhancer: session.enhancer,
+                DesktopNativePlayer(player: session.player, fillsFrame: fillsFrame, live: bare, waiting: waitContent,
                                     subtitles: session.subtitles)
                     .id(bare)
-                if showsDanmaku && !session.danmaku.isEmpty { DanmakuOverlay(player: session.player, comments: session.danmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision).ignoresSafeArea() }
                 SubtitleOverlay(cues: session.subtitles, fills: fillsFrame).ignoresSafeArea()
                 SourceSkipButton(session: session)
                 DesktopBoostLabel(session: session)
@@ -1790,8 +1636,6 @@ private struct DesktopPlaybackView: View {
         }
         .preferredColorScheme(.dark)
         .ignoresSafeArea()
-        .onChange(of: showsDanmaku) { _, value in session.catalogDanmaku.enabled = value }
-        .onChange(of: session.catalogDanmaku.enabled) { _, value in showsDanmaku = value }
         .onChange(of: floats) { _, value in window.level = value ? .floating : .normal }
         .onChange(of: fillsFrame, initial: true) { _, value in window.fillsFrame = value }
         // Each picture that appears (the next episode too) shapes the window; the size arrives a moment after it.
@@ -1816,13 +1660,6 @@ private struct DesktopPlaybackView: View {
         }
         .playerEpisodesSheet(isPresented: $showsEpisodes, channel: channel)
         .playerChannelsSheet(isPresented: $showsChannels, channel: channel, session: session)
-        .sheet(isPresented: $showsDanmakuList) {
-            DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
-                .danmakuListPresentation()
-        }
-        .sheet(isPresented: $showsDanmakuSettings) {
-            CatalogDanmakuSettingsView(model: session.catalogDanmaku, channelName: channel.name).playerSheet()
-        }
         .sheet(isPresented: $showsSkip) { EpisodeSkipSettingsView(session: session).environment(store) }
         .onDisappear { idle.detach(); tvBrowser.stop(); CastController.shared.detach() }
         .subtitleImport(files: $importsSubtitleFile, address: $asksSubtitleAddress, search: $searchesSubtitles, subtitles: session.externalSubtitles)
@@ -1912,8 +1749,8 @@ private struct DesktopPlaybackView: View {
     }
 
     private var optionsMenu: some View {
-        DesktopOptionsMenu(channel: channel, session: session, window: window, frames: frames, hasDanmaku: !session.danmaku.isEmpty, fillsFrame: $fillsFrame, floats: $floats,
-                           showsDanmakuList: $showsDanmakuList, showsDanmakuSettings: $showsDanmakuSettings, showsSkip: $showsSkip,
+        DesktopOptionsMenu(channel: channel, session: session, window: window, frames: frames, fillsFrame: $fillsFrame, floats: $floats,
+                           showsSkip: $showsSkip,
                            importsSubtitleFile: $importsSubtitleFile, asksSubtitleAddress: $asksSubtitleAddress, searchesSubtitles: $searchesSubtitles)
             .equatable()
     }
@@ -1934,25 +1771,17 @@ private struct DesktopOptionsMenu: View, Equatable {
     let session: PlaybackSession
     let window: PlaybackWindow
     let frames: FrameSaver
-    /// Whether there are comments at all, not the comments: those change with every message.
-    let hasDanmaku: Bool
     @Binding var fillsFrame: Bool
     @Binding var floats: Bool
-    @Binding var showsDanmakuList: Bool
-    @Binding var showsDanmakuSettings: Bool
     @Binding var showsSkip: Bool
     @Binding var importsSubtitleFile: Bool
     @Binding var asksSubtitleAddress: Bool
     @Binding var searchesSubtitles: Bool
-    @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
-    @AppStorage(DanmakuArea.key) private var danmakuArea = DanmakuArea.standard
-    @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
-    @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
     @AppStorage(PlaybackInfo.key) private var showsPlaybackInfo = false
 
     /// The bindings and settings reach the menu by themselves; only these decide what it is built from.
     nonisolated static func == (a: Self, b: Self) -> Bool {
-        a.session === b.session && a.window === b.window && a.frames === b.frames && a.hasDanmaku == b.hasDanmaku && a.channel == b.channel
+        a.session === b.session && a.window === b.window && a.frames === b.frames && a.channel == b.channel
     }
 
     var body: some View {
@@ -1965,24 +1794,12 @@ private struct DesktopOptionsMenu: View, Equatable {
             Toggle(L10n.text("Fill Window"), isOn: $fillsFrame)
             Toggle(L10n.text("Float on Top"), isOn: $floats)
             Toggle(L10n.text("Show Video Info"), isOn: $showsPlaybackInfo)
-            if VideoEnhancement.canUpscale { Toggle(L10n.text("Sharper Picture"), isOn: $upscalesVideo) }
-            if VideoEnhancement.canSmooth { Toggle(L10n.text("Smooth Motion (60 fps)"), isOn: $smoothsVideo) }
             if session.qualities.count > 1 {
                 Menu(L10n.text("Quality")) { QualityPicker(session: session) }
             }
             Menu(L10n.text("Subtitle Files")) {
                 MacSubtitleFiles(subtitles: session.externalSubtitles, addFile: { importsSubtitleFile = true }, addAddress: { asksSubtitleAddress = true },
                                  searchOnline: { searchesSubtitles = true })
-            }
-            Menu(L10n.text("Danmaku")) {
-                Toggle(L10n.text("Show Danmaku"), isOn: $showsDanmaku)
-                Picker(L10n.text("Danmaku Area"), selection: $danmakuArea) {
-                    ForEach(DanmakuArea.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                DanmakuStylePickers(model: session.catalogDanmaku)
-                Button(L10n.text("Danmaku Settings…")) { showsDanmakuSettings = true }
-                    .accessibilityIdentifier("player.danmakuSettings")
-                Button(L10n.text("Danmaku List…")) { showsDanmakuList = true }.disabled(!hasDanmaku)
             }
             // The frame on screen, to the Pictures folder at the video's own size (#1342).
             Button(L10n.text("Save Frame")) { frames.save(session.player, title: channel.name) }
@@ -2032,7 +1849,6 @@ private struct DesktopNativePlayer: NSViewRepresentable {
     let fillsFrame: Bool
     var live = false
     var waiting: PlaybackWaitContent? = nil
-    var enhancer: VideoEnhancer? = nil
     var subtitles: SubtitleCues? = nil
     @MainActor final class Coordinator: NSObject, @preconcurrency AVPlayerViewPictureInPictureDelegate {
         var host: PassthroughHostingView<AnyView>?
@@ -2061,7 +1877,7 @@ private struct DesktopNativePlayer: NSViewRepresentable {
         view.controlsStyle = live ? .none : .inline
         view.player = player
         // No full-screen button of AVKit's own: it took only this view full screen, in a window of AVKit's, without
-        // the subtitles and danmaku drawn over it, the controls above it or the arrow keys' 10 s seek (#750). The
+        // the subtitles drawn over it, the controls above it or the arrow keys' 10 s seek (#750). The
         // window's full screen (the bar's button, F, the green button) keeps them all.
         view.showsFullScreenToggleButton = false
         view.allowsPictureInPicturePlayback = true
@@ -2087,7 +1903,6 @@ private struct DesktopNativePlayer: NSViewRepresentable {
     static func dismantleNSView(_ view: AVPlayerView, coordinator: Coordinator) { view.player = nil }
     private var overlay: AnyView {
         AnyView(ZStack {
-            if let enhancer { EnhancedVideoSurface(enhancer: enhancer, fills: fillsFrame) }
             if let waiting { waiting.view.transition(PlaybackWaitContent.transition) }
         // In with a fade; out at once, so the first frame replaces the wait with no pause or crossfade.
         }.animation(waiting == nil ? nil : .easeInOut(duration: 0.7), value: waiting == nil))
@@ -2178,8 +1993,6 @@ extension Store {
         store?.catalog(for: channel).map { TMDBMatchStore.key(source: $0.client.site.key, video: $0.video.id) }
     }
     session.skipDefaults = store.playbackDefaults
-    session.catalogDanmaku.enabled = UserDefaults.standard.object(forKey: DanmakuPreference.key) == nil
-        || UserDefaults.standard.bool(forKey: DanmakuPreference.key)
     if !resuming { session.start(channel) }
     session.onPlaybackEnded = { [weak store] in
         guard let store, store.autoPlayNext else { return }
@@ -2207,11 +2020,6 @@ extension Store {
     session.onSourceExhausted = { [weak store, weak session] in
         guard let store else { return false }
         return store.failoverFromPlayer(channel) { session?.lineSwitchFailed($0) }
-    }
-    if let context = channel.historyContext, let next = store.nextEpisode(after: channel),
-       let catalog = store.catalog(for: channel) {
-        session.catalogDanmaku.prefetch(PlaybackHistoryContext(origin: context.origin, site: catalog.client.site,
-            video: catalog.video, episode: next))
     }
 }
 
@@ -2438,12 +2246,6 @@ struct TVPlayerTitleRow: View {
         let measured = Double(video?.currentVideoFrameRate ?? 0)
         let declaredRate = picture?.frameRate.flatMap { $0 >= 5 ? $0 : nil }
         next.frameRate = declaredRate ?? (measured > 0 ? measured : nil)
-        // Smooth Motion's in-between frames reach the screen at its grid's rate (#519).
-        let enhancement = session.enhancer.status
-        if enhancement.smoothing {
-            let source = enhancement.sourceRate > 0 ? enhancement.sourceRate : next.frameRate ?? 0
-            next.smoothedFrameRate = VideoEnhancer.outputRate(source: source, matching: false)
-        }
         next.audioCodec = sound?.codec
         next.sampleRate = sound?.sampleRate
         next.channels = sound?.channels
@@ -2592,7 +2394,7 @@ struct PlayerChaptersView: View {
 #if !os(tvOS)
 /// Save Frame in the player's options (#1342, #1332): the frame on screen at the video's own size, to Photos on iPhone and
 /// iPad and to the Pictures folder on the Mac, for a wallpaper, say. It is taken from the decoded picture, not the
-/// screen, so the controls, danmaku and subtitles stay out of it, and an HDR frame is saved as HDR.
+/// screen, so the controls and subtitles stay out of it, and an HDR frame is saved as HDR.
 @MainActor @Observable final class FrameSaver {
     enum Outcome: Equatable {
         case saved(String)

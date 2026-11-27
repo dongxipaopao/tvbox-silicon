@@ -10,7 +10,7 @@ final class CachedEpisodesUITests: XCTestCase {
         let video = "qa-cache-ui-" + UUID().uuidString
         app.launchArguments = ["-qaSection", "downloads", "-qaVersion", "999.0", "-updates.announcedVersion", "999.0", "-qaIsolatedData", "1", "-qaDownload", "qa-standard:" + video + ":2",
                                "-qaSubscription", "http://127.0.0.1:8776/config.json", "-qaPlayerControls", "1",
-                               "-danmakuEnabled", "0", "-autoPlayNextEpisode", "0", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+                               "-autoPlayNextEpisode", "0", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         if app.buttons["Not Now"].waitForExistence(timeout: 3) { app.buttons["Not Now"].tap() }
         let group = app.descendants(matching: .any)["downloads.show." + video].firstMatch

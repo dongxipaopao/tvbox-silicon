@@ -14,9 +14,6 @@ struct MobilePlayerView: View {
     /// The player screen's: it goes with the session when the video carries on in Picture in Picture after the screen
     /// closes (`FloatingPlayback`).
     let pip: PictureInPicture
-    @Binding var showsDanmaku: Bool
-    @Binding var upscalesVideo: Bool
-    @Binding var smoothsVideo: Bool
     var waiting: PlaybackWaitContent?
     /// Whether the controls show. The player screen runs the timer that hides them.
     let chromeVisible: Bool
@@ -52,9 +49,6 @@ struct MobilePlayerView: View {
     @AppStorage(BatteryPercentage.key) private var batteryPercentage = false
     @AppStorage(SkipInterval.key) private var skipInterval = SkipInterval.standard
     @State private var speed: Float = 1
-    @AppStorage(DanmakuArea.key) private var danmakuArea = DanmakuArea.standard
-    @State private var showsDanmakuList = false
-    @State private var showsDanmakuSettings = false
     @State private var showsSkip = false
     @State private var showsEpisodes = false
     @State private var showsChannels = false
@@ -130,13 +124,6 @@ struct MobilePlayerView: View {
                 // A connected display (USB-C, HDMI) takes the same Picture Size: Fill covers a monitor of another
                 // shape, as asked in #1151.
                 .onChange(of: videoFill, initial: true) { _, fill in ExternalDisplay.shared.gravity = fill.gravity }
-            // The enhanced picture covers the layer's own, under everything else.
-            EnhancedVideoSurface(enhancer: session.enhancer, fills: videoFill == .fill, stretches: videoFill == .stretch, bleeds: !inline)
-            if showsDanmaku && !session.danmaku.isEmpty {
-                DanmakuOverlay(player: session.player, comments: session.danmaku, opacity: session.danmakuOpacity, revision: session.danmakuRevision)
-                    // Across the whole width, but below the Dynamic Island and above the home indicator when upright.
-                    .playerBleed(!inline, edges: .horizontal)
-            }
             SubtitleOverlay(cues: session.subtitles, fills: videoFill == .fill, stretches: videoFill == .stretch).playerBleed(!inline)
             // The artwork dissolves into the first frame.
             if let waiting {
@@ -264,13 +251,6 @@ struct MobilePlayerView: View {
         .subtitleImport(files: $importsSubtitleFile, address: $asksSubtitleAddress, search: $searchesSubtitles, subtitles: session.externalSubtitles)
         .playerEpisodesSheet(isPresented: $showsEpisodes, channel: channel)
         .playerChannelsSheet(isPresented: $showsChannels, channel: channel, session: session)
-        .sheet(isPresented: $showsDanmakuList) {
-            DanmakuListView(player: session.player, comments: session.danmaku) { showsDanmakuList = false }
-                .danmakuListPresentation().environment(store)
-        }
-        .sheet(isPresented: $showsDanmakuSettings) {
-            CatalogDanmakuSettingsView(model: session.catalogDanmaku, channelName: channel.name).playerSheet().environment(store)
-        }
         .sheet(isPresented: $showsSkip) { EpisodeSkipSettingsView(session: session).playerSheet().environment(store) }
     }
 
@@ -279,7 +259,7 @@ struct MobilePlayerView: View {
     private var keyboardEnabled: Bool {
         UIDevice.current.userInterfaceIdiom == .pad && scenePhase == .active && !locked && !pip.active && playingOn == nil
             && !importsSubtitleFile && !asksSubtitleAddress && !searchesSubtitles && !showsEpisodes && !showsChannels
-            && !showsDanmakuList && !showsDanmakuSettings && !showsSkip
+            && !showsSkip
     }
 
     private func keyboardAction(_ action: PlaybackKeyboard.Action) {
@@ -815,23 +795,6 @@ struct MobilePlayerView: View {
             }
             // On a watch page the episodes are on the page itself.
             if !inline { CatalogPlaybackActions(channel: channel, session: session) }
-            Menu {
-                Toggle(isOn: $showsDanmaku) { Label(L10n.text("Show Danmaku"), systemImage: "text.bubble") }
-                Button { showsDanmakuSettings = true } label: { Label(L10n.text("Danmaku Settings…"), systemImage: "slider.horizontal.3") }
-                Picker(selection: $danmakuArea) {
-                    ForEach(DanmakuArea.allCases, id: \.self) { Text($0.title).tag($0) }
-                } label: { Label(L10n.text("Danmaku Area"), systemImage: "rectangle.tophalf.inset.filled") }
-                .pickerStyle(.menu)
-                DanmakuStylePickers(model: session.catalogDanmaku)
-                Button { showsDanmakuList = true } label: { Label(L10n.text("Danmaku List"), systemImage: "list.bullet.rectangle") }
-                    .disabled(session.danmaku.isEmpty)
-            } label: {
-                // A wide, tall mark: a size down it sits level with AirPlay and the options beside it.
-                Image(systemName: DanmakuPreference.symbol).font(.system(size: 16, weight: .semibold)).frame(width: 22, height: 22)
-            }
-            .chromeButton()
-            .accessibilityLabel(L10n.text("Danmaku"))
-            .accessibilityIdentifier("player.danmakuMenu")
             // Turns the picture even with Portrait Orientation Lock on, the way the system's own rotation can't.
             // Only on a phone-sized screen: iPhone Duo's inner display (regular both ways) ignores orientations.
             if !inline, PlayerOrientation.available, horizontalSizeClass == .compact || verticalSizeClass == .compact {
@@ -849,19 +812,10 @@ struct MobilePlayerView: View {
         }
     }
 
-    /// Whether the options have the smoothing and upscaling switches (iPhone and iPad on OS 26).
-    private var pictureSwitches: Bool { VideoEnhancement.canUpscale || VideoEnhancement.canSmooth }
-
     /// The picture, sound and subtitle settings in one menu: what AVKit's ⋯ menu held, and the stream's quality.
     private var optionsMenu: some View {
         Menu {
             if session.qualities.count > 1 { Menu(L10n.text("Quality")) { QualityPicker(session: session) } }
-            if pictureSwitches {
-                Section(L10n.text("Picture")) {
-                    if VideoEnhancement.canSmooth { Toggle(L10n.text("Smooth Motion (60 fps)"), isOn: $smoothsVideo) }
-                    if VideoEnhancement.canUpscale { Toggle(L10n.text("Sharper Picture"), isOn: $upscalesVideo) }
-                }
-            }
             if let audio = tracks.audio, audio.options.count > 1 {
                 Menu(L10n.text("Audio")) {
                     Picker(L10n.text("Audio"), selection: Binding(get: { tracks.selected(in: audio) }, set: { tracks.select($0, in: audio) })) {
@@ -942,7 +896,6 @@ struct MobilePlayerView: View {
             }
         } label: {
             Image(systemName: "slider.horizontal.3").font(.headline).frame(width: 22, height: 22)
-                .symbolVariant(pictureSwitches && (upscalesVideo || smoothsVideo) ? .fill : .none)
         }
         .chromeButton()
         // "Playback Options" is the catalog's episode menu beside it.

@@ -63,7 +63,7 @@ import TVCore
         case .media(let url, let title):
             Task {
                 // The phone casts Bilibili videos to DLNA TVs as a 720p MP4. When the part can be identified,
-                // play the video itself instead: its HD streams (up to what the account allows) and danmaku.
+                // play the video itself instead: its HD streams (up to what the account allows).
                 if let cid = Bilibili.castCID(url), let aid = await Bilibili.castVideo(cid: cid, title: title),
                    let channel = try? await Bilibili.castChannel(aid: aid, cid: cid, episode: 0, in: store?.subscription) {
                     BilibiliCastReceiver.log("play hd aid=\(aid) cid=\(cid)")
@@ -71,8 +71,7 @@ import TVCore
                     store?.playing = channel
                     return
                 }
-                let comments = DanmakuSource.registerBilibiliMedia(url)
-                BilibiliCastReceiver.log("play media danmaku=\(comments) \(url.absoluteString.prefix(120))")
+                BilibiliCastReceiver.log("play media \(url.absoluteString.prefix(120))")
                 if store?.playing != nil { store?.playing = nil; try? await Task.sleep(for: .milliseconds(700)) }
                 // Bilibili's CDN wants its referer; other servers ignore it.
                 store?.playing = Channel(name: title.isEmpty ? L10n.text("Bilibili") : title, group: L10n.text("Bilibili"), url: url,
@@ -82,7 +81,6 @@ import TVCore
         case .resume: player?.play()
         case .stop: store?.playing = nil
         case .seek(let seconds): player?.seek(to: CMTime(seconds: max(0, seconds), preferredTimescale: 600))
-        case .danmaku(let on): UserDefaults.standard.set(on, forKey: DanmakuPreference.key)
         }
     }
 }

@@ -109,12 +109,6 @@ enum QALaunch {
             }
         }
         #endif
-        // `-qaEnhance up,smooth` saves the Picture settings (unlike passing the keys, which would pin them
-        // and stop the player's menu from switching them).
-        if let enhance = UserDefaults.standard.string(forKey: "qaEnhance") {
-            UserDefaults.standard.set(enhance.contains("up"), forKey: VideoEnhancement.upscaleKey)
-            UserDefaults.standard.set(enhance.contains("smooth"), forKey: VideoEnhancement.smoothKey)
-        }
         if UserDefaults.standard.bool(forKey: "qaResetPlayerSettings") {
             EpisodeSkipSettings().saveGlobal(defaults: store.playbackDefaults)
             for key in store.playbackDefaults.dictionaryRepresentation().keys where key.hasPrefix("episodeSkip.v1.") || key == "episodeSkip.auto.v2" {
@@ -315,8 +309,6 @@ enum QALaunch {
             CloudQRLoginView(drive: drive) {}
         } else if section == self.section, page == "subtitle-style" {
             SubtitleStyleView()
-        } else if section == self.section, page == "danmaku-style" {
-            DanmakuSettingsView()
         } else if section == self.section, page == "app-icon" {
             appIconPage
         } else if section == self.section, page == "color-theme" {
@@ -429,8 +421,6 @@ enum QALaunch {
                     DouyinHandoffView(link: link)
                 }
             #endif
-            case "danmaku-list": QADanmakuList()
-            case "danmaku-settings": QADanmakuSettings()
             // `-qaPage cloud-login:<quark|uc|baidu|aliyun|pan115|tianyi|pan123|guangya>`; `cloud-accounts` shows the accounts page.
             case "cloud-login": CloudQRLoginView(drive: parts.dropFirst().first.flatMap(CloudDriveQRLogin.Drive.init(rawValue:)) ?? .quark) {}
             case "cloud-accounts": CloudDriveView()
@@ -476,7 +466,7 @@ enum QALaunch {
 
     static func overrides(_ section: AppSection) -> Bool {
         guard section == self.section, let page else { return false }
-        return ["site", "setting", "detail", "open-detail", "channels", "runtime", "subscription", "arrange-subscriptions", "logs", "feedback", "telegram", "cache", "playback", "privacy", "licenses", "app-icon", "color-theme", "profiles", "account", "points", "cloud-login", "cloud-accounts", "subtitle-style", "danmaku-style", "book-sources", "drive-sign-in", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "danmaku-list", "danmaku-settings", "web-sign-in", "plugin-sign-in", "catpaw-sign-in", "folder", "files-title", "alist-add", "up", "comments", "chapters", "live-plugins", "live-plugin", "live-plugin-sign-in", "live-plugin-qr"].contains(page.split(separator: ":").first.map(String.init) ?? "")
+        return ["site", "setting", "detail", "open-detail", "channels", "runtime", "subscription", "arrange-subscriptions", "logs", "feedback", "telegram", "cache", "playback", "privacy", "licenses", "app-icon", "color-theme", "profiles", "account", "points", "cloud-login", "cloud-accounts", "subtitle-style", "book-sources", "drive-sign-in", "bilibili-account", "douyin-account", "douyin-login", "douyin-handoff", "bilibili-live", "live", "web-sign-in", "plugin-sign-in", "catpaw-sign-in", "folder", "files-title", "alist-add", "up", "comments", "chapters", "live-plugins", "live-plugin", "live-plugin-sign-in", "live-plugin-qr"].contains(page.split(separator: ":").first.map(String.init) ?? "")
     }
 }
 
@@ -641,58 +631,6 @@ enum QASweep {
 
 private extension Int { var nonZero: Int? { self == 0 ? nil : self } }
 
-/// `-qaPage danmaku-settings`: the player's Danmaku sheet over a page's player, which makes only its own views dark.
-/// On Apple TV it covers the screen, as the player's Danmaku menu presents it (#1089).
-private struct QADanmakuSettings: View {
-    @State private var model = CatalogDanmakuModel()
-    var body: some View {
-        #if os(tvOS)
-        Color.black.ignoresSafeArea()
-            .fullScreenCover(isPresented: .constant(true)) { CatalogDanmakuSettingsView(model: model, channelName: "仙逆 · 第01集") }
-        #else
-        Color.black.ignoresSafeArea()
-            .sheet(isPresented: .constant(true)) {
-                CatalogDanmakuSettingsView(model: model, channelName: "仙逆 · 第01集").playerSheet()
-            }
-            .environment(\.colorScheme, .dark)
-        #endif
-    }
-}
-
-/// `-qaPage danmaku-list`: the player's 弹幕 tab with sample comments, to check the focused row.
-private struct QADanmakuList: View {
-    /// `-qaDanmakuPlayer <hls url>` gives the list a real clock (paused at 2:20) for the now-highlight and the strip.
-    @State private var player: AVPlayer = {
-        guard let address = UserDefaults.standard.string(forKey: "qaDanmakuPlayer"), let url = URL(string: address) else { return AVPlayer() }
-        let player = AVPlayer(url: url)
-        player.seek(to: CMTime(seconds: 140, preferredTimescale: 600))
-        return player
-    }()
-    private let comments: [Danmaku] = {
-        let texts = ["失恋模式", "有用的小玩意增加了", "见缝插针属于是", "我曾经有一部手机", "这个好", "直击要害", "前方高能",
-                     "哈哈哈哈哈哈哈", "这一段的配乐真的绝了，建议单曲循环", "第一次看到这里的人举个手", "细节拉满", "泪目", "打卡", "这个镜头太美了"]
-        let colors: [UInt32] = [0xFFFFFF, 0xFFFFFF, 0xFFFFFF, 0xFFD700, 0xFE0302, 0x00CD00, 0x4266BE, 0xFFFFFF, 0xCC0273]
-        var list: [Danmaku] = []
-        for index in 0..<300 {
-            // Clusters around 1:00, 2:20 and 7:30, like a real episode's busy moments.
-            let centre = [60.0, 140.0, 450.0, Double(index % 600)][index % 4]
-            let time = max(1, min(599, centre + Double((index * 37) % 41) - 20))
-            list.append(Danmaku(time: time, position: .scroll, color: colors[index % colors.count], text: texts[(index * 5 + index / 14) % texts.count]))
-        }
-        return list.sorted { $0.time < $1.time }
-    }()
-    var body: some View {
-        #if os(tvOS)
-        // A cover so focus starts on the first row instead of the tab bar.
-        Color.clear.fullScreenCover(isPresented: .constant(true)) { DanmakuListView(player: player, comments: comments) }
-        #else
-        // The list as the player shows it: a sheet over the picture.
-        LinearGradient(colors: [Color(red: 0.1, green: 0.16, blue: 0.3), .black], startPoint: .top, endPoint: .bottom)
-            .ignoresSafeArea()
-            .sheet(isPresented: .constant(true)) { DanmakuListView(player: player, comments: comments).danmakuListPresentation() }
-        #endif
-    }
-}
 #endif
 
 #if DEBUG && os(tvOS)

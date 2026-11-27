@@ -22,7 +22,6 @@ public final class BilibiliCastReceiver: @unchecked Sendable {
         case media(URL, title: String)
         case pause, resume, stop
         case seek(Double)
-        case danmaku(Bool)
     }
     public struct Status: Sendable, Equatable {
         public var playing: Bool
@@ -452,7 +451,6 @@ public final class BilibiliCastReceiver: @unchecked Sendable {
         case "Resume": session.empty(); onEvent?(.resume)
         case "Stop": session.empty(); onEvent?(.stop)
         case "Seek": session.empty(); onEvent?(.seek(Double(int(body["seekTs"]))))
-        case "SwitchDanmaku": session.empty(); onEvent?(.danmaku((body["open"] as? Bool) ?? true))
         default: session.empty()
         }
     }

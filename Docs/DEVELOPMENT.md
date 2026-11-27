@@ -77,7 +77,7 @@ command's subscription argument).
 - Run type 3 plugin sources (JAR, JavaScript, and Python on Mac). Bundled lightweight ports of common sources (`Sources/TVCore/ScriptAssets/sites/`) run first on QuickJS, with the original plugin as the fallback.
 - Recommended Bilibili (video, live, QR sign-in, and casts from the Bilibili phone app on Apple TV and Mac) and short dramas, appended to the displayed subscription.
 - Play media with AVPlayer, display playback errors, and retry failed requests. On Mac, a private loopback HLS adapter handles supported image-prefixed MPEG-TS segments.
-- Playback history, Continue Watching, intro/outro skipping, automatic next episode and automatic danmaku ([library and cache notes](LIBRARY_CACHE.md)).
+- Playback history, Continue Watching, intro/outro skipping, and automatic next episode ([library and cache notes](LIBRARY_CACHE.md)).
 - Offline downloads, resumable, played back through a loopback server (`Downloads.swift`, `DownloadTransfer.swift`, `LocalMediaServer.swift`). tvOS keeps them in Caches, which the system may purge.
 - Music: search, albums, playlists, a queue, lyrics and lossless playback (see [Music](#music)).
 - Run the bundled DEX test JAR and inspect subscription plugins for DEX files and Android libraries. The inspection tool can check an inline MD5 fingerprint.

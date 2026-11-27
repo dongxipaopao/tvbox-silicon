@@ -10,8 +10,6 @@ struct QuitContext: Codable, Equatable, Sendable {
         var format: String
         var source: String
         var since: Int
-        var danmaku: Bool
-        var sharper: Bool
     }
 
     var launch: String
@@ -44,7 +42,7 @@ struct QuitContext: Codable, Equatable, Sendable {
         lines.append(memory)
         if let playback = context.playback {
             lines.append("playing: \(playback.live ? "live" : "vod") format=\(playback.format) source=\(playback.source) "
-                + "for=\((context.saved - playback.since) / 60)min danmaku=\(playback.danmaku ? "on" : "off") sharper=\(playback.sharper ? "on" : "off")")
+                + "for=\((context.saved - playback.since) / 60)min")
         }
         lines.append("launched \((context.saved - context.started) / 60)min before the last sample (taken every 30s on screen)")
         return lines.joined(separator: "\n")

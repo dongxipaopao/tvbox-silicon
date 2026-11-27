@@ -95,9 +95,6 @@ targets:
         type: folder
         buildPhase: resources
     preBuildScripts:
-      - name: Embed Dandanplay API configuration
-        script: '"$SRCROOT/Scripts/embed-dandanplay-config.py"'
-        basedOnDependencyAnalysis: false
       - name: Check the bundled Java host
         script: '"$SRCROOT/Scripts/check-java-host.sh" "$SRCROOT/build/JavaHost/host.jar" && touch "$DERIVED_FILE_DIR/java-host-checked"'
         # Declared, so the script sandbox lets it read them and it runs again only when one changes.
@@ -138,10 +135,6 @@ targets:
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
   TVBox-iOS:
     templates: [SharedApp]
-    preBuildScripts:
-      - name: Embed Dandanplay API configuration
-        script: '"$SRCROOT/Scripts/embed-dandanplay-config.py"'
-        basedOnDependencyAnalysis: false
     platform: iOS
     sources:
       - path: Runtime/AppleRuntime/Native/AppleRuntime.m
@@ -220,10 +213,6 @@ targets:
         LSSupportsOpeningDocumentsInPlace: true
   TVBox-tvOS:
     templates: [SharedApp]
-    preBuildScripts:
-      - name: Embed Dandanplay API configuration
-        script: '"$SRCROOT/Scripts/embed-dandanplay-config.py"'
-        basedOnDependencyAnalysis: false
     platform: tvOS
     sources:
       - path: Runtime/AppleRuntime/Native/AppleRuntime.m

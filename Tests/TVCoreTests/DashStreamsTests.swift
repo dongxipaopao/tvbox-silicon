@@ -44,12 +44,10 @@ struct DashStreamsTests {
         #expect(!CloudSources.accepts(try Subscription.parse(Data(#"{"yingxia":{"version":2},"sites":[{"key":"x","type":3,"api":"https://x/x.js"}]}"#.utf8), origin: URL(string: "https://s.example/sub.json")!)))
     }
 
-    @Test func biliProxyAddressesAndDanmakuFeedsNameTheirVideo() {
+    @Test func biliProxyAddressesNameTheirVideo() {
         #expect(CatalogClient.bilibiliProxyID("http://127.0.0.1:9978/proxy?do=bili&aid=1&cid=2&ep=3") == "1_2_3")
         #expect(CatalogClient.bilibiliProxyID("http://127.0.0.1:9978/proxy?do=bili&aid=1&cid=2") == "1_2")
         #expect(CatalogClient.bilibiliProxyID("http://127.0.0.1:9978/proxy?do=other&aid=1&cid=2") == nil)
-        #expect(DanmakuSource.bilibiliCID("https://api.bilibili.com/x/v2/dm/web/seg.so?type=1&oid=12345") == "12345")
-        #expect(DanmakuSource.bilibiliCID("https://example.com/dm?oid=12345") == nil)
     }
 
     @Test func segmentIndexListsFragmentsAfterTheBox() throws {

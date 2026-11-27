@@ -486,13 +486,6 @@
 "Bilibili's video servers could not be reached. Try again later." = "ビリビリの動画サーバーに接続できません。しばらくしてからもう一度お試しください。";
 "This playback has expired. Open the video again." = "この再生は期限切れです。動画をもう一度開いてください。";
 "This episode needs a Bilibili premium membership. Only a short preview is available." = "このエピソードはビリビリの大会員限定です。視聴できるのは短いプレビューのみです。";
-"Danmaku" = "弾幕コメント";
-"Show Danmaku" = "弾幕コメントを表示";
-"Hide Danmaku" = "弾幕コメントを非表示";
-"Bilibili's bullet comments, drawn over the video. You can also switch them in the player." = "ビリビリの弾幕コメントを映像に重ねて表示します。プレーヤーでも切り替えられます。";
-"Danmaku List" = "弾幕コメント一覧";
-"Danmaku List…" = "弾幕コメント一覧…";
-"Filter comments" = "コメントを絞り込む";
 "See your following feed, favorites, watch later and history, and play in higher quality." = "フォロー中の投稿、お気に入り、あとで見る、視聴履歴を表示し、より高画質で再生できます。";
 "Cast from the Bilibili App" = "ビリビリアプリからキャスト";
 "With your phone on the same network, tap the TV button in a Bilibili video and choose %@." = "スマートフォンを同じネットワークにつなぎ、ビリビリの動画でテレビボタンを押して「%@」を選びます。";
@@ -565,25 +558,6 @@
 "Browse Sources" = "配信ソースを見る";
 "%@ available on this device" = "このデバイスの空き容量 %@";
 
-"Loaded %lld comments" = "%lld 件の弾幕を読み込みました";
-"Opacity" = "不透明度";
-"Text Size" = "文字サイズ";
-"Time Offset: %@ s" = "時間オフセット：%@ 秒";
-"A positive offset shows comments later. Playback controls stay available." = "正の値で弾幕を遅らせます。再生操作は引き続き使用できます。";
-"Clear Danmaku" = "弾幕をクリア";
-"Video title" = "作品名";
-"Back to search results" = "検索結果に戻る";
-"No danmaku found. Try another title or server." = "弾幕がありません。別の作品名やサーバーをお試しください。";
-"Find Danmaku" = "弾幕を検索";
-"Search sends only the title to the selected danmaku service. Choose the correct season and episode; some videos have no comments." = "検索時は作品名のみを選択した弾幕サービスに送信します。正しいシーズンと話数を選んでください。弾幕がない作品もあります。";
-"Danmaku server URL" = "弾幕サーバーURL";
-"Danmaku Service" = "弾幕サービス";
-"Uses a public Dandanplay-compatible service. You can enter your own danmu_api server. Availability depends on the service." = "公開のDandanplay互換サービスを使用します。独自のdanmu_apiサーバーも指定できます。利用可否はサービスに依存します。";
-"The danmaku file is too large." = "弾幕ファイルが大きすぎます。";
-"The service did not return a supported danmaku list." = "対応する弾幕リストが返されませんでした。";
-"Enter the danmaku server base URL, without a query or fragment." = "クエリやフラグメントを含まない弾幕サーバーのベースURLを入力してください。";
-"This danmaku server requires authorization. Choose a compatible public or self-hosted server." = "この弾幕サーバーは認証が必要です。対応する公開サーバーか独自サーバーを選んでください。";
-"The danmaku server could not complete this request. Try another server." = "弾幕のリクエストを完了できませんでした。別のサーバーをお試しください。";
 "Wait for the video duration. Live streams cannot use skipping." = "動画の長さを読み込み中です。ライブ配信では使用できません。";
 "Enter a valid time such as 01:30." = "01:30 のような有効な時間を入力してください。";
 "The intro must end before the outro starts." = "オープニングはエンディングより前に終わる必要があります。";
@@ -598,8 +572,6 @@
 "Reset intro and outro" = "スキップ設定をリセット";
 "Skip intro / outro" = "オープニング・エンディングをスキップ";
 "Save" = "保存";
-"Import Danmaku File" = "弾幕ファイルを読み込む";
-"Import Bilibili XML or Dandanplay JSON from Files. Imported comments do not require a network connection." = "ファイルからBilibili XMLまたはDandanplay JSONを読み込みます。読み込んだ弾幕はオフラインで表示できます。";
 "Playback History" = "再生履歴";
 "Continue Watching" = "視聴を続ける";
 "No Playback History Yet" = "再生履歴はまだありません";
@@ -614,8 +586,6 @@
 "The saved episode is no longer available from this source. Choose an episode again." = "保存したエピソードが見つかりません。もう一度選択してください。";
 "Unable to resume playback: %@" = "続きから再生できません：%@";
 "The player could not restore the saved position. Try again." = "前回の再生位置を復元できませんでした。もう一度お試しください。";
-"Automatically match the current episode" = "現在のエピソードを自動検索";
-"Matching comments appear automatically. If none match or the service is unavailable, the video stays clear." = "作品とエピソードが一致すると弾幕を表示します。一致しない場合やサービスを利用できない場合は表示しません。";
 "Times apply to this series and all its episodes. Automatic skipping is a global switch. The outro is remembered as time remaining." = "時間はこの作品の全話で共有します。自動スキップの切り替えは全作品共通です。エンディングは残り時間で記憶します。";
 "Pinned" = "固定済み";
 "Pin source" = "ソースを固定";
@@ -643,24 +613,14 @@
 "Remove selected history and its cached content?" = "選択した履歴と関連キャッシュを削除しますか？";
 "Local Cache" = "ローカルキャッシュ";
 "Cached Content" = "キャッシュ内容";
-"Artwork is kept for 30 days, danmaku for 7 days and episode lists for 6 hours, up to 256 MB. History titles are prioritized. Only the latest 20 successful work address mappings are retained." = "画像は30日間、コメントは7日間、エピソード一覧は6時間、最大256 MBまで保持します。履歴の作品を優先し、アドレス対応は直近20作品のみ保持します。";
+"Artwork is kept for 30 days and episode lists for 6 hours, up to 256 MB. History titles are prioritized. Only the latest 20 successful work address mappings are retained." = "画像は30日間、エピソード一覧は6時間、最大256 MBまで保持します。履歴の作品を優先し、アドレス対応は直近20作品のみ保持します。";
 "Artwork: %lld" = "画像：%lld";
-"Episode danmaku: %lld" = "各話のコメント：%lld";
 "Episode lists: %lld" = "エピソード一覧：%lld";
 "Recent work mappings: %lld / 20" = "最近の作品アドレス：%lld / 20";
-"Clears artwork, episode lists, danmaku and address mappings. Playback history, subscriptions, pinned sources and skip settings are kept." = "画像・エピソード一覧・コメント・アドレス対応を削除します。視聴履歴・購読・固定ソース・スキップ設定は保持します。";
+"Clears artwork, episode lists and address mappings. Playback history, subscriptions, pinned sources and skip settings are kept." = "画像・エピソード一覧・アドレス対応を削除します。視聴履歴・購読・固定ソース・スキップ設定は保持します。";
 "Clearing…" = "削除中…";
 "Clear local cache" = "ローカルキャッシュを削除";
 "Clear all local cached content?" = "すべてのローカルキャッシュを削除しますか？";
-"Imported file" = "インポートしたファイル";
-"Retry automatic matching" = "自動検索を再試行";
-"From local cache" = "ローカルキャッシュ";
-"Find official episodes for dmku" = "dmku用に公式エピソードを自動検索";
-"Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku, or to danmu.zxz.ee when dmku has none; stream URLs and playback headers are never sent." = "Dandanplay・iQIYI・Tencent Videoを自動検索し、最初に見つかった該当コメントを使用します。dmku（見つからない場合は danmu.zxz.ee）には公式の公開エピソードページのみ送信し、ストリームURLや再生ヘッダーは送信しません。";
-"Finding matching danmaku…" = "該当するコメントを検索中…";
-"No matching episode has comments." = "このエピソードのコメントは見つかりませんでした。";
-"Danmaku services are temporarily unavailable. Video playback is unaffected." = "コメントサービスを一時的に利用できません。動画再生には影響しません。";
-"Automatic matching is idle." = "自動検索は待機中です。";
 "%lld titles" = "%lld作品";
 "Removing a title also clears its cached content and skip times." = "履歴を削除すると、その作品のキャッシュとスキップ時間も削除します。";
 "Auto-play next episode" = "次のエピソードを自動再生";
@@ -897,12 +857,6 @@
 "Try Again" = "もう一度試す";
 "This episode's link may have expired. Open it again, or try another line." = "このエピソードのリンクは期限切れかもしれません。開き直すか、別の回線を試してください。";
 "Picture" = "画質";
-"Sharper Picture" = "高画質化";
-"Smooth Motion (60 fps)" = "なめらか補間 (60fps)";
-"Upscales video smaller than your screen with on-device machine learning." = "画面より小さい動画をデバイス上の機械学習でアップスケールします。";
-"Adds in-between frames so 24–30 fps video plays at 60 fps. Uses more battery, and films can look like TV soap operas." = "フレームを補間して 24〜30fps の動画を 60fps で再生します。電池の消費が増え、映画がテレビドラマのように見えることがあります。";
-"%d comments" = "%d 件のコメント";
-"Back to Now" = "現在に戻る";
 "Rotate to Landscape" = "横向きにする";
 "Rotate to Portrait" = "縦向きにする";
 "Send Feedback" = "フィードバックを送信";
@@ -1345,12 +1299,6 @@
 
 "iCloud Sync" = "iCloud 同期";
 "Keeps favorites, Continue Watching, subscriptions, and the sources you pinned, hid or ordered the same on your devices signed in to the same iCloud account. Accounts, passwords and downloads stay on each device." = "同じ iCloud アカウントでサインインしているデバイス間で、お気に入り、視聴を続ける、配信設定、固定・非表示・並べ替えたソースを同期します。アカウント、パスワード、ダウンロードは各デバイスにのみ保存されます。";
-"Danmaku Area" = "弾幕の表示範囲";
-"One Line" = "1 行";
-"Top Quarter" = "上 1/4";
-"Top Half" = "上半分";
-"Top Three Quarters" = "上 3/4";
-"Whole Screen" = "全画面";
 "UC TV Token" = "UC TV トークン";
 "Get UC TV Token" = "UC TV トークンを取得";
 "You're signed in to UC, but this source plays UC accounts without premium through UC's TV app, which needs a token of its own. Get it once with the UC Browser app, or choose another line." = "UC にはサインイン済みですが、このソースはプレミアムでない UC アカウントを UC の TV アプリ経由で再生するため、専用のトークンが必要です。UC Browser で一度取得するか、別の回線を選んでください。";
@@ -1385,10 +1333,6 @@
 
 "Download %@" = "ダウンロード %@";
 
-"Uses the official Dandanplay service. You can also enter your own compatible server." = "Dandanplay公式サービスを使用します。独自の互換サーバーも指定できます。";
-"This build is missing its Dandanplay API configuration." = "このビルドにはDandanplay API設定がありません。";
-"Uses Dandanplay first, then tries iQIYI and Tencent Video if no comments are found or the service is unavailable. Official public episode pages are sent to dmku, or to danmu.zxz.ee when dmku has none; stream URLs and playback headers are never sent." = "Dandanplayを優先し、コメントが見つからないかサービスを利用できない場合はiQIYIとTencent Videoを検索します。dmku（見つからない場合は danmu.zxz.ee）には公式の公開エピソードページのみ送信し、ストリームURLや再生ヘッダーは送信しません。";
-"Dandanplay has reached its request limit for now. Try again later, or choose another danmaku server." = "Dandanplayのリクエスト上限に達しました。しばらくしてからもう一度試すか、別の弾幕サーバーを選んでください。";
 "Open Config Center" = "設定センターを開く";
 "Config Center" = "設定センター";
 "Top Charts" = "ランキング";
@@ -1608,7 +1552,6 @@
 "Start in Full Screen" = "再生開始時にフルスクリーン";
 "With Play Automatically on, a video of one episode starts as soon as its page opens." = "「自動再生」をオンにすると、1話だけの動画は詳細ページを開くとすぐに再生されます。";
 "With Play Automatically on, a video of one episode starts as soon as its page opens. With Start in Full Screen on, a video fills the screen as soon as it starts on its page." = "「自動再生」をオンにすると、1話だけの動画は詳細ページを開くとすぐに再生されます。「再生開始時にフルスクリーン」をオンにすると、詳細ページで再生を始めた動画はすぐにフルスクリーンになります。";
-"Area" = "表示範囲";
 "This plugin setting only works in Android TVBox." = "このプラグイン設定は Android 版 TVBox でのみ使えます。";
 "The plugin finished without a message." = "プラグインはメッセージなしで終了しました。";
 "Copied to the clipboard." = "クリップボードにコピーしました。";
@@ -1623,38 +1566,7 @@
 "No subtitles were found in the file." = "ファイルに字幕が見つかりません。";
 "The file couldn't be opened." = "ファイルを開けません。";
 "Automatic" = "自動";
-"iQIYI" = "iQIYI";
-"Tencent Video" = "Tencent Video";
-"Youku" = "Youku";
-"Mango TV" = "Mango TV";
-"Migu" = "Migu";
-"Dandanplay" = "Dandanplay";
-"Scroll Speed" = "スクロール速度";
-"Compact" = "狭め";
-"Standard" = "標準";
-"Relaxed" = "ゆったり";
-"Wide" = "広め";
-"Density" = "密度";
-"Fewer" = "少なめ";
-"Fewest" = "最少";
-"Fewer and Fewest hide a comment repeated within a few seconds and let fewer comments start scrolling each second." = "「少なめ」と「最少」では、数秒以内に繰り返された同じコメントを隠し、1秒間に流れ始めるコメントを減らします。";
-"Scrolling Comments" = "スクロールコメント";
-"Top Comments" = "上部コメント";
-"Bottom Comments" = "下部コメント";
-"Danmaku Settings…" = "弾幕設定…";
-"Preferred Source Platform" = "コメントの配信元";
 "Use Official URL" = "公式URLを使う";
-"Danmaku service settings saved." = "弾幕サービスの設定を保存しました。";
-"Enter a Dandanplay-compatible server root or an API prefix ending in /api/v2. A token in the path is supported. The URL is saved only on this device." = "Dandanplay互換サーバーのルート、または /api/v2 で終わるアドレスを入力します。パス内のトークンに対応し、URLはこのデバイスにのみ保存されます。";
-"Danmaku Display" = "弾幕表示";
-"Advance 0.5 s" = "0.5 秒早める";
-"Advance 5 s" = "5 秒早める";
-"Delay 0.5 s" = "0.5 秒遅らせる";
-"Delay 5 s" = "5 秒遅らせる";
-"Reset Timing" = "タイミングをリセット";
-"Current Danmaku" = "現在の弾幕";
-"Unknown Source" = "不明な配信元";
-"Unknown Year" = "年不明";
 "Simplified Chinese (GB 18030)" = "簡体字中国語（GB 18030）";
 "Traditional Chinese (Big5)" = "繁体字中国語（Big5）";
 "Japanese (Shift-JIS)" = "日本語（Shift-JIS）";
@@ -1887,28 +1799,6 @@
 "The video servers could not be reached. Try again later." = "動画サーバーに接続できませんでした。時間をおいてもう一度お試しください。";
 
 // Settings › Danmaku
-"Two Lines" = "2 行";
-"Three Lines" = "3 行";
-"Danmaku Settings" = "弾幕の設定";
-"Display" = "表示";
-"Comment Types" = "弾幕の種類";
-"Colored Comments" = "カラー弾幕";
-"Turn off Colored Comments to draw every comment in white, which stays readable over bright pictures." = "「カラー弾幕」をオフにすると、すべての弾幕が白で表示され、明るい画面でも読みやすくなります。";
-"Blocked Words" = "NG ワード";
-"Add a word or /pattern/" = "単語または /パターン/ を追加";
-"Add Blocked Word" = "NG ワードを追加";
-"No blocked words" = "NG ワードはありません";
-"Comments containing any of these words are hidden in every video. Put a pattern between slashes, like /^哈+$/, to match it as a regular expression." = "これらの語を含む弾幕は、すべての動画で非表示になります。/^哈+$/ のようにスラッシュで囲むと、正規表現として照合します。";
-"Applies to comments in every video, including one that is playing." = "再生中の動画を含め、すべての動画の弾幕に適用されます。";
-"Here it comes!" = "来るぞ！";
-"This scene is incredible" = "この場面すごい";
-"Hahahahaha" = "ｗｗｗｗｗ";
-"Third time watching" = "3 回目の視聴";
-"The music is so good" = "音楽が最高";
-"Plot twist!" = "まさかの展開！";
-"Classic moment" = "名シーン";
-"Welcome back, everyone" = "おかえり";
-"Who else is watching tonight?" = "今夜見てる人いる？";
 
 // Novels (Legado book sources)
 "%lld chapters" = "%lld 話";
@@ -1991,7 +1881,6 @@
 "Scroll" = "スクロール";
 "Theme" = "テーマ";
 "Font Size" = "文字サイズ";
-"Line Spacing" = "行間";
 "Margins" = "余白";
 "Appearance" = "外観";
 "Light" = "ライト";
@@ -2263,19 +2152,6 @@
 "Delete “%@”?" = "「%@」を削除しますか？";
 "Its subscriptions, favorites, Continue Watching and search history are deleted from this device." = "このプロフィールのサブスクリプション、お気に入り、視聴中の作品、検索履歴がこのデバイスから削除されます。";
 "Each profile has its own subscriptions, favorites, Continue Watching, followed shows and search history. Only the main profile syncs with iCloud; downloads, accounts and settings are shared." = "プロフィールごとに、サブスクリプション、お気に入り、視聴中の作品、フォロー中の番組、検索履歴が分かれます。iCloud で同期するのはメインプロフィールだけです。ダウンロード、アカウント、設定は共通です。";
-"Built-in Danmaku Services" = "内蔵の弾幕サービス";
-"Servers are asked in order until one has comments. Add a Dandanplay-compatible server, such as a self-hosted danmu_api, by its root or an API prefix ending in /api/v2; a token in the path is supported. Each one is tested when added. Official episode pages from the source are sent to servers you add, to fetch their comments. Addresses are saved only on this device." = "サーバーは上から順に、コメントが見つかるまで問い合わせます。Dandanplay 互換のサーバー（自分で運用する danmu_api など）を、ルートまたは /api/v2 で終わる API プレフィックスで追加します。パス内のトークンにも対応します。追加時に接続を確認します。追加したサーバーには、コメントを取得するためソースが示す公式エピソードページが送信されます。アドレスはこのデバイスにのみ保存されます。";
-"Paste an episode link from iQIYI, Tencent Video, Youku, Mango TV or Bilibili." = "iQIYI、Tencent Video、Youku、Mango TV、Bilibili のエピソードリンクを貼り付けてください。";
-"No comments were found for this link." = "このリンクのコメントは見つかりませんでした。";
-"Search On" = "検索先";
-"Episode page address" = "エピソードページのURL";
-"Load from Link" = "リンクから読み込む";
-"Episode Link" = "エピソードリンク";
-"Paste the episode's page from iQIYI, Tencent Video, Youku, Mango TV or Bilibili. The link is sent to the selected danmaku service to fetch its comments." = "iQIYI、Tencent Video、Youku、Mango TV、Bilibili のエピソードページを貼り付けます。リンクはコメント取得のため、選択中の弾幕サービスに送信されます。";
-"Add Built-in Services" = "内蔵サービスを追加";
-"Danmaku Servers" = "弾幕サーバー";
-"Add another server to move or remove this one." = "このサーバーを移動または削除するには、別のサーバーを追加してください。";
-"Find Danmaku…" = "弾幕を探す…";
 
 /* Novel reader: layout, script, page curl, background (#1430, #1007, #1437, #1265) */
 "Paragraph Spacing" = "段落の間隔";

@@ -119,13 +119,13 @@ import Testing
 }
 
 @Test func quitReportsSayWhyALaunchEndedOnScreen() throws {
-    let playback = QuitContext.Playback(live: false, format: "m3u8", source: "csp_Test", since: 1_000, danmaku: true, sharper: false)
+    let playback = QuitContext.Playback(live: false, format: "m3u8", source: "csp_Test", since: 1_000)
     let squeezed = QuitContext(launch: "a", started: 0, saved: 3_040, footprint: 812, available: 300, pressure: 3_020, pressureLevel: "critical", playback: playback)
     let report = try #require(QuitContext.report(squeezed, bootTime: 0))
     #expect(report == """
         Quit unexpectedly while on screen (low on memory, during playback)
         memory: footprint=812MB available=300MB pressure=critical 20s before the last sample
-        playing: vod format=m3u8 source=csp_Test for=34min danmaku=on sharper=off
+        playing: vod format=m3u8 source=csp_Test for=34min
         launched 50min before the last sample (taken every 30s on screen)
         """)
 

@@ -491,7 +491,6 @@ extension View {
 /// The notes under settings switches, shared by Settings and the pages under it.
 private enum SettingsNote {
     static var playbackInfo: String { L10n.text("Shows the video's format, resolution, frame rate and bitrate in a corner of the player.") }
-    static var danmaku: String { L10n.text("Bilibili's bullet comments, drawn over the video. You can also switch them in the player.") }
     /// Where a title's intro and outro times are set: in the player, not here (#1284, #1488).
     static var introOutro: String {
         L10n.text("Each series and audiobook keeps its own times. While one plays, choose Skip intro / outro in the player's settings menu, or in an audiobook's More menu.")
@@ -518,9 +517,6 @@ struct FormSettingsView: View {
     @State private var douyinSummary = ""
     /// The recommended sources that take a sign-in, each with its row's subtitle.
     @State private var sourceSignIns: [(signIn: SourceSignIn, summary: String)] = []
-    @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
-    @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
-    @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
     @AppStorage(ErrorReports.key) private var sendsErrorReports = true
     @AppStorage(TMDBMatch.key) private var looksUpTMDB = true
     @AppStorage(CloudSync.enabledKey) private var syncsWithICloud = true
@@ -780,14 +776,6 @@ struct FormSettingsView: View {
             #if os(macOS)
             Section {
                 if store.extrasUnlocked {
-                    Toggle(isOn: $showsDanmaku) {
-                        FormLabel(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"), subtitle: danmakuNote)
-                    }
-                    .settingsSwitch()
-                    .settingsAnchor(.showDanmaku)
-                    FormLink(symbol: "slider.horizontal.3", tint: .teal, title: L10n.text("Danmaku Settings")) { DanmakuSettingsView() }
-                        .accessibilityIdentifier("settings.danmakuSettings")
-                        .settingsAnchor(.danmakuSettings)
                     Toggle(isOn: $receivesCasts) {
                         FormLabel(symbol: "tv.and.mediabox.fill", tint: BilibiliMark.blue, title: L10n.text("Cast from the Bilibili App"),
                                   subtitle: L10n.text("With your phone on the same network, tap the TV button in a Bilibili video and choose %@.", L10n.text("Yingxia")))
@@ -837,26 +825,6 @@ struct FormSettingsView: View {
                     .settingsAnchor(.playURL)
             } header: {
                 Text(L10n.text("Playback"))
-            }
-            if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {
-                Section {
-                    if VideoEnhancement.canUpscale {
-                        Toggle(isOn: $upscalesVideo) {
-                            FormLabel(symbol: "wand.and.sparkles", tint: .purple, title: L10n.text("Sharper Picture"), subtitle: upscaleNote)
-                        }
-                        .settingsSwitch()
-                        .settingsAnchor(.sharperPicture)
-                    }
-                    if VideoEnhancement.canSmooth {
-                        Toggle(isOn: $smoothsVideo) {
-                            FormLabel(symbol: "film.stack", tint: .indigo, title: L10n.text("Smooth Motion (60 fps)"), subtitle: smoothNote)
-                        }
-                        .settingsSwitch()
-                        .settingsAnchor(.smoothMotion)
-                    }
-                } header: {
-                    Text(L10n.text("Picture"))
-                }
             }
             #endif
 
@@ -1104,9 +1072,6 @@ struct FormSettingsView: View {
     }
 
     private var canAdd: Bool { !store.importing && !store.subscriptionAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-    private var danmakuNote: String { SettingsNote.danmaku }
-    private var upscaleNote: String { VideoEnhancement.upscaleNote }
-    private var smoothNote: String { VideoEnhancement.smoothNote }
     private var tmdbNote: String { SettingsNote.tmdb }
     private var supportNote: String { SettingsNote.support }
     private var errorReportsNote: String { SettingsNote.errorReports }
@@ -1158,8 +1123,6 @@ private enum SettingsSearchTarget: Hashable, Sendable {
     case tabBarLabels
     case collapseTabBar
     case language
-    case showDanmaku
-    case danmakuSettings
     case bilibiliCast
     case playOn
     case showVideoInfo
@@ -1167,8 +1130,6 @@ private enum SettingsSearchTarget: Hashable, Sendable {
     case skipIntroOutro
     case subtitleStyle
     case subtitleSources
-    case sharperPicture
-    case smoothMotion
     case localCache
     case jarRuntime
     case diagnostics
@@ -1271,7 +1232,6 @@ private extension FormSettingsView {
         let secSubs = L10n.text("Subscriptions")
         let secAccounts = L10n.text("Accounts")
         let secPlayback = L10n.text("Playback")
-        let secPicture = L10n.text("Picture")
         let secAdvanced = L10n.text("Advanced")
         let secAbout = L10n.text("About")
 
@@ -1333,7 +1293,7 @@ private extension FormSettingsView {
 
         #if os(iOS)
         add(.playback, title: L10n.text("Playback"), section: secPlayback,
-            keywords: ["playback", "player", "pip", "danmaku", "subtitle", "skip", "intro", "outro", "speed", "播放", "弹幕", "字幕", "画中画", "倍速", "跳过", "片头", "片尾"])
+            keywords: ["playback", "player", "pip", "subtitle", "skip", "intro", "outro", "speed", "播放", "字幕", "画中画", "倍速", "跳过", "片头", "片尾"])
         add(.playURL, title: L10n.text("Play a URL"), section: secPlayback,
             keywords: ["url", "stream", "link", "播放链接", "串流"])
         add(.editTabBar, title: L10n.text("Edit Tab Bar"), section: secGeneral, subtitle: L10n.text("Choose your tabs and their order."),
@@ -1351,10 +1311,6 @@ private extension FormSettingsView {
 
         #if os(macOS)
         if store.extrasUnlocked {
-            add(.showDanmaku, title: L10n.text("Show Danmaku"), section: secPlayback, subtitle: danmakuNote,
-                keywords: ["danmaku", "bullet", "comments", "弹幕"])
-            add(.danmakuSettings, title: L10n.text("Danmaku Settings"), section: secPlayback,
-                keywords: ["danmaku", "font", "opacity", "speed", "area", "弹幕", "透明度", "速度", "区域"])
             add(.bilibiliCast, title: L10n.text("Cast from the Bilibili App"), section: secPlayback,
                 keywords: ["bilibili", "cast", "tv", "b站", "投屏"])
         }
@@ -1373,14 +1329,6 @@ private extension FormSettingsView {
         add(.playURL, title: L10n.text("Play a URL"), section: secPlayback,
             keywords: ["url", "stream", "link", "播放链接", "串流"])
 
-        if VideoEnhancement.canUpscale {
-            add(.sharperPicture, title: L10n.text("Sharper Picture"), section: secPicture, subtitle: upscaleNote,
-                keywords: ["upscale", "sharp", "metal", "ai", "超分", "锐化", "画质"])
-        }
-        if VideoEnhancement.canSmooth {
-            add(.smoothMotion, title: L10n.text("Smooth Motion (60 fps)"), section: secPicture, subtitle: smoothNote,
-                keywords: ["smooth", "60", "fps", "motion", "interpolation", "补帧", "流畅", "帧率"])
-        }
         #endif
 
         add(.localCache, title: L10n.text("Local Cache"), section: secAdvanced,
@@ -1475,10 +1423,9 @@ private struct PressableStyle: ButtonStyle {
     }
 }
 
-/// Playback on iPhone and iPad: the player's gestures, danmaku and picture, each note under the group it explains.
+/// Playback on iPhone and iPad: the player's gestures and picture, each note under the group it explains.
 struct PlaybackSettingsView: View {
     @Environment(Store.self) private var store
-    @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
     @AppStorage(SpeedBoost.key) private var holdSpeed = SpeedBoost.standard
     @AppStorage(PictureLevel.key) private var slidesLevels = true
     @AppStorage(PictureDoubleTap.key) private var doubleTapSkips = PictureDoubleTap.standard
@@ -1486,8 +1433,6 @@ struct PlaybackSettingsView: View {
     @AppStorage(PlaybackTags.key) private var showsTags = true
     @AppStorage(PictureInPicturePreference.key) private var allowsPictureInPicture = true
     @AppStorage(SkipInterval.key) private var skipInterval = SkipInterval.standard
-    @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
-    @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
     @AppStorage(PlaybackInfo.key) private var showsPlaybackInfo = false
     @AppStorage(AdSkip.key) private var skipsAds = true
     @AppStorage(WatchPage.autoPlayKey) private var autoPlays = true
@@ -1604,33 +1549,6 @@ struct PlaybackSettingsView: View {
                     FormLabel(symbol: "forward.end.fill", tint: .red, title: L10n.text("Skip Ad Segments"))
                 }
                 .settingsSwitch()
-            }
-            if store.extrasUnlocked {
-                SettingsGroup(title: L10n.text("Danmaku"), footer: SettingsNote.danmaku) {
-                    Toggle(isOn: $showsDanmaku) {
-                        FormLabel(symbol: "text.bubble.fill", tint: .teal, title: L10n.text("Show Danmaku"))
-                    }
-                    .settingsSwitch()
-                    // Area, size, speed, the kinds shown, blocked words and matching: one page, like Subtitle Style (#768).
-                    FormLink(symbol: "slider.horizontal.3", tint: .teal, title: L10n.text("Danmaku Settings")) { DanmakuSettingsView() }
-                        .accessibilityIdentifier("settings.danmakuSettings")
-                }
-            }
-            if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {
-                SettingsGroup(title: L10n.text("Picture"), footer: VideoEnhancement.note) {
-                    if VideoEnhancement.canUpscale {
-                        Toggle(isOn: $upscalesVideo) {
-                            FormLabel(symbol: "wand.and.sparkles", tint: .purple, title: L10n.text("Sharper Picture"))
-                        }
-                        .settingsSwitch()
-                    }
-                    if VideoEnhancement.canSmooth {
-                        Toggle(isOn: $smoothsVideo) {
-                            FormLabel(symbol: "film.stack", tint: .indigo, title: L10n.text("Smooth Motion (60 fps)"))
-                        }
-                        .settingsSwitch()
-                    }
-                }
             }
         }
     }
@@ -2343,9 +2261,6 @@ struct TVSettingsView: View {
     @State private var douyinSummary = ""
     /// The recommended sources that take a sign-in, each with its row's subtitle.
     @State private var sourceSignIns: [(signIn: SourceSignIn, summary: String)] = []
-    @AppStorage(DanmakuPreference.key) private var showsDanmaku = true
-    @AppStorage(VideoEnhancement.upscaleKey) private var upscalesVideo = false
-    @AppStorage(VideoEnhancement.smoothKey) private var smoothsVideo = false
     @AppStorage(BilibiliCastController.key) private var receivesCasts = true
     @AppStorage(PlayOnController.key) private var receivesPlayOn = true
     @AppStorage(PlaybackInfo.key) private var showsPlaybackInfo = false
@@ -2397,8 +2312,6 @@ struct TVSettingsView: View {
             }
             TVSettingsSection(title: L10n.text("Playback"), footer: playbackFooter) {
                 if store.extrasUnlocked {
-                    TVSettingsToggle(title: L10n.text("Show Danmaku"), isOn: $showsDanmaku)
-                    TVSettingsLink(title: L10n.text("Danmaku Settings")) { DanmakuSettingsView() }
                     TVSettingsToggle(title: L10n.text("Cast from the Bilibili App"), isOn: $receivesCasts)
                         .onChange(of: receivesCasts) { _, on in
                             if on { BilibiliCastController.shared.start(store) } else { BilibiliCastController.shared.stop() }
@@ -2420,12 +2333,6 @@ struct TVSettingsView: View {
                 TVSettingsLink(title: L10n.text("Subtitle Style")) { SubtitleStyleView() }
                 TVSettingsLink(title: L10n.text("Subtitle Sources")) { SubtitleSourcesView() }
                 TVSettingsToggle(title: L10n.text("Show Video Info"), isOn: $showsPlaybackInfo)
-            }
-            if VideoEnhancement.canUpscale || VideoEnhancement.canSmooth {
-                TVSettingsSection(title: L10n.text("Picture"), footer: VideoEnhancement.note) {
-                    if VideoEnhancement.canUpscale { TVSettingsToggle(title: L10n.text("Sharper Picture"), isOn: $upscalesVideo) }
-                    if VideoEnhancement.canSmooth { TVSettingsToggle(title: L10n.text("Smooth Motion (60 fps)"), isOn: $smoothsVideo) }
-                }
             }
             TVSettingsSection(title: L10n.text("Advanced"),
                               footer: L10n.text("Sends errors to the developer a few times a day so they can be fixed: the error text with web addresses cut to the server name, the app and system versions, and a random ID. Never your accounts, passwords or viewing history.")) {

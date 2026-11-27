@@ -41,8 +41,7 @@ public enum DashStreams {
     }
 
     /// The master playlist address for a play result's `dash`, or nil when it has no usable video.
-    /// `danmaku` is the result's comment feed, which the files keep for downloads.
-    static func stream(_ dash: [String: JSONValue], headers: [String: String], danmaku: String?, session: URLSession = .shared) async throws -> URL? {
+    static func stream(_ dash: [String: JSONValue], headers: [String: String], session: URLSession = .shared) async throws -> URL? {
         let videos = choose((dash["video"]?.array ?? []).compactMap { $0.object.flatMap(Representation.init) })
         guard !videos.isEmpty else { return nil }
         let audio = (dash["audio"]?.array ?? []).compactMap { $0.object.flatMap(Representation.init) }.max { $0.bandwidth < $1.bandwidth }
@@ -91,7 +90,6 @@ public enum DashStreams {
         }
         files["master.m3u8"] = master.joined(separator: "\n") + "\n"
         let duration = (dash["duration"]).flatMap { $0.string.flatMap(Double.init) }.flatMap { $0 > 0 ? $0 : nil }
-        let cid = danmaku.flatMap(DanmakuSource.bilibiliCID)
         // The files themselves, for downloads: the address whose index answered first.
         let sources = video.map { item, index in
             DashFiles(quality: item.quality, label: item.label,
@@ -99,12 +97,11 @@ public enum DashStreams {
                       audio: sound.map { audio, index in [index.url] + audio.urls.filter { $0 != index.url } } ?? [],
                       videoInitialization: item.initialization, videoIndex: item.index,
                       audioInitialization: sound?.0.initialization, audioIndex: sound?.0.index,
-                      streamInfo: streamInfo[item.quality] ?? "", headers: headers, cid: cid, duration: duration)
+                      streamInfo: streamInfo[item.quality] ?? "", headers: headers, duration: duration)
         }
         PlaylistStore.shared.add(files, token: token, headers: headers, qualities: qualities, sources: sources)
         Diagnostics.shared.record(.info, "dash", "qualities=\(video.map { "\($0.0.quality)/\($0.0.codecs)" }.joined(separator: ",")) audio=\(sound?.0.codecs ?? "-") host=\(video[0].1.url.host() ?? "-")")
         guard let master = URL(string: address("master.m3u8")) else { return nil }
-        if let cid { DanmakuSource.register(master, bilibiliCID: cid, duration: duration) }
         return master
     }
 
@@ -202,8 +199,6 @@ public struct DashFiles: Sendable, Hashable {
     let streamInfo: String
     /// The headers the CDN wants.
     public let headers: [String: String]
-    /// The Bilibili comment track, when the source named one.
-    public let cid: String?
     public let duration: Double?
 }
 

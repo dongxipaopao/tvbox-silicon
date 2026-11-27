@@ -20,8 +20,6 @@ public struct PlaybackHistoryContext: Codable, Hashable, Sendable {
     public let episodeName: String
     public let episodeFlag: String
     public var year: String?
-    /// Only validated public official pages are retained, never signed stream addresses.
-    public var officialPage: URL?
     public var posterHeaders: [String: String]?
     public var id: String { EpisodeSkipSettings.scope(origin: origin, source: sourceKey, video: videoID) }
 
@@ -38,14 +36,13 @@ public struct PlaybackHistoryContext: Codable, Hashable, Sendable {
                   episodeName: episode.name, episodeFlag: episode.flag)
         year = video.year
         posterHeaders = video.posterHeaders.isEmpty ? nil : video.posterHeaders
-        officialPage = OfficialVideoPage.validated(episode.address)
     }
 
     /// The same place under a subscription's new address (#982).
     public func moved(to origin: URL) -> Self {
         var context = PlaybackHistoryContext(origin: origin, sourceKey: sourceKey, sourceName: sourceName, videoID: videoID, videoName: videoName,
                                              poster: poster, episodeID: episodeID, episodeName: episodeName, episodeFlag: episodeFlag)
-        context.year = year; context.officialPage = officialPage; context.posterHeaders = posterHeaders
+        context.year = year; context.posterHeaders = posterHeaders
         return context
     }
 
@@ -86,8 +83,8 @@ public struct PlaybackHistoryEntry: Identifiable, Codable, Hashable, Sendable {
         let line = episodes.filter { $0.flag == episode.flag }
         guard line.contains(episode) else { return nil }
         if episode.name == context.episodeName { return line.filter { $0.name == episode.name }.count == 1 ? resumePosition : nil }
-        if let number = CatalogDanmakuMatcher.episodeNumber(episode.name), number == CatalogDanmakuMatcher.episodeNumber(context.episodeName) {
-            return line.filter { CatalogDanmakuMatcher.episodeNumber($0.name) == number }.count == 1 ? resumePosition : nil
+        if let number = EpisodeNameMatcher.episodeNumber(episode.name), number == EpisodeNameMatcher.episodeNumber(context.episodeName) {
+            return line.filter { EpisodeNameMatcher.episodeNumber($0.name) == number }.count == 1 ? resumePosition : nil
         }
         return line.count == 1 && episodes.filter { $0.flag == context.episodeFlag }.count <= 1 ? resumePosition : nil
     }

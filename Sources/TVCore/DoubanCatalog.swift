@@ -72,13 +72,13 @@ public enum DoubanCatalog {
     public static func match(_ item: Item, in results: [TMDBMatch.SearchResult]) -> TMDBMatch.SearchResult? {
         let name = searchTitle(item)
         let season = name != item.title
-        let key = CatalogDanmakuMatcher.normalized(name)
+        let key = EpisodeNameMatcher.normalized(name)
         let kind = results.filter { $0.mediaType == item.mediaType }
         func yearFits(_ result: TMDBMatch.SearchResult) -> Bool {
             guard !season, let year = item.year, let other = result.year else { return true }
             return abs(year - other) <= 1
         }
-        let named = kind.filter { CatalogDanmakuMatcher.normalized($0.name) == key || $0.originalName.map(CatalogDanmakuMatcher.normalized) == key }
+        let named = kind.filter { EpisodeNameMatcher.normalized($0.name) == key || $0.originalName.map(EpisodeNameMatcher.normalized) == key }
         if let exact = named.first(where: yearFits) { return exact }
         // Douban and TMDB often spell a title differently (punctuation, a subtitle): the best result of that kind
         // and year is still the work, when Douban gave a year to check it by.

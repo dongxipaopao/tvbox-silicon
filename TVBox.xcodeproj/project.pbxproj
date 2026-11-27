@@ -34,7 +34,6 @@
 		1331896EA47189E426A4DE6C /* DiscoverBrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 846F0B59129DEB3329D2C5DD /* DiscoverBrowseView.swift */; };
 		13A266A0565733CC2C7A66E6 /* Updates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90D706229ED242AE96AE52F8 /* Updates.swift */; };
 		13AB1C878E7990BF8FB16849 /* HLSProxy.swift in Sources */ = {isa = PBXBuildFile; fileRef = B44CBA0E5BBD1D129D5D64E3 /* HLSProxy.swift */; };
-		14C397640E05A3FA9CE444D8 /* DanmakuServiceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26F144846346C7C8F52CE20C /* DanmakuServiceSettingsView.swift */; };
 		14E05DC952FB2705E645EAE6 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B7E929CDDC1F085C6B55693 /* HomeView.swift */; };
 		14FA5947D5B1472F7AF31530 /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45CB8261D922949ADBDBE15 /* DownloadsView.swift */; };
 		15D2081ED3FCCB08A5ED506A /* Keystone-GPL2.txt in Resources */ = {isa = PBXBuildFile; fileRef = 084C8344E2997DB3ED8FE974 /* Keystone-GPL2.txt */; };
@@ -88,7 +87,6 @@
 		2D5C517BA45AA3ACE1C53D73 /* DiscoverArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E644254088B8C9E61B8363D /* DiscoverArtwork.swift */; };
 		2E2372AA323482FCF4B01156 /* LiveGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72830F1F2EF52362002EBA43 /* LiveGuide.swift */; };
 		2EF2744DCA81AD6098398028 /* Keystone-LLVM.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3A398E8AF0C7E4C94787F4B3 /* Keystone-LLVM.txt */; };
-		2EF5CCF1BA71B68F4DCF2F71 /* DanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5737402EC96F0FBF79243E /* DanmakuView.swift */; };
 		2F15EB7A825E0A9D0F9E03A6 /* MusicAppleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80C6028F85975A31B1BC1DDD /* MusicAppleViews.swift */; };
 		2F46BE251F004B53430FD516 /* DateComparison.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9644627CBD3EF1CE6A06E228 /* DateComparison.swift */; };
 		2F58769982B29FDB6BE2304C /* DiscoverTrailer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74376E0596FEAF3CE3FBE7C8 /* DiscoverTrailer.swift */; };
@@ -109,7 +107,6 @@
 		36506AEA4D6F2E1541C1BCD1 /* AppleRuntime.m in Sources */ = {isa = PBXBuildFile; fileRef = FFE4BA19E4F4F2797D929A6F /* AppleRuntime.m */; };
 		36A9745531EE811E77BFBFBE /* NovelSourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 190385A01FCD240DDB5AD4EA /* NovelSourcesView.swift */; };
 		3723B970A266B1CA72C8B634 /* NovelChapterList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C0D362A48D8B9F9A3B8A537 /* NovelChapterList.swift */; };
-		37B3CD8A4542A1B2304DBB75 /* CatalogDanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C093554D3863FDB5D2E832B5 /* CatalogDanmakuView.swift */; };
 		37B73ED3D45A1F126E98B375 /* CloudPosterViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F975966BD8829710491AF56 /* CloudPosterViews.swift */; };
 		38089AAF28B91679EFEA5F70 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B784080CDE6CF171AEA5E7 /* DiscoverView.swift */; };
 		38395AAE5193EB91CF33602A /* DiscoverDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28110209CF4DBB819A2F3C74 /* DiscoverDetailView.swift */; };
@@ -134,9 +131,7 @@
 		3EB79F655F119BDD19F30726 /* ColorfulX in Frameworks */ = {isa = PBXBuildFile; productRef = 185E90685A8AF7EB8AD7A768 /* ColorfulX */; };
 		3ED898D04E49F78F4DD57109 /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31D1816B8ED53D49478FD843 /* MoreView.swift */; };
 		3F2E64D0FAA75B78026F115A /* RuntimeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2075419FEF0E1C161A31A9F0 /* RuntimeView.swift */; };
-		3F7AA2351B3C009CDDE41C4F /* DanmakuServiceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26F144846346C7C8F52CE20C /* DanmakuServiceSettingsView.swift */; };
 		41947E313A2EF1F270864F02 /* MobilePlayerKeyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25859CA4F71FAAD347B667B7 /* MobilePlayerKeyboard.swift */; };
-		41FB20C693CBD87C569DCC18 /* DanmakuSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91355F9A371572D91388ED36 /* DanmakuSettingsView.swift */; };
 		455119517E0FFF07B799E98C /* MusicPlayerViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2CD4FD12F4DD3AAE1F8592A /* MusicPlayerViews.swift */; };
 		45B29C434AF09F895B918AD8 /* MusicIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B24C3A21F10F41307AF2937E /* MusicIntents.swift */; };
 		45ECD9E8EE6888748AC6D46E /* ThirdPartyNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = A3012FC04D8DAD058B1A5168 /* ThirdPartyNotices.txt */; };
@@ -208,7 +203,6 @@
 		6B5A97E3471CFF8086F15EB7 /* JNA-Apache2.txt in Resources */ = {isa = PBXBuildFile; fileRef = 8320284C7FB9590C44BA7102 /* JNA-Apache2.txt */; };
 		6B8A35576F3B6D86ACA87047 /* Unicorn-LGPL2.txt in Resources */ = {isa = PBXBuildFile; fileRef = 77D75493765469B6134467AE /* Unicorn-LGPL2.txt */; };
 		6B940ABF210E7EE756826526 /* OpenJDK-assembly-exception.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4EF42E1957EFE569C0D2CF7D /* OpenJDK-assembly-exception.txt */; };
-		6BD7887B6DFF159358B27ACD /* CatalogDanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C093554D3863FDB5D2E832B5 /* CatalogDanmakuView.swift */; };
 		6BF1C12F7ABFECC33919BFE7 /* WatchNowPhone.swift in Sources */ = {isa = PBXBuildFile; fileRef = B70E10B1B4ED09D544D6F679 /* WatchNowPhone.swift */; };
 		6CB260D36D1F108ED3A0D1AD /* TVPlayerEpisodes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B482395E1DB3E0C2FF8CDC6 /* TVPlayerEpisodes.swift */; };
 		6CE6FB43EF6031C2E216DF33 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F25432F6424C7931768C7B6F /* Assets.xcassets */; };
@@ -353,7 +347,6 @@
 		BFCFF64AE36615F3BAE33874 /* BilibiliCastController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7B1CEF969E4F3D3301A8D61 /* BilibiliCastController.swift */; };
 		C093CB1C1E82F6648ADBC51C /* VideoEnhancement.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAA3BD557773609F9C5109CA /* VideoEnhancement.swift */; };
 		C0CF8F2481F4B90775C681F8 /* DiscoverSearchFilters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 356AA3CFC2271101141EF964 /* DiscoverSearchFilters.swift */; };
-		C10EEC4D7AED0BE564BF2246 /* DanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5737402EC96F0FBF79243E /* DanmakuView.swift */; };
 		C1B7535DAD8E3E474D70D0AD /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 7383E296A9A1A224EE71FA94 /* Localizable.strings */; };
 		C1C46AE3262D5E734B72F980 /* OpenJDK-additional.txt in Resources */ = {isa = PBXBuildFile; fileRef = 49F3577BBD5630331F34E84E /* OpenJDK-additional.txt */; };
 		C205444953E700EF5D4FBFA4 /* MangaStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C05256E7BDC34745BDE22193 /* MangaStore.swift */; };
@@ -416,12 +409,10 @@
 		E81BB0E2AAAAB9BF2D3706D4 /* ExternalDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B2D3312926C619F1DD413B8 /* ExternalDisplay.swift */; };
 		E8A225058F954A38DDAE052A /* MusicMacBrowse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D442D4FB2D2EB656FBBCB2C /* MusicMacBrowse.swift */; };
 		E8E7D31FA6802352FA66EB56 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 335A7E05458DD9DA9AA04125 /* InfoPlist.strings */; };
-		E9F0900B56C80C647D87FD3E /* DanmakuSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91355F9A371572D91388ED36 /* DanmakuSettingsView.swift */; };
 		EA59E4954399A7E5BC6C2348 /* unidbg.txt in Resources */ = {isa = PBXBuildFile; fileRef = 995F5F0DB35FE66B4F90B4FF /* unidbg.txt */; };
 		EBDFAB717675C3CBCA05B75F /* DetailAurora.swift in Sources */ = {isa = PBXBuildFile; fileRef = A920E1FB27BD2A7B4B5E7EAE /* DetailAurora.swift */; };
 		EC7C67386A7AD9F977E42224 /* LivePluginsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901EDEF85B9BA1B92932FEC1 /* LivePluginsView.swift */; };
 		ED3A1F1DAE4D25F3AA743AC7 /* WebSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 367AD12D73554C3C3667315D /* WebSignInView.swift */; };
-		ED3BFF07859A99C455624644 /* DanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5737402EC96F0FBF79243E /* DanmakuView.swift */; };
 		EE40CAB25587252D370219D3 /* PlaybackHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 334B106CCFB47B5E27376A16 /* PlaybackHistoryView.swift */; };
 		EE69AE0800A8DAB7450170D3 /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 559683A9A4BDFA11A4A9FE67 /* FeedbackView.swift */; };
 		EF0B1C626478D79D1B6486D7 /* PlaybackWaitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57642E0B8E9377FD57BC9D7F /* PlaybackWaitView.swift */; };
@@ -436,14 +427,12 @@
 		F5C1BA900848240FECE2EDAB /* StateViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB900D01D10F44A858FB96D1 /* StateViews.swift */; };
 		F5F92EF7AFCA773D9FF85A8A /* OpenJDK-assembly-exception.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4EF42E1957EFE569C0D2CF7D /* OpenJDK-assembly-exception.txt */; };
 		F619534F102FC9D165F900C9 /* NovelQA.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF046FB7D8F99B3EC47C9069 /* NovelQA.swift */; };
-		F74139021653CFA0E17CE123 /* DanmakuServiceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26F144846346C7C8F52CE20C /* DanmakuServiceSettingsView.swift */; };
 		F792BA02C02390291EEE4838 /* EpisodeSkipSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B451E5612B33CF005EEAAE08 /* EpisodeSkipSettingsView.swift */; };
 		F845C8AC22D7E526F91FB1AB /* ExternalDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B2D3312926C619F1DD413B8 /* ExternalDisplay.swift */; };
 		F8EB061662C5CB6EB47B41F2 /* SitesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75124CC2471CF95C1FFB168A /* SitesView.swift */; };
 		F8FDE07CCDA81CE83CEAB4B9 /* BilibiliViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57363D217E83F0E69B2DF678 /* BilibiliViews.swift */; };
 		F90D633F45956BEB583BB3C8 /* LiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7459A3EBEF2E7C346B508738 /* LiveView.swift */; };
 		F938FF6194BF4053F4F63501 /* MangaDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B33761B860B18DD0F3CE7FAC /* MangaDetailView.swift */; };
-		FA6CC845EF0E0E913AA393E8 /* DanmakuSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91355F9A371572D91388ED36 /* DanmakuSettingsView.swift */; };
 		FA820ECE634F6CE935A25E2B /* AppIcons.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5194EB255D269658DD7A81E3 /* AppIcons.xcassets */; };
 		FA8B587D9D8860C0AC21ABD5 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4AF41DB8DD88A4FACE380494 /* Localizable.strings */; };
 		FBD490433241B703DEC0B46B /* SubtitleTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13947E20489465F172C8B5B7 /* SubtitleTranslator.swift */; };
@@ -458,7 +447,6 @@
 		FF2676E385636EBBCE5C2ED2 /* runtime-probe.jar in Resources */ = {isa = PBXBuildFile; fileRef = E19FE970E68D278C15E8DBF8 /* runtime-probe.jar */; };
 		FF51906A6F86833239C53A33 /* Capstone-LLVM.txt in Resources */ = {isa = PBXBuildFile; fileRef = 08B7C43C763200E67A22E365 /* Capstone-LLVM.txt */; };
 		FF931676C5626AB647CDCF03 /* MangaSourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0E5BAF6D854E7CE5DA362D0 /* MangaSourcesView.swift */; };
-		FFE8085D174DC6F8A20E5CD6 /* CatalogDanmakuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C093554D3863FDB5D2E832B5 /* CatalogDanmakuView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -483,7 +471,6 @@
 		2278608DE7AE2FEA27EB51C9 /* TVBox-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TVBox-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		235375CC2420B76124FCEBC2 /* MusicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicView.swift; sourceTree = "<group>"; };
 		25859CA4F71FAAD347B667B7 /* MobilePlayerKeyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobilePlayerKeyboard.swift; sourceTree = "<group>"; };
-		26F144846346C7C8F52CE20C /* DanmakuServiceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DanmakuServiceSettingsView.swift; sourceTree = "<group>"; };
 		28110209CF4DBB819A2F3C74 /* DiscoverDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverDetailView.swift; sourceTree = "<group>"; };
 		2A16B4FE6CB6B1946969D5BE /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		2ACBC18014BA7190EBA2EDD7 /* MacUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacUpdater.swift; sourceTree = "<group>"; };
@@ -539,7 +526,6 @@
 		77D75493765469B6134467AE /* Unicorn-LGPL2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Unicorn-LGPL2.txt"; sourceTree = "<group>"; };
 		781912838F2DF6F1DD3963CF /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		79ABEF8CC3883B021CEF3CEE /* LivePluginSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePluginSignIn.swift; sourceTree = "<group>"; };
-		7A5737402EC96F0FBF79243E /* DanmakuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DanmakuView.swift; sourceTree = "<group>"; };
 		80C6028F85975A31B1BC1DDD /* MusicAppleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicAppleViews.swift; sourceTree = "<group>"; };
 		8320284C7FB9590C44BA7102 /* JNA-Apache2.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "JNA-Apache2.txt"; sourceTree = "<group>"; };
 		846F0B59129DEB3329D2C5DD /* DiscoverBrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverBrowseView.swift; sourceTree = "<group>"; };
@@ -552,7 +538,6 @@
 		901EDEF85B9BA1B92932FEC1 /* LivePluginsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePluginsView.swift; sourceTree = "<group>"; };
 		90D706229ED242AE96AE52F8 /* Updates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Updates.swift; sourceTree = "<group>"; };
 		90F5A2CC425C9574421FAE57 /* GatherMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GatherMark.swift; sourceTree = "<group>"; };
-		91355F9A371572D91388ED36 /* DanmakuSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DanmakuSettingsView.swift; sourceTree = "<group>"; };
 		95BCE231D3EA9E4C6167CC1A /* SleepTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepTimer.swift; sourceTree = "<group>"; };
 		9644627CBD3EF1CE6A06E228 /* DateComparison.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateComparison.swift; sourceTree = "<group>"; };
 		995F5F0DB35FE66B4F90B4FF /* unidbg.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = unidbg.txt; sourceTree = "<group>"; };
@@ -592,7 +577,6 @@
 		BF1BA0E595482E98D5915EC8 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		BF5733BA144503E76421BCFD /* MusicTVPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MusicTVPlayer.swift; sourceTree = "<group>"; };
 		C05256E7BDC34745BDE22193 /* MangaStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaStore.swift; sourceTree = "<group>"; };
-		C093554D3863FDB5D2E832B5 /* CatalogDanmakuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogDanmakuView.swift; sourceTree = "<group>"; };
 		C3F4B05EFEA87ADFB35ACD57 /* PointsGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointsGuideView.swift; sourceTree = "<group>"; };
 		C3FBB140165AC6F0A60866F5 /* LivePluginQRSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePluginQRSignIn.swift; sourceTree = "<group>"; };
 		CD3EB3627A26DB28A92F4EEF /* NovelReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NovelReaderView.swift; sourceTree = "<group>"; };
@@ -715,7 +699,6 @@
 				E0A2914C1B5B5ABA5F4B25A7 /* BilibiliMark.swift */,
 				57363D217E83F0E69B2DF678 /* BilibiliViews.swift */,
 				A4EB0D74F8DB73E33CC129F8 /* CacheSettingsView.swift */,
-				C093554D3863FDB5D2E832B5 /* CatalogDanmakuView.swift */,
 				46C4D3FABE1C6E7A7B63BA62 /* CatalogPlaybackActions.swift */,
 				688641B892E4732AFEB875A3 /* CatPawSignInView.swift */,
 				CEE19E104EAA6C4F620B8E53 /* CloudDriveView.swift */,
@@ -723,9 +706,6 @@
 				9F975966BD8829710491AF56 /* CloudPosterViews.swift */,
 				E78573DE76BCF27CABBB20F3 /* CloudQRLoginView.swift */,
 				AFD150AEEA34722E2F2F7E83 /* ColorThemes.swift */,
-				26F144846346C7C8F52CE20C /* DanmakuServiceSettingsView.swift */,
-				91355F9A371572D91388ED36 /* DanmakuSettingsView.swift */,
-				7A5737402EC96F0FBF79243E /* DanmakuView.swift */,
 				9644627CBD3EF1CE6A06E228 /* DateComparison.swift */,
 				A920E1FB27BD2A7B4B5E7EAE /* DetailAurora.swift */,
 				1E644254088B8C9E61B8363D /* DiscoverArtwork.swift */,
@@ -921,7 +901,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 69187C92E06B41B0817552F3 /* Build configuration list for PBXNativeTarget "TVBox-iOS" */;
 			buildPhases = (
-				7E0F3B0D6BC3E391D1F6A374 /* Embed Dandanplay API configuration */,
 				FF62FD0D84F10E3C607D716E /* Sources */,
 				AEDE346CFFADBAE2169B12A1 /* Resources */,
 				E94BC2A1C955B6F2E58D19BE /* Frameworks */,
@@ -945,7 +924,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 429EE12CD839980B47636EAD /* Build configuration list for PBXNativeTarget "TVBox-macOS" */;
 			buildPhases = (
-				DD18DA320E499D9BCF308EE1 /* Embed Dandanplay API configuration */,
 				38AA9476BEF00D4E183306B5 /* Check the bundled Java host */,
 				DE668986064D1052747B0516 /* Sources */,
 				330684913FA5953506D1EE47 /* Resources */,
@@ -969,7 +947,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = DAA4895E5FBCBEE93E8522D9 /* Build configuration list for PBXNativeTarget "TVBox-tvOS" */;
 			buildPhases = (
-				9C7766533080E9B0AC54B9CD /* Embed Dandanplay API configuration */,
 				3045AC51AD346EA9FB246FE5 /* Sources */,
 				28C5970E177A56CF0613AE10 /* Resources */,
 				42CF7C28FA76A27C0C01C499 /* Frameworks */,
@@ -1187,44 +1164,6 @@
 			shellPath = /bin/sh;
 			shellScript = "set -eu\nRUNTIME=\"$SRCROOT/build/AppleRuntime/$PLATFORM_NAME\"\ntest -f \"$RUNTIME/lib/libTVAppleRuntime.a\"\n\"$SRCROOT/Scripts/check-java-host.sh\" \"$RUNTIME/Resources/JavaHost/host.jar\"\n\"$SRCROOT/Scripts/check-apple-runtime.sh\" \"$RUNTIME\"\nrsync -a --delete \"$RUNTIME/Resources/lib/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/\"\nrsync -a --delete \"$RUNTIME/Resources/JavaHost/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/\"\n";
 		};
-		7E0F3B0D6BC3E391D1F6A374 /* Embed Dandanplay API configuration */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Embed Dandanplay API configuration";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"$SRCROOT/Scripts/embed-dandanplay-config.py\"";
-		};
-		9C7766533080E9B0AC54B9CD /* Embed Dandanplay API configuration */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Embed Dandanplay API configuration";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"$SRCROOT/Scripts/embed-dandanplay-config.py\"";
-		};
 		A4DF47F9E069B67C04C29D12 /* Embed on-device Java runtime */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -1243,25 +1182,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -eu\nRUNTIME=\"$SRCROOT/build/AppleRuntime/$PLATFORM_NAME\"\ntest -f \"$RUNTIME/lib/libTVAppleRuntime.a\"\n\"$SRCROOT/Scripts/check-java-host.sh\" \"$RUNTIME/Resources/JavaHost/host.jar\"\n\"$SRCROOT/Scripts/check-apple-runtime.sh\" \"$RUNTIME\"\nrsync -a --delete \"$RUNTIME/Resources/lib/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/lib/\"\nrsync -a --delete \"$RUNTIME/Resources/JavaHost/\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/JavaHost/\"\n";
-		};
-		DD18DA320E499D9BCF308EE1 /* Embed Dandanplay API configuration */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Embed Dandanplay API configuration";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"$SRCROOT/Scripts/embed-dandanplay-config.py\"";
 		};
 		E70A0A00C0021120BA15D9D3 /* Embed on-device Python runtime */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -1358,7 +1278,6 @@
 				F8FDE07CCDA81CE83CEAB4B9 /* BilibiliViews.swift in Sources */,
 				19D2D88AB805DCF59BA312D6 /* CacheSettingsView.swift in Sources */,
 				E0832AB8995164BECCE1DEDA /* CatPawSignInView.swift in Sources */,
-				FFE8085D174DC6F8A20E5CD6 /* CatalogDanmakuView.swift in Sources */,
 				762AAE7DEDF6675A62474B19 /* CatalogPlaybackActions.swift in Sources */,
 				C6D7579CAFFAB9B441C0703C /* CloudDriveView.swift in Sources */,
 				8EB254B55B70CF8A923D1CD0 /* CloudFilesView.swift in Sources */,
@@ -1366,9 +1285,6 @@
 				91C07692EFFEE27619AA9FF3 /* CloudQRLoginView.swift in Sources */,
 				BB38C5CFD612604156A97463 /* ColorThemes.swift in Sources */,
 				BDD8564E5166B979B3600E6D /* DLNACast.swift in Sources */,
-				F74139021653CFA0E17CE123 /* DanmakuServiceSettingsView.swift in Sources */,
-				E9F0900B56C80C647D87FD3E /* DanmakuSettingsView.swift in Sources */,
-				ED3BFF07859A99C455624644 /* DanmakuView.swift in Sources */,
 				2F46BE251F004B53430FD516 /* DateComparison.swift in Sources */,
 				6F182F91BDACFBFC8E6B3B0E /* DetailAurora.swift in Sources */,
 				61A44E1F889577D84A761385 /* DiscoverArtwork.swift in Sources */,
@@ -1486,7 +1402,6 @@
 				DC9FE649E0C2DA0F156FD876 /* BilibiliViews.swift in Sources */,
 				1903E9CDD9B2628A63C19FF3 /* CacheSettingsView.swift in Sources */,
 				5FD01522B8D935B4CF540C64 /* CatPawSignInView.swift in Sources */,
-				37B3CD8A4542A1B2304DBB75 /* CatalogDanmakuView.swift in Sources */,
 				FC0F00688179660407FD70E1 /* CatalogPlaybackActions.swift in Sources */,
 				D10B5A0245BDE1A5E05A6BD7 /* CloudDriveView.swift in Sources */,
 				1D82C5470FDA73053EAD6398 /* CloudFilesView.swift in Sources */,
@@ -1494,9 +1409,6 @@
 				277D741E2A86C06612A8034A /* CloudQRLoginView.swift in Sources */,
 				54A96B89DA4D05725C0D0DB1 /* ColorThemes.swift in Sources */,
 				A2D1248EED140C8F92416156 /* DLNACast.swift in Sources */,
-				3F7AA2351B3C009CDDE41C4F /* DanmakuServiceSettingsView.swift in Sources */,
-				41FB20C693CBD87C569DCC18 /* DanmakuSettingsView.swift in Sources */,
-				2EF5CCF1BA71B68F4DCF2F71 /* DanmakuView.swift in Sources */,
 				5389383E76A0D20F8A86317A /* DateComparison.swift in Sources */,
 				7DCDDEB6A7774CAF5C85D539 /* DetailAurora.swift in Sources */,
 				2D5C517BA45AA3ACE1C53D73 /* DiscoverArtwork.swift in Sources */,
@@ -1616,7 +1528,6 @@
 				DE1271B46C765F148A18E322 /* BilibiliViews.swift in Sources */,
 				99DDB54D60A36E748D5E8C73 /* CacheSettingsView.swift in Sources */,
 				616DE5FBCAE2BD0044BD32AA /* CatPawSignInView.swift in Sources */,
-				6BD7887B6DFF159358B27ACD /* CatalogDanmakuView.swift in Sources */,
 				78CE336AE6714726DFDFDB43 /* CatalogPlaybackActions.swift in Sources */,
 				59953BBDD74AED0A292F7079 /* CloudDriveView.swift in Sources */,
 				BA97CE75C2E0DF21635E17EA /* CloudFilesView.swift in Sources */,
@@ -1624,9 +1535,6 @@
 				31D893FEF33876FD07BB58BA /* CloudQRLoginView.swift in Sources */,
 				BEFFC109286C99EB1495F6DD /* ColorThemes.swift in Sources */,
 				8841F62611BD2311301226B8 /* DLNACast.swift in Sources */,
-				14C397640E05A3FA9CE444D8 /* DanmakuServiceSettingsView.swift in Sources */,
-				FA6CC845EF0E0E913AA393E8 /* DanmakuSettingsView.swift in Sources */,
-				C10EEC4D7AED0BE564BF2246 /* DanmakuView.swift in Sources */,
 				E7D008DE20C7450D031909C1 /* DateComparison.swift in Sources */,
 				EBDFAB717675C3CBCA05B75F /* DetailAurora.swift in Sources */,
 				90EE7DA8213C0720E113C6F1 /* DiscoverArtwork.swift in Sources */,

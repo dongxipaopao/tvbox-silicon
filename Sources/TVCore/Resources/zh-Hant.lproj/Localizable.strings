@@ -486,13 +486,6 @@
 "Bilibili's video servers could not be reached. Try again later." = "無法連線至嗶哩嗶哩的影片伺服器，請稍後再試。";
 "This playback has expired. Open the video again." = "本次播放已失效，請重新開啟影片。";
 "This episode needs a Bilibili premium membership. Only a short preview is available." = "本集需要嗶哩嗶哩大會員，目前只能觀看試看片段。";
-"Danmaku" = "彈幕";
-"Show Danmaku" = "顯示彈幕";
-"Hide Danmaku" = "隱藏彈幕";
-"Bilibili's bullet comments, drawn over the video. You can also switch them in the player." = "在畫面上顯示嗶哩嗶哩的彈幕。也可以在播放器裡開關。";
-"Danmaku List" = "彈幕列表";
-"Danmaku List…" = "彈幕列表…";
-"Filter comments" = "篩選彈幕";
 "See your following feed, favorites, watch later and history, and play in higher quality." = "查看關注動態、收藏、稍後再看和觀看紀錄，並以更高畫質播放。";
 "Cast from the Bilibili App" = "嗶哩嗶哩 App 投影";
 "With your phone on the same network, tap the TV button in a Bilibili video and choose %@." = "手機與本機連線同一網路，在嗶哩嗶哩影片裡點投影按鈕並選擇「%@」。";
@@ -565,25 +558,6 @@
 "Browse Sources" = "瀏覽隨選來源";
 "%@ available on this device" = "本機可用 %@";
 
-"Loaded %lld comments" = "已載入 %lld 條彈幕";
-"Opacity" = "不透明度";
-"Text Size" = "字號";
-"Time Offset: %@ s" = "時間偏移：%@ 秒";
-"A positive offset shows comments later. Playback controls stay available." = "正值會延後顯示彈幕，播放控制仍可正常使用。";
-"Clear Danmaku" = "清除彈幕";
-"Video title" = "影片名稱";
-"Back to search results" = "返回搜尋結果";
-"No danmaku found. Try another title or server." = "未找到彈幕，請嘗試其他片名或服務。";
-"Find Danmaku" = "尋找彈幕";
-"Search sends only the title to the selected danmaku service. Choose the correct season and episode; some videos have no comments." = "搜尋只會向所選彈幕服務傳送片名，請選擇正確的季度和集數，部分影片沒有彈幕。";
-"Danmaku server URL" = "彈幕服務位址";
-"Danmaku Service" = "彈幕服務";
-"Uses a public Dandanplay-compatible service. You can enter your own danmu_api server. Availability depends on the service." = "使用公開的彈彈play相容服務，也可填入自建 danmu_api 服務位址；可用性取決於伺服器。";
-"The danmaku file is too large." = "彈幕檔案過大。";
-"The service did not return a supported danmaku list." = "服務未傳回支援的彈幕清單。";
-"Enter the danmaku server base URL, without a query or fragment." = "請輸入彈幕服務的基礎位址，不要附帶查詢參數或片段。";
-"This danmaku server requires authorization. Choose a compatible public or self-hosted server." = "此彈幕服務需要授權，請使用相容的公開服務或自建服務。";
-"The danmaku server could not complete this request. Try another server." = "彈幕服務無法完成請求，請嘗試其他服務。";
 "Wait for the video duration. Live streams cannot use skipping." = "請等待影片時長載入，直播不支援片頭片尾跳過。";
 "Enter a valid time such as 01:30." = "請輸入有效時間，例如 01:30。";
 "The intro must end before the outro starts." = "片頭結束時間需早於片尾開始時間。";
@@ -598,8 +572,6 @@
 "Reset intro and outro" = "清除片頭片尾設定";
 "Skip intro / outro" = "跳過片頭片尾";
 "Save" = "儲存";
-"Import Danmaku File" = "匯入彈幕檔案";
-"Import Bilibili XML or Dandanplay JSON from Files. Imported comments do not require a network connection." = "從檔案 App 匯入 Bilibili XML 或彈彈play JSON，匯入後無需連線即可顯示。";
 "Playback History" = "播放記錄";
 "Continue Watching" = "繼續觀看";
 "No Playback History Yet" = "尚無播放記錄";
@@ -614,8 +586,6 @@
 "The saved episode is no longer available from this source. Choose an episode again." = "此來源已沒有記錄中的劇集，請重新選擇集數。";
 "Unable to resume playback: %@" = "無法繼續播放：%@";
 "The player could not restore the saved position. Try again." = "播放器無法恢復上次進度，請重試。";
-"Automatically match the current episode" = "自動配對目前集數";
-"Matching comments appear automatically. If none match or the service is unavailable, the video stays clear." = "配對到目前影片和集數後自動顯示彈幕；無配對或服務無法使用時不顯示。";
 "Times apply to this series and all its episodes. Automatic skipping is a global switch. The outro is remembered as time remaining." = "時間僅用於目前劇集的所有集，自動跳過開關為全域開關。片尾按剩餘時長記憶。";
 "Pinned" = "已置頂";
 "Pin source" = "置頂來源";
@@ -643,24 +613,14 @@
 "Remove selected history and its cached content?" = "刪除所選歷史及關聯內容快取？";
 "Local Cache" = "本機快取";
 "Cached Content" = "快取內容";
-"Artwork is kept for 30 days, danmaku for 7 days and episode lists for 6 hours, up to 256 MB. History titles are prioritized. Only the latest 20 successful work address mappings are retained." = "封面保留30天、彈幕7天、劇集目錄6小時，總量上限256 MB，優先保留播放歷史裡的劇。成功找到的劇集位址對應僅保留最近20部。";
+"Artwork is kept for 30 days and episode lists for 6 hours, up to 256 MB. History titles are prioritized. Only the latest 20 successful work address mappings are retained." = "封面保留30天、劇集目錄6小時，總量上限256 MB，優先保留播放歷史裡的劇。成功找到的劇集位址對應僅保留最近20部。";
 "Artwork: %lld" = "封面：%lld";
-"Episode danmaku: %lld" = "單集彈幕：%lld";
 "Episode lists: %lld" = "劇集目錄：%lld";
 "Recent work mappings: %lld / 20" = "最近劇集位址對應：%lld / 20";
-"Clears artwork, episode lists, danmaku and address mappings. Playback history, subscriptions, pinned sources and skip settings are kept." = "清理封面、劇集目錄、彈幕和位址對應，保留播放歷史、訂閱、置頂來源及跳過設定。";
+"Clears artwork, episode lists and address mappings. Playback history, subscriptions, pinned sources and skip settings are kept." = "清理封面、劇集目錄和位址對應，保留播放歷史、訂閱、置頂來源及跳過設定。";
 "Clearing…" = "正在清理…";
 "Clear local cache" = "清理本機快取";
 "Clear all local cached content?" = "清理所有本機內容快取？";
-"Imported file" = "匯入檔案";
-"Retry automatic matching" = "重新自動配對";
-"From local cache" = "來自本機快取";
-"Find official episodes for dmku" = "為 dmku 自動尋找官方單集";
-"Automatically checks Dandanplay, iQIYI and Tencent Video. The first matching track with comments is used. Official public episode pages are sent to dmku, or to danmu.zxz.ee when dmku has none; stream URLs and playback headers are never sent." = "自動查詢彈彈play、愛奇藝和騰訊影片，使用最先找到的有效彈幕。僅將官方公開單集頁面交給 dmku（dmku 沒有時交給 danmu.zxz.ee），不傳送播放串流位址或請求標頭。";
-"Finding matching danmaku…" = "正在配對彈幕…";
-"No matching episode has comments." = "未找到目前集的彈幕。";
-"Danmaku services are temporarily unavailable. Video playback is unaffected." = "彈幕服務暫時無法使用，不影響影片播放。";
-"Automatic matching is idle." = "自動配對尚未執行。";
 "%lld titles" = "%lld 部影片";
 "Removing a title also clears its cached content and skip times." = "刪除記錄也會清理該劇的快取與跳過時間。";
 "Auto-play next episode" = "自動播放下一集";
@@ -897,12 +857,6 @@
 "Try Again" = "再試一次";
 "This episode's link may have expired. Open it again, or try another line." = "這一集的連結可能已經過期了。重新打開這一集，或者換條線路試試。";
 "Picture" = "畫面";
-"Sharper Picture" = "畫質增強";
-"Smooth Motion (60 fps)" = "智慧補幀 (60 幀)";
-"Upscales video smaller than your screen with on-device machine learning." = "以裝置上的機器學習放大解析度低於螢幕的影片。";
-"Adds in-between frames so 24–30 fps video plays at 60 fps. Uses more battery, and films can look like TV soap operas." = "在畫面之間產生新幀，讓 24–30 幀的影片以 60 幀播放。會更耗電，電影可能看起來像電視劇。";
-"%d comments" = "%d 則彈幕";
-"Back to Now" = "回到目前";
 "Rotate to Landscape" = "切換為橫向";
 "Rotate to Portrait" = "切換為直向";
 "Send Feedback" = "意見回饋";
@@ -1345,12 +1299,6 @@
 
 "iCloud Sync" = "iCloud 同步";
 "Keeps favorites, Continue Watching, subscriptions, and the sources you pinned, hid or ordered the same on your devices signed in to the same iCloud account. Accounts, passwords and downloads stay on each device." = "在登入同一 iCloud 帳號的裝置之間同步收藏、繼續觀看、訂閱，以及你置頂、隱藏或排序的來源。帳號、密碼和下載內容只保存在各自的裝置上。";
-"Danmaku Area" = "彈幕區域";
-"One Line" = "單行";
-"Top Quarter" = "1/4 畫面";
-"Top Half" = "半畫面";
-"Top Three Quarters" = "3/4 畫面";
-"Whole Screen" = "全畫面";
 "UC TV Token" = "UC TV Token";
 "Get UC TV Token" = "取得 UC TV Token";
 "You're signed in to UC, but this source plays UC accounts without premium through UC's TV app, which needs a token of its own. Get it once with the UC Browser app, or choose another line." = "你已登入 UC，但此片源透過 UC 網盤 TV 版播放非會員帳號，需要另外的 TV Token。用 UC 瀏覽器取得一次即可，或改選其他線路。";
@@ -1385,10 +1333,6 @@
 
 "Download %@" = "下載 %@";
 
-"Uses the official Dandanplay service. You can also enter your own compatible server." = "使用彈彈play官方服務，也可填入自建相容服務位址。";
-"This build is missing its Dandanplay API configuration." = "此版本缺少彈彈play API 設定。";
-"Uses Dandanplay first, then tries iQIYI and Tencent Video if no comments are found or the service is unavailable. Official public episode pages are sent to dmku, or to danmu.zxz.ee when dmku has none; stream URLs and playback headers are never sent." = "優先使用彈彈play；找不到彈幕或服務無法使用時，再查詢愛奇藝和騰訊影片。僅將官方公開單集頁面交給 dmku（dmku 沒有時交給 danmu.zxz.ee），不傳送播放串流位址或請求標頭。";
-"Dandanplay has reached its request limit for now. Try again later, or choose another danmaku server." = "彈彈play 的請求次數暫時用完了，請稍後再試，或換一個彈幕伺服器。";
 "Open Config Center" = "打開配置中心";
 "Config Center" = "配置中心";
 "Top Charts" = "排行榜";
@@ -1608,7 +1552,6 @@
 "Start in Full Screen" = "開始播放時全螢幕";
 "With Play Automatically on, a video of one episode starts as soon as its page opens." = "開啟「自動播放」後，單集影片在打開詳情頁時立即開始播放。";
 "With Play Automatically on, a video of one episode starts as soon as its page opens. With Start in Full Screen on, a video fills the screen as soon as it starts on its page." = "開啟「自動播放」後，單集影片在打開詳情頁時立即開始播放。開啟「開始播放時全螢幕」後，在詳情頁開始播放的影片會立即全螢幕。";
-"Area" = "區域";
 "This plugin setting only works in Android TVBox." = "這項外掛設定只能在 Android 版 TVBox 中使用。";
 "The plugin finished without a message." = "外掛已完成，沒有回傳訊息。";
 "Copied to the clipboard." = "已複製到剪貼簿。";
@@ -1623,38 +1566,7 @@
 "No subtitles were found in the file." = "檔案裡沒有找到字幕。";
 "The file couldn't be opened." = "無法打開檔案。";
 "Automatic" = "自動";
-"iQIYI" = "愛奇藝";
-"Tencent Video" = "騰訊影片";
-"Youku" = "優酷";
-"Mango TV" = "芒果 TV";
-"Migu" = "咪咕影片";
-"Dandanplay" = "彈彈play";
-"Scroll Speed" = "彈幕速度";
-"Compact" = "緊湊";
-"Standard" = "標準";
-"Relaxed" = "寬鬆";
-"Wide" = "很寬";
-"Density" = "彈幕密度";
-"Fewer" = "較少";
-"Fewest" = "最少";
-"Fewer and Fewest hide a comment repeated within a few seconds and let fewer comments start scrolling each second." = "「較少」和「最少」會隱藏幾秒內重複的相同彈幕，並減少每秒開始捲動的彈幕數量。";
-"Scrolling Comments" = "滾動彈幕";
-"Top Comments" = "頂部彈幕";
-"Bottom Comments" = "底部彈幕";
-"Danmaku Settings…" = "彈幕設定…";
-"Preferred Source Platform" = "彈幕來源平台";
 "Use Official URL" = "使用官方網址";
-"Danmaku service settings saved." = "彈幕服務設定已儲存。";
-"Enter a Dandanplay-compatible server root or an API prefix ending in /api/v2. A token in the path is supported. The URL is saved only on this device." = "填寫相容彈彈play的服務根網址，也可填寫以 /api/v2 結尾的介面網址；支援路徑中的權杖。網址僅儲存在本機。";
-"Danmaku Display" = "彈幕顯示";
-"Advance 0.5 s" = "提前 0.5 秒";
-"Advance 5 s" = "提前 5 秒";
-"Delay 0.5 s" = "延後 0.5 秒";
-"Delay 5 s" = "延後 5 秒";
-"Reset Timing" = "重設時間偏移";
-"Current Danmaku" = "目前彈幕";
-"Unknown Source" = "未知來源";
-"Unknown Year" = "年份未知";
 "Simplified Chinese (GB 18030)" = "簡體中文（GB 18030）";
 "Traditional Chinese (Big5)" = "繁體中文（Big5）";
 "Japanese (Shift-JIS)" = "日文（Shift-JIS）";
@@ -1887,28 +1799,6 @@
 "The video servers could not be reached. Try again later." = "無法連線影片伺服器，請稍後再試。";
 
 // Settings › Danmaku
-"Two Lines" = "兩行";
-"Three Lines" = "三行";
-"Danmaku Settings" = "彈幕設定";
-"Display" = "顯示";
-"Comment Types" = "彈幕類型";
-"Colored Comments" = "彩色彈幕";
-"Turn off Colored Comments to draw every comment in white, which stays readable over bright pictures." = "關閉「彩色彈幕」後，所有彈幕都顯示為白色，在明亮的畫面上也看得清。";
-"Blocked Words" = "屏蔽詞";
-"Add a word or /pattern/" = "新增詞語或 /正規表示式/";
-"Add Blocked Word" = "新增屏蔽詞";
-"No blocked words" = "沒有屏蔽詞";
-"Comments containing any of these words are hidden in every video. Put a pattern between slashes, like /^哈+$/, to match it as a regular expression." = "含有這些詞語的彈幕在所有影片中都會隱藏。把規則寫在兩個斜線之間（例如 /^哈+$/），就按正規表示式比對。";
-"Applies to comments in every video, including one that is playing." = "對所有影片的彈幕生效，包括正在播放的影片。";
-"Here it comes!" = "前方高能！";
-"This scene is incredible" = "這一幕絕了";
-"Hahahahaha" = "哈哈哈哈哈";
-"Third time watching" = "三刷打卡";
-"The music is so good" = "配樂好好聽";
-"Plot twist!" = "反轉了！";
-"Classic moment" = "名場面";
-"Welcome back, everyone" = "歡迎回來";
-"Who else is watching tonight?" = "今晚還有誰在看？";
 
 // Novels (Legado book sources)
 "%lld chapters" = "%lld 章";
@@ -1991,7 +1881,6 @@
 "Scroll" = "捲動";
 "Theme" = "主題";
 "Font Size" = "字級";
-"Line Spacing" = "行距";
 "Margins" = "頁邊距";
 "Appearance" = "外觀";
 "Light" = "淺色";
@@ -2263,19 +2152,6 @@
 "Delete “%@”?" = "要刪除「%@」嗎？";
 "Its subscriptions, favorites, Continue Watching and search history are deleted from this device." = "它的訂閱、收藏、繼續觀看和搜尋記錄會從這部裝置上刪除。";
 "Each profile has its own subscriptions, favorites, Continue Watching, followed shows and search history. Only the main profile syncs with iCloud; downloads, accounts and settings are shared." = "每位使用者都有自己的訂閱、收藏、繼續觀看、追劇和搜尋記錄。只有主要使用者透過 iCloud 同步；離線快取、帳號和設定在各使用者間共用。";
-"Built-in Danmaku Services" = "內建彈幕服務";
-"Servers are asked in order until one has comments. Add a Dandanplay-compatible server, such as a self-hosted danmu_api, by its root or an API prefix ending in /api/v2; a token in the path is supported. Each one is tested when added. Official episode pages from the source are sent to servers you add, to fetch their comments. Addresses are saved only on this device." = "依序詢問各伺服器，直到某個伺服器有彈幕。可加入相容彈彈play 的伺服器（如自架的 danmu_api），填寫根位址或以 /api/v2 結尾的 API 前綴；支援路徑中的 token。加入時會先測試。為取得彈幕，片源提供的官方劇集頁面會傳送給你加入的伺服器。位址僅儲存在本裝置上。";
-"Paste an episode link from iQIYI, Tencent Video, Youku, Mango TV or Bilibili." = "請貼上愛奇藝、騰訊視頻、優酷、芒果TV 或嗶哩嗶哩的劇集連結。";
-"No comments were found for this link." = "此連結沒有找到彈幕。";
-"Search On" = "搜尋伺服器";
-"Episode page address" = "劇集頁面位址";
-"Load from Link" = "從連結載入";
-"Episode Link" = "劇集連結";
-"Paste the episode's page from iQIYI, Tencent Video, Youku, Mango TV or Bilibili. The link is sent to the selected danmaku service to fetch its comments." = "貼上愛奇藝、騰訊視頻、優酷、芒果TV 或嗶哩嗶哩的劇集頁面。連結會傳送給所選的彈幕服務以取得彈幕。";
-"Add Built-in Services" = "加入內建服務";
-"Danmaku Servers" = "彈幕伺服器";
-"Add another server to move or remove this one." = "加入其他伺服器後才能移動或移除此伺服器。";
-"Find Danmaku…" = "尋找彈幕…";
 
 /* Novel reader: layout, script, page curl, background (#1430, #1007, #1437, #1265) */
 "Paragraph Spacing" = "段間距";

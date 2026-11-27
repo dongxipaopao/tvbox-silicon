@@ -16,9 +16,6 @@ import IOKit.pwr_mgt
         return Float(min(1, max(0, defaults.double(forKey: "playerVolume"))))
     }
 
-    /// Upscaling and 60 fps smoothing, drawn over AVKit's picture when switched on in Settings.
-    let enhancer: VideoEnhancer
-    let catalogDanmaku = CatalogDanmakuModel()
     #if os(macOS)
     /// Keeps the Mac from dimming, starting the screen saver and locking while a video plays (#565).
     private let displayAwake = DisplayAwake()
@@ -223,12 +220,6 @@ import IOKit.pwr_mgt
     private(set) var openedAt = Date()
     /// The SF Symbol that names the latest failure for the error screen.
     private(set) var errorSymbol = "play.slash.fill"
-    /// Bullet comments for the media, when its source has them.
-    private var sourceDanmaku: [Danmaku] = []
-    private var usesCatalogDanmaku: Bool { sourceDanmaku.isEmpty || catalogDanmaku.overridesSourceComments }
-    var danmaku: [Danmaku] { usesCatalogDanmaku ? catalogDanmaku.renderedComments : sourceDanmaku }
-    var danmakuOpacity: Double { catalogDanmaku.opacity }
-    var danmakuRevision: String { usesCatalogDanmaku ? catalogDanmaku.renderedRevision : "" }
     var onPlaybackEnded: (() -> Void)?
     /// Plays another line of the same episode when this file can't play here (an MKV original);
     /// returns that line's name, or nil when there is none.
@@ -641,7 +632,6 @@ import IOKit.pwr_mgt
            let style = try? JSONDecoder().decode(SubtitleStyle.self, from: Data(json.utf8)) { style.save() }
         #endif
         self.player = player
-        enhancer = VideoEnhancer(player: player)
         queueObservation = player.observe(\.currentItem, options: [.new]) { [weak self] _, _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
@@ -725,8 +715,7 @@ import IOKit.pwr_mgt
         @unknown default: "unknown"
         }
         let seconds = player.currentTime().seconds
-        Diagnostics.shared.record(.info, "player", "thermal=\(state) at=\(seconds.isFinite ? Int(seconds) : -1)s playing=\(player.timeControlStatus == .playing) "
-            + "smoothing=\(enhancer.status.smoothing) upscaling=\(enhancer.status.upscaling) danmaku=\(!danmaku.isEmpty)")
+        Diagnostics.shared.record(.info, "player", "thermal=\(state) at=\(seconds.isFinite ? Int(seconds) : -1)s playing=\(player.timeControlStatus == .playing)")
     }
     @ObservationIgnored private var jumpObserver: NSObjectProtocol?
     @ObservationIgnored private var jumpResume: Task<Void, Never>?
@@ -865,15 +854,13 @@ import IOKit.pwr_mgt
 
     private func open(_ channel: Channel) {
         savedDownload = channel.url.scheme == DownloadLibrary.scheme
-        stop(); error = nil; errorSymbol = "play.slash.fill"; loading = true; showsPicture = false; openedAt = .now; sourceDanmaku = []; qualities = []; quality = nil; switchNotice = nil
+        stop(); error = nil; errorSymbol = "play.slash.fill"; loading = true; showsPicture = false; openedAt = .now; qualities = []; quality = nil; switchNotice = nil
         let live = false
         begin(channel, live: live)
         isLive = live
         rangeRetried = false
         loopbackRecovered = nil; dropRecovery = PlaybackDropRecovery(); reopenedAfterDrop = false
-        ErrorReports.shared.playing(live: isLive, format: channel.url.pathExtension, source: channel.historyContext?.sourceKey,
-                                    danmaku: UserDefaults.standard.object(forKey: DanmakuPreference.key) == nil || UserDefaults.standard.bool(forKey: DanmakuPreference.key),
-                                    sharper: UserDefaults.standard.bool(forKey: VideoEnhancement.upscaleKey))
+        ErrorReports.shared.playing(live: isLive, format: channel.url.pathExtension, source: channel.historyContext?.sourceKey)
         let activeGeneration = generation
         lineReadyAt = nil
         if lines.count > 1 || onSourceExhausted != nil {
@@ -917,8 +904,6 @@ import IOKit.pwr_mgt
             self.loadPartExtras(channel, generation: activeGeneration)
             self.qualities = DashStreams.qualities(for: address)
             self.quality = nil
-            if DanmakuSource.has(channel.url), let comments = await DanmakuSource.comments(for: channel.url),
-               self.generation == activeGeneration { self.sourceDanmaku = comments }
         }
     }
     private func configure(_ channel: Channel, url: URL, generation activeGeneration: UUID) {
@@ -1412,11 +1397,9 @@ import IOKit.pwr_mgt
             || UserDefaults.standard.string(forKey: "qaPlayURL") != nil || UserDefaults.standard.string(forKey: "qaPlayCaching") != nil
             || UserDefaults.standard.string(forKey: "qaPlayCached") != nil {
             let report: [String: Any] = ["seconds": position, "duration": duration, "ready": item.status == .readyToPlay,
-                "rate": player.rate, "error": error ?? "", "danmakuCount": danmaku.count,
+                "rate": player.rate, "error": error ?? "",
                 "errorDetail": item.error.map(Self.describe) ?? "", "videoWidth": item.presentationSize.width, "videoHeight": item.presentationSize.height,
-                "enhance": enhancer.summary, "upscaling": enhancer.status.upscaling, "smoothing": enhancer.status.smoothing,
                 "screenHz": Self.screenRate,
-                "danmakuState": catalogDanmaku.automaticState, "cached": catalogDanmaku.fromCache,
                 "introEnd": skipSettings.introEnd, "outroLength": skipSettings.outroLength,
                 "requestedResumePosition": requestedResumePosition ?? 0, "restoredPosition": restoredPosition ?? 0]
             try? JSONSerialization.data(withJSONObject: report).write(to: URL.cachesDirectory.appending(path: "qa-playback.json"), options: .atomic)
@@ -1474,7 +1457,6 @@ import IOKit.pwr_mgt
         if playing != nil { ErrorReports.shared.stoppedPlaying() }
         PluginConversionAhead.playbackChanged(false)
         playing = nil
-        catalogDanmaku.clear()
         externalSubtitles.stop()
         subtitles.follow(nil)
         historyContext = nil; pendingResume = nil; restoringPosition = false
@@ -1523,7 +1505,7 @@ import IOKit.pwr_mgt
         if let part = bilibiliPart { Task { await BilibiliHeartbeat.shared.report(part, seconds: time, final: completed) } }
     }
 
-    /// Per-episode state: where its history goes, where it resumes, the intro and outro to skip, its danmaku.
+    /// Per-episode state: where its history goes, where it resumes, the intro and outro to skip.
     /// `live` is a live room: it always plays at 1×.
     private func begin(_ channel: Channel, live: Bool) {
         historyContext = channel.historyContext
@@ -1549,12 +1531,6 @@ import IOKit.pwr_mgt
         bilibiliPart = channel.bilibiliPart
         position = 0; duration = 0
         upcomingAttempted = false
-        // Keep the context even when native comments win, so an explicit service/platform chosen in Settings can
-        // rematch the playing episode. A drive's folder and file names still do not identify a show automatically.
-        let source = channel.historyContext?.sourceKey
-        catalogDanmaku.startAutomatic(channel.historyContext,
-            usesSourceComments: DanmakuSource.has(channel.url) || source == Bilibili.siteKey,
-            allowsAutomatic: source != CloudFiles.sourceKey)
     }
 
     private func restorePositionIfNeeded(_ item: AVPlayerItem) {
@@ -1944,7 +1920,6 @@ extension PlaybackSession {
         generation = UUID()
         let activeGeneration = generation
         transfer = Transfer(); steps = []
-        catalogDanmaku.clear(); sourceDanmaku = []
         error = nil; switchNotice = nil; quality = nil
         // A queued next episode is a point video, never live.
         begin(channel, live: false)
@@ -1955,12 +1930,6 @@ extension PlaybackSession {
         player.allowsExternalPlayback = !Remux.isRemuxed(upcoming.prepared.url)
         qualities = DashStreams.qualities(for: upcoming.prepared.url)
         watch(upcoming.item, channel: channel, url: upcoming.prepared.url, generation: activeGeneration)
-        if DanmakuSource.has(channel.url) {
-            Task { [weak self] in
-                guard let comments = await DanmakuSource.comments(for: channel.url), let self, self.generation == activeGeneration else { return }
-                self.sourceDanmaku = comments
-            }
-        }
         if upcomingSkippedIntro { showIntroSkipped(from: 0) }
         upcomingSkippedIntro = false
         advanced = channel

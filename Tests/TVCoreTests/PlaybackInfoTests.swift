@@ -75,9 +75,6 @@ private func code(_ text: String) -> UInt32 { text.utf8.reduce(0) { $0 << 8 | UI
     info.videoCodec = code("av01"); info.hardwareDecoding = false; info.transferFunction = "ITU_R_2100_HLG"
     info.width = 1280; info.height = 720; info.frameRate = 29.97
     #expect(info.badges == ["SW", "HLG", "AV1", "720P", "30FPS"])
-    // Smooth Motion draws 60 frames a second (#519).
-    info.smoothedFrameRate = 60
-    #expect(info.badges.last == "30→60FPS")
     info.frameRate = 60
     #expect(info.badges.last == "60FPS")
     info.videoCodec = code("avc1"); info.hardwareDecoding = nil; info.transferFunction = nil

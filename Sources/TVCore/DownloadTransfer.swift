@@ -46,7 +46,6 @@ struct TransferPlan: Codable, Sendable {
     /// DASH: the master playlist's EXT-X-STREAM-INF attributes.
     var streamInfo: String?
     var label: String?
-    var cid: String?
     var duration: Double?
     var expected: Int64? {
         guard kind != .hls else { return nil }
@@ -179,7 +178,7 @@ struct Transfer: Sendable {
                                initialization: initialization, index: index))
         }
         return TransferPlan(kind: .dash, headers: dash.headers, files: files, quality: dash.quality,
-                            streamInfo: dash.streamInfo, label: dash.label, cid: dash.cid, duration: dash.duration)
+                            streamInfo: dash.streamInfo, label: dash.label, duration: dash.duration)
     }
 
     private func prepareHLS(_ playlist: String, base: URL, headers: [String: String]) async throws -> TransferPlan {
