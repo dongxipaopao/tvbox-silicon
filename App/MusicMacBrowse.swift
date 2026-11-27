@@ -116,7 +116,7 @@ struct MusicCollectionTile: View {
         .cardButton()
         .contextMenu { MusicCollectionLikeButton(collection: collection) }
         if let firstFocusIn {
-            if let pageFocus { card.prefersDefaultFocus(true, in: firstFocusIn).focused(pageFocus, equals: "music.firstCover") }
+            if let pageFocus { card.prefersDefaultFocus(true, in: firstFocusIn).focused(pageFocus, equals: "music.firstCover").accessibilityIdentifier("music.firstCover") }
             else { card.prefersDefaultFocus(true, in: firstFocusIn) }
         } else { card }
         #else
@@ -158,6 +158,9 @@ struct MusicBrowseShelves: View {
     #if os(tvOS)
     @Environment(\.resetFocus) private var resetFocus
     @FocusState private var pageFocus: String?
+    /// The first cover is focused once, when the page first opens; coming back from a list keeps the user's place.
+    @State private var focusedFirst = false
+    @State private var moved = false
     #endif
 
     var body: some View {
@@ -178,11 +181,16 @@ struct MusicBrowseShelves: View {
         .padding(.horizontal, -MusicBrowseMetrics.inset)
         // The shelves load after the page opens, by which time the Music Settings button above has taken focus:
         // ask the page's scope again so the first cover of the first shelf (its default) gets it.
-        .onAppear { if let focusScope { resetFocus(in: focusScope) } }
-        // The first cover itself, not See All: set explicitly once the rail has laid out.
+        .onMoveCommand { _ in moved = true }
+        .onAppear { if !focusedFirst, let focusScope { resetFocus(in: focusScope) } }
+        // The first cover itself, not See All: set explicitly once the rail has laid out, once, and never after the
+        // user has moved.
         .task {
+            guard !focusedFirst else { return }
             try? await Task.sleep(for: .milliseconds(400))
-            if pageFocus == nil { pageFocus = "music.firstCover" }
+            guard !focusedFirst, !moved else { return }
+            focusedFirst = true
+            pageFocus = "music.firstCover"
         }
         #else
         VStack(alignment: .leading, spacing: MusicBrowseMetrics.sectionSpacing) {

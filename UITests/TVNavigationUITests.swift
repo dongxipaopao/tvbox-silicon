@@ -688,11 +688,8 @@ final class TVNavigationUITests: XCTestCase {
         note("Music initial focus frame=\(frame) settings=\(describe(settings))")
         XCTAssertFalse(focus.contains("Music Settings"), "Music opened with focus on Music Settings, not the first playlist: \(focus)")
         XCTAssertFalse(focus.hasPrefix("none"), "Music opened with nothing focused")
+        XCTAssertTrue(focus.contains("id=music.firstCover"), "Focus is not the first playlist cover (id music.firstCover): \(focus)")
         XCTAssertFalse(focus.contains("See All") || focus.contains("watchnow.more"), "Music opened on a shelf's See All, not its first playlist cover: \(focus)")
-        // Positive: the focused item is a cover in the content (right of the sidebar, below the magnifier row, above the
-        // Music Settings button that now follows the shelves), at the left end of the first shelf.
-        XCTAssertTrue(frame.minX > 100 && frame.minX < 700 && frame.minY > 150 && (!settings.exists || frame.minY < settings.frame.minY),
-                      "Focus is not on the first playlist cover: \(focus) frame=\(frame)")
         // The magnifier is reachable from the content with Up, Select opens the search, Menu returns to the page.
         let remote = XCUIRemote.shared
         for _ in 0..<4 where !entry.hasFocus { remote.press(.up); sleep(1) }
@@ -702,7 +699,13 @@ final class TVNavigationUITests: XCTestCase {
         snap(app, "music-search-open")
         XCTAssertTrue(app.keyboards.count > 0 || app.searchFields.count > 0, "Select on the Music magnifier did not open the search")
         remote.press(.menu); sleep(2)
+        snap(app, "music-after-back")
         XCTAssertTrue(entry.exists && app.keyboards.count == 0, "Back from the Music search did not return to the page")
+        XCTAssertTrue(app.buttons["music.firstCover"].exists, "The Music page is not showing after Back")
+        // Down from the magnifier returns to the content, and Back from the keyboard leaves the focus on the page.
+        remote.press(.down); sleep(1)
+        note("Music after Down from the magnifier: \(focusInfo(app))")
+        XCTAssertFalse(entry.hasFocus, "Down did not leave the magnifier")
     }
 
     /// Music Settings lists Music Extensions, with the address row (Apple TV adds by address, there is no file picker).
@@ -730,6 +733,12 @@ final class TVNavigationUITests: XCTestCase {
         let remote = XCUIRemote.shared
         snap(app, "source-page")
         XCTAssertEqual(app.keyboards.count, 0, "The source page opened with the keyboard")
+        // Into the content from the sidebar as a user does: Right must land on the first poster.
+        let firstPoster = shown("测试影片 01", in: app)
+        remote.press(.right); sleep(2)
+        note("source page after Right: \(focusInfo(app)) firstPoster=\(describe(firstPoster))")
+        snap(app, "source-page-content-focus")
+        XCTAssertTrue(focusInfo(app).contains("测试影片 01") || firstPoster.hasFocus, "Right did not land on the first poster: \(focusInfo(app))")
         XCTAssertFalse(app.buttons["search.entry"].hasFocus, "The source page opened on the magnifier")
         trace(app, switcher, "source page")
         note("switcher focus attempt: \(focusInfo(app))")
