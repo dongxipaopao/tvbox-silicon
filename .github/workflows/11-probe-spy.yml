@@ -4,7 +4,7 @@ on:
     inputs:
       query:
         description: title to search (appears in the log)
-        default: åä¼åæ
+        default: 后会发期
 jobs:
   play:
     runs-on: xcode-27
