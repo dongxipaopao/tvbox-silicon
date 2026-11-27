@@ -54,7 +54,7 @@ import Testing
     #expect(PluginFailure.message(android, language: "en") == "This source needs an Android feature that isn't supported yet: android.util.AtomicFile.")
     #expect(PluginFailure.diagnostic(source: "Luck", android) == "source=Luck code=unsupported_android NoClassDefFoundError missingClass=android.util.AtomicFile")
     let screen: [String: JSONValue] = ["error": .string("java.lang.RuntimeException: Stub!"), "errorCode": .string("android_screen")]
-    #expect(PluginFailure.message(screen, language: "zh-Hans") == "此条目会打开来源自带的设置或登录界面（例如二维码），映匣无法显示。请改在“设置 → 网盘账号”中登录。")
+    #expect(PluginFailure.message(screen, language: "zh-Hans") == "此条目会打开来源自带的设置或登录界面（例如二维码），XiPlayer无法显示。请改在“设置 → 网盘账号”中登录。")
     #expect(PluginFailure.inPlugin(screen))
     #expect(PluginFailure.message(["error": .string("boom")], language: "en") == "Plugin error: boom")
     let told: [String: JSONValue] = ["error": .string("java.lang.Exception: 还没有配置115 Cookie，请先到配置中心登录"), "errorCode": .string("plugin_message"),

@@ -784,13 +784,13 @@ private struct FakeCatalog: MusicCatalogSource {
     #expect(CloudSources.music?.api == "assets://music/builtin-music.js")
 
     // A plain subscription without yingxiaMusic does not hide the bundled channels.
-    let plain = try Subscription.parse(Data(#"{"sites":[]}"#.utf8), origin: URL(string: "https://plain.example/tvbox.json")!)
+    let plain = try Subscription.parse(Data(#"{"sites":[{"key":"p","name":"P","type":3,"api":"https://x/p.js"}]}"#.utf8), origin: URL(string: "https://plain.example/tvbox.json")!)
     CloudSources.current = plain
     #expect(CloudSources.music?.api == "assets://music/builtin-music.js")
 
     // A subscription with its own yingxiaMusic wins over the bundled one.
     let withMusic = try Subscription.parse(Data(#"""
-    {"yingxia":{"version":1},"sites":[],
+    {"yingxia":{"version":1},"sites":[{"key":"s","name":"S","type":3,"api":"https://x/s.js"}],
      "yingxiaMusic":{"api":"https://music.example/m.js","channels":[{"id":"sub","name":"Sub","platforms":["qq"]}]}}
     """#.utf8), origin: URL(string: "https://sub.example/tvbox.json")!)
     CloudSources.current = withMusic
