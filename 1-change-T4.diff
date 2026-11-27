@@ -1,0 +1,122 @@
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index e96ebf4e..665001b8 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -590,6 +590,117 @@ final class TVNavigationUITests: XCTestCase {
+         XCTAssertFalse(panel.exists, "The Episodes tab stayed open after choosing an episode")
+     }
+ 
++    // MARK: Apple TV parity checks (T1 to T3). They record what is on screen and where focus is, as screenshots and
++    // attachments, and report each mismatch without stopping at the first one.
++
++    private func launch(_ extra: [String]) -> XCUIApplication {
++        let app = XCUIApplication()
++        app.launchArguments = extra + ["-qaIsolatedData", "1", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
++        app.launch()
++        return app
++    }
++    private func snap(_ app: XCUIApplication, _ name: String) {
++        let shot = XCTAttachment(screenshot: app.screenshot())
++        shot.name = name; shot.lifetime = .keepAlways
++        add(shot)
++    }
++    private func focusInfo(_ app: XCUIApplication) -> String {
++        let focused = app.descendants(matching: .any).matching(NSPredicate(format: "hasFocus == true")).firstMatch
++        guard focused.exists else { return "none" }
++        return "id=\(focused.identifier) label=\(focused.label)"
++    }
++    private func note(_ text: String) {
++        let item = XCTAttachment(string: text)
++        item.name = "note"; item.lifetime = .keepAlways
++        add(item)
++    }
++
++    /// The Sources page opens on its content, with no keyboard, and a magnifier that opens the search only when pressed.
++    func testSourcesOpenOnContentAndMagnifierOpensSearch() throws {
++        continueAfterFailure = true
++        let app = launch(["-qaSection", "sites", "-qaSubscription", "http://127.0.0.1:8776/config.json"])
++        let entry = app.buttons["search.entry"]
++        XCTAssertTrue(entry.waitForExistence(timeout: 60), "The Sources page has no search magnifier")
++        sleep(3)
++        note("Sources initial focus: \(focusInfo(app)); keyboards=\(app.keyboards.count)")
++        snap(app, "sources-initial")
++        XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening the Sources page")
++        XCTAssertFalse(entry.hasFocus, "The magnifier, not the first source, has the initial focus")
++        let remote = XCUIRemote.shared
++        for _ in 0..<5 where !entry.hasFocus { remote.press(.up); sleep(1) }
++        note("after Up: \(focusInfo(app))")
++        snap(app, "sources-magnifier-focused")
++        XCTAssertTrue(entry.hasFocus, "Up from the sources did not reach the magnifier")
++        XCTAssertEqual(app.keyboards.count, 0, "Focus on the magnifier opened the keyboard")
++        remote.press(.select); sleep(3)
++        snap(app, "sources-search-open")
++        note("after Select: keyboards=\(app.keyboards.count) searchFields=\(app.searchFields.count) focus=\(focusInfo(app))")
++        XCTAssertTrue(app.keyboards.count > 0 || app.searchFields.count > 0, "Select on the magnifier did not open the search")
++        remote.press(.menu); sleep(2)
++        snap(app, "sources-after-back")
++        note("after Menu: \(focusInfo(app)); entryExists=\(entry.exists)")
++        XCTAssertTrue(entry.exists, "Back from the search did not return to the Sources page")
++        XCTAssertEqual(app.keyboards.count, 0, "The keyboard stayed after Back")
++    }
++
++    /// Music has the same magnifier and no keyboard on opening.
++    func testMusicOpensWithoutKeyboardAndHasMagnifier() throws {
++        continueAfterFailure = true
++        let app = launch(["-qaSection", "music"])
++        let entry = app.buttons["search.entry"]
++        XCTAssertTrue(entry.waitForExistence(timeout: 60), "The Music page has no search magnifier")
++        sleep(5)
++        note("Music initial focus: \(focusInfo(app)); keyboards=\(app.keyboards.count)")
++        snap(app, "music-initial")
++        XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening the Music page")
++    }
++
++    /// Music Settings lists Music Extensions, with the address row (Apple TV adds by address, there is no file picker).
++    func testMusicSettingsHasMusicExtensions() throws {
++        continueAfterFailure = true
++        let app = launch(["-qaSection", "music", "-qaMusicSettings", "1"])
++        XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
++        let remote = XCUIRemote.shared
++        sleep(2)
++        snap(app, "music-settings-top")
++        for index in 0..<8 where !shown("Add from Address", in: app).exists { remote.press(.down); sleep(1); if index == 3 { snap(app, "music-settings-mid") } }
++        snap(app, "music-settings-extensions")
++        XCTAssertTrue(shown("Music Extensions", in: app).exists, "No Music Extensions section")
++        XCTAssertTrue(shown("Add from Address", in: app).exists, "No Add from Address row in Music Extensions")
++    }
++
++    /// A source's page has its name with a down arrow; Select opens the subscription chips and that subscription's sources;
++    /// choosing another source switches the page.
++    func testSourcePageSwitchesSourceFromItsName() throws {
++        continueAfterFailure = true
++        let app = launch(["-qaSection", "sites", "-qaPage", "site:qa-standard", "-qaSubscription", "http://127.0.0.1:8776/config.json"])
++        XCTAssertTrue(shown("测试影片 01", in: app).waitForExistence(timeout: 60), "The source page did not load")
++        let switcher = app.buttons["site.switcher"]
++        XCTAssertTrue(switcher.waitForExistence(timeout: 10), "The source page has no switcher")
++        let remote = XCUIRemote.shared
++        snap(app, "source-page")
++        for _ in 0..<6 where !switcher.hasFocus { remote.press(.up); sleep(1) }
++        note("switcher focus attempt: \(focusInfo(app))")
++        XCTAssertTrue(switcher.hasFocus, "The remote did not reach the source name button")
++        let before = switcher.value as? String ?? ""
++        remote.press(.select); sleep(2)
++        snap(app, "switcher-open")
++        let groups = app.descendants(matching: .any)["site.switch.groups"]
++        XCTAssertTrue(groups.exists, "The switch list has no subscription chips")
++        let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'site.switch.row.'"))
++        note("switch rows=\(rows.count); focus=\(focusInfo(app)); current=\(before)")
++        XCTAssertGreaterThan(rows.count, 1, "The switch list shows fewer than two sources")
++        XCTAssertTrue(rows.matching(NSPredicate(format: "hasFocus == true")).count == 1, "Focus did not start on a source row")
++        // Move to a different row and choose it.
++        remote.press(.down); sleep(1)
++        let picked = focusInfo(app)
++        remote.press(.select); sleep(4)
++        snap(app, "after-switch")
++        note("picked \(picked); switcher now \(app.buttons["site.switcher"].value as? String ?? "?")")
++        XCTAssertFalse(groups.exists, "The switch list stayed open after choosing")
++        XCTAssertNotEqual(app.buttons["site.switcher"].value as? String ?? "", before, "The page did not switch to the chosen source")
++    }
++
+     /// Poster titles are part of their card's label, so look for the text anywhere in a label.
+     private func shown(_ text: String, in app: XCUIApplication) -> XCUIElement {
+         app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
