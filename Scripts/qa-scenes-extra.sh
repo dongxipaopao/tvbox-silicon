@@ -16,5 +16,10 @@ case "${SCENES:-}" in
     shot 26e-stream-shape-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-shape -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
     shot 26f-stream-episode-cleared-zh 40 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -qaRexEpisodeAfter 2 -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
     shot 26g-stream-tap-player 40 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -qaRexTap 1
+    # The removal of Danmaku, Sharper Picture and Smooth Motion, and the three kept app icons (B76/B77).
+    shot 27a-settings-root-zh 20 -qaSection settings -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+    shot 27b-settings-playback-zh 20 -qaSection settings -qaPage playback -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+    shot 27c-settings-app-icon-zh 20 -qaSection settings -qaPage app-icon -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+    shot 27d-settings-cache-zh 20 -qaSection settings -qaPage cache -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
     ;;
 esac

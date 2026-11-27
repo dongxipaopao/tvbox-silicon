@@ -5,12 +5,12 @@ import CryptoKit
 /// A ticket prevents a download started before deletion from recreating deleted data.
 public final class MediaCache: @unchecked Sendable {
     public static let shared = MediaCache()
-    public enum Kind: String, Codable, Sendable { case artwork, danmaku, lookup, catalog }
+    /// `legacyDanmaku` only names entries an older version wrote, so they can be found and deleted. Nothing writes or reads it.
+    public enum Kind: String, Codable, Sendable { case artwork, legacyDanmaku = "danmaku", lookup, catalog }
     public struct Ticket: Sendable { fileprivate let generation: UInt64 }
     public struct Summary: Sendable {
         public let bytes: Int
         public let artwork: Int
-        public let danmaku: Int
         public let lookups: Int
         public let catalogs: Int
     }
@@ -98,13 +98,13 @@ public final class MediaCache: @unchecked Sendable {
         lock.withLock {
             prune(now: now); persist()
             return Summary(bytes: entries.values.reduce(0) { $0 + $1.bytes }, artwork: entries.values.filter { $0.kind == .artwork }.count,
-                           danmaku: entries.values.filter { $0.kind == .danmaku }.count, lookups: entries.values.filter { $0.kind == .lookup }.count,
+                           lookups: entries.values.filter { $0.kind == .lookup }.count,
                            catalogs: entries.values.filter { $0.kind == .catalog }.count)
         }
     }
     private func erase(_ key: String) { entries[key] = nil; try? FileManager.default.removeItem(at: root.appending(path: key)) }
     private func prune(now: Date) {
-        for key in entries.keys.filter({ entries[$0]!.expires <= now }) { erase(key) }
+        for key in entries.keys.filter({ entries[$0]!.expires <= now || entries[$0]!.kind == .legacyDanmaku }) { erase(key) }
         // Lookup scope is a work, not an episode. Retain only the last 20 successful work mappings.
         let lookups = entries.filter { $0.value.kind == .lookup }.sorted { $0.value.used > $1.value.used }
         for (key, _) in lookups.dropFirst(20) { erase(key) }
