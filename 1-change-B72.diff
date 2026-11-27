@@ -1,0 +1,273 @@
+diff --git a/App/RexView.swift b/App/RexView.swift
+index d908a029..0969c3d8 100644
+--- a/App/RexView.swift
++++ b/App/RexView.swift
+@@ -210,7 +210,7 @@ struct RexModuleView: View {
+                 }
+                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12, alignment: .top)], spacing: 14) {
+                     ForEach(items) { item in
+-                        RouteLink { RexItemView(item: item) } label: { RexTile(item: item) }
++                        RouteLink { RexItemView(widget: widget, stream: module?.functions.first(where: \.isStream), item: item) } label: { RexTile(item: item) }
+                             .buttonStyle(.plain).accessibilityIdentifier("rex.item." + item.id)
+                     }
+                 }
+@@ -267,7 +267,17 @@ private struct RexTile: View {
+ 
+ /// A title from a Rex module: its cover and facts, and a way to search the user's own sources for it.
+ struct RexItemView: View {
++    let widget: RexCollection.Widget
++    let stream: RexFunction?
+     let item: RexItem
++    @Environment(Store.self) private var store
++    @State private var episode = 1
++    @State private var lines: [RexLine] = []
++    @State private var skipped = 0
++    @State private var loading = false
++    @State private var asked = false
++    @State private var failure: String?
++
+     var body: some View {
+         ScrollView {
+             VStack(spacing: 16) {
+@@ -275,11 +285,53 @@ struct RexItemView: View {
+                 Text(item.title).font(.title2.weight(.semibold)).multilineTextAlignment(.center)
+                 if !item.subtitle.isEmpty { Text(item.subtitle).font(.subheadline).opacity(0.7) }
+                 if !item.overview.isEmpty { Text(item.overview).font(.footnote).opacity(0.7).multilineTextAlignment(.leading) }
++                if let stream { playLines(stream) }
+                 DiscoverFindSourcesButton(title: item.title).padding(.top, 8).accessibilityIdentifier("rex.findSources")
+             }.padding(40).frame(maxWidth: .infinity)
+         }
+         .background { DiscoverCanvas(poster: item.poster) }
+         .foregroundStyle(.white).preferredColorScheme(.dark)
+     }
++
++    @ViewBuilder private func playLines(_ stream: RexFunction) -> some View {
++        VStack(spacing: 10) {
++            Stepper(value: $episode, in: 1...999) { Text(L10n.text("Episode %lld", episode)) }
++            Button { Task { await load(stream) } } label: { Text(L10n.text("Show Play Lines")).frame(maxWidth: .infinity) }
++                .buttonStyle(.borderedProminent).disabled(loading).accessibilityIdentifier("rex.showLines")
++            if loading { ProgressView().accessibilityIdentifier("rex.lines.loading") }
++            if let failure { Text(failure).font(.footnote).opacity(0.7).multilineTextAlignment(.center) }
++            else if asked, !loading, lines.isEmpty { Text(L10n.text("No play lines were returned.")).font(.footnote).opacity(0.7) }
++            ForEach(lines) { line in
++                Button { play(line) } label: {
++                    VStack(alignment: .leading, spacing: 2) {
++                        Text(line.name.isEmpty ? L10n.text("Play Line") : line.name).font(.subheadline.weight(.semibold))
++                        if !line.detail.isEmpty { Text(line.detail).font(.caption).opacity(0.7).lineLimit(2) }
++                        if line.playURL == nil { Text(L10n.text("This line is not a web address, so it cannot play.")).font(.caption).opacity(0.7) }
++                    }.frame(maxWidth: .infinity, alignment: .leading)
++                }
++                .buttonStyle(.bordered).disabled(line.playURL == nil)
++            }
++            if skipped > 0 { Text(L10n.text("%lld lines had no address and were skipped.", skipped)).font(.caption).opacity(0.7) }
++        }
++    }
++
++    private func load(_ stream: RexFunction) async {
++        loading = true; failure = nil; defer { loading = false; asked = true }
++        var params = ["id": item.id, "link": item.id, "episode": String(episode)]
++        if !item.kind.isEmpty { params["type"] = item.kind; params["mediaType"] = item.kind }
++        do {
++            let answer = try await RexRuntime.shared.lines(widget, function: stream, params: params)
++            lines = answer.lines; skipped = answer.invalid
++        } catch {
++            lines = []; skipped = 0
++            failure = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
++        }
++    }
++
++    private func play(_ line: RexLine) {
++        guard let url = line.playURL else { return }
++        let name = line.name.isEmpty ? item.title : item.title + " · " + line.name
++        store.playing = Channel(name: name, group: "Rex", url: url, headers: line.headers)
++    }
+ }
+ #endif
+diff --git a/Sources/TVCore/Resources/en.lproj/Localizable.strings b/Sources/TVCore/Resources/en.lproj/Localizable.strings
+index 3992f90f..715e62a6 100644
+--- a/Sources/TVCore/Resources/en.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/en.lproj/Localizable.strings
+@@ -2412,3 +2412,10 @@
+ "This list is empty." = "This list is empty.";
+ "This subscription has no modules." = "This subscription has no modules.";
+ "This module needs %@, which this app does not support yet." = "This module needs %@, which this app does not support yet.";
++"Episode %lld" = "Episode %lld";
++"Show Play Lines" = "Show Play Lines";
++"Play Line" = "Play Line";
++"No play lines were returned." = "No play lines were returned.";
++"This line is not a web address, so it cannot play." = "This line is not a web address, so it cannot play.";
++"%lld lines had no address and were skipped." = "%lld lines had no address and were skipped.";
++"This module answered in a form this app does not understand yet." = "This module answered in a form this app does not understand yet.";
+diff --git a/Sources/TVCore/Resources/ja.lproj/Localizable.strings b/Sources/TVCore/Resources/ja.lproj/Localizable.strings
+index 79969a4a..0dbee9c3 100644
+--- a/Sources/TVCore/Resources/ja.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/ja.lproj/Localizable.strings
+@@ -2412,3 +2412,10 @@
+ "This list is empty." = "このリストは空です。";
+ "This subscription has no modules." = "このサブスクリプションにモジュールはありません。";
+ "This module needs %@, which this app does not support yet." = "このモジュールには「%@」が必要ですが、このアプリはまだ対応していません。";
++"Episode %lld" = "第 %lld 話";
++"Show Play Lines" = "再生ラインを表示";
++"Play Line" = "再生ライン";
++"No play lines were returned." = "モジュールから再生ラインが返されませんでした。";
++"This line is not a web address, so it cannot play." = "このラインは Web アドレスではないため再生できません。";
++"%lld lines had no address and were skipped." = "%lld 件のラインはアドレスがなくスキップされました。";
++"This module answered in a form this app does not understand yet." = "このモジュールの応答形式にはまだ対応していません。";
+diff --git a/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings b/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
+index 920b3004..8297a593 100644
+--- a/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
+@@ -2412,3 +2412,10 @@
+ "This list is empty." = "这个列表是空的。";
+ "This subscription has no modules." = "这个订阅里没有模块。";
+ "This module needs %@, which this app does not support yet." = "这个模块需要“%@”，本应用暂不支持。";
++"Episode %lld" = "第 %lld 集";
++"Show Play Lines" = "显示播放线路";
++"Play Line" = "播放线路";
++"No play lines were returned." = "模块没有返回播放线路。";
++"This line is not a web address, so it cannot play." = "这条线路不是网页地址，无法播放。";
++"%lld lines had no address and were skipped." = "有 %lld 条线路没有地址，已跳过。";
++"This module answered in a form this app does not understand yet." = "这个模块返回的格式，本应用暂时无法识别。";
+diff --git a/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings b/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
+index af61646e..3e122511 100644
+--- a/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
+@@ -2412,3 +2412,10 @@
+ "This list is empty." = "這個列表是空的。";
+ "This subscription has no modules." = "這個訂閱裡沒有模組。";
+ "This module needs %@, which this app does not support yet." = "這個模組需要「%@」，本應用暫不支援。";
++"Episode %lld" = "第 %lld 集";
++"Show Play Lines" = "顯示播放線路";
++"Play Line" = "播放線路";
++"No play lines were returned." = "模組沒有回傳播放線路。";
++"This line is not a web address, so it cannot play." = "這條線路不是網頁位址，無法播放。";
++"%lld lines had no address and were skipped." = "有 %lld 條線路沒有位址，已跳過。";
++"This module answered in a form this app does not understand yet." = "這個模組回傳的格式，本應用暫時無法辨識。";
+diff --git a/Sources/TVCore/Rex.swift b/Sources/TVCore/Rex.swift
+index d7d7b453..3382288d 100644
+--- a/Sources/TVCore/Rex.swift
++++ b/Sources/TVCore/Rex.swift
+@@ -59,6 +59,27 @@ public struct RexFunction: Hashable, Sendable, Identifiable {
+     public let params: [RexParam]
+     /// A "stream" module resolves a play address rather than listing titles.
+     public let listsTitles: Bool
++    /// A function declared with type "stream": it answers with play lines (`RexRuntime.lines`).
++    public let isStream: Bool
++}
++
++/// One play line a stream module returned. Lines that are not web addresses are kept and shown as unplayable.
++public struct RexLine: Hashable, Sendable, Identifiable {
++    public let name: String
++    public let detail: String
++    public let url: String
++    public let headers: [String: String]
++    public var id: String { name + "|" + url }
++    public var playURL: URL? {
++        guard let url = URL(string: url), let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme) else { return nil }
++        return url
++    }
++}
++
++public struct RexLines: Sendable {
++    public let lines: [RexLine]
++    /// Entries the module returned that were not objects or had no address text, counted, never silently lost.
++    public let invalid: Int
+ }
+ 
+ public struct RexModule: Hashable, Sendable {
+@@ -76,6 +97,8 @@ public struct RexItem: Hashable, Sendable, Identifiable {
+     public let overview: String
+     public let rating: Double?
+     public let year: Int?
++    /// The item's own `mediaType` (movie or tv) when the module gives one, else empty.
++    public let kind: String
+ }
+ 
+ public actor RexRuntime {
+@@ -148,6 +171,32 @@ public actor RexRuntime {
+         return (value["items"]?.array ?? []).compactMap(Self.item)
+     }
+ 
++    /// A stream function's play lines for one title and episode. `params` replace the module's defaults.
++    public func lines(_ widget: RexCollection.Widget, function: RexFunction, params: [String: String]) async throws -> RexLines {
++        let entry = try await load(widget)
++        var all = entry.module.globals
++        for (key, value) in params { all[key] = value }
++        let json = String(decoding: try JSONSerialization.data(withJSONObject: all), as: UTF8.self)
++        let literal = String(decoding: try JSONSerialization.data(withJSONObject: [function.functionName], options: []), as: UTF8.self).dropFirst().dropLast()
++        let envelope = await entry.session.evaluate("__rex.resources(\(literal), \(json))", within: 60)
++        guard let value = envelope["value"]?.object else {
++            throw RexError.failed(Self.explain(String((envelope["error"]?.string ?? "The module did not answer").prefix(200))))
++        }
++        if let message = value["error"]?.string {
++            if message == "REX_SHAPE" { throw RexError.failed(L10n.text("This module answered in a form this app does not understand yet.")) }
++            throw RexError.failed(Self.explain(message))
++        }
++        let lines: [RexLine] = (value["lines"]?.array ?? []).compactMap { entry in
++            guard let object = entry.object, let url = object["url"]?.string else { return nil }
++            var headers: [String: String] = [:]
++            for (key, header) in object["headers"]?.object ?? [:] { if let text = header.string { headers[key] = text } }
++            return RexLine(name: object["name"]?.string ?? "", detail: object["description"]?.string ?? "", url: url, headers: headers)
++        }
++        var invalid = 0
++        if case .number(let count)? = value["invalid"] { invalid = Int(count) }
++        return RexLines(lines: lines, invalid: invalid)
++    }
++
+     private func load(_ widget: RexCollection.Widget) async throws -> Loaded {
+         if let existing = loaded[widget.url] {
+             recent.removeAll { $0 == widget.url }; recent.append(widget.url)
+@@ -189,7 +238,7 @@ public actor RexRuntime {
+             guard let object = value.object, let name = object["functionName"]?.string else { return nil }
+             let type = object["type"]?.string ?? ""
+             return RexFunction(id: object["id"]?.string ?? name, title: object["title"]?.string ?? name, functionName: name,
+-                               params: params(object["params"]?.array), listsTitles: type.isEmpty || type == "list")
++                               params: params(object["params"]?.array), listsTitles: type.isEmpty || type == "list", isStream: type == "stream")
+         }
+         return RexModule(widget: widget, title: meta["title"]?.string ?? widget.title, functions: functions, globals: globals)
+     }
+@@ -203,7 +252,7 @@ public actor RexRuntime {
+         if case .number(let score)? = object["rating"], score > 0 { rating = score }
+         return RexItem(id: object["id"]?.string ?? title, title: title, subtitle: object["subtitle"]?.string ?? object["genreTitle"]?.string ?? "",
+                        poster: poster.isEmpty ? nil : URL(string: poster.replacingOccurrences(of: "http://", with: "https://")),
+-                       overview: object["description"]?.string ?? "", rating: rating, year: Int(date.prefix(4)))
++                       overview: object["description"]?.string ?? "", rating: rating, year: Int(date.prefix(4)), kind: object["mediaType"]?.string ?? "")
+     }
+ }
+ 
+diff --git a/Sources/TVCore/ScriptAssets/rex/prelude.js b/Sources/TVCore/ScriptAssets/rex/prelude.js
+index b0456a26..25f09651 100644
+--- a/Sources/TVCore/ScriptAssets/rex/prelude.js
++++ b/Sources/TVCore/ScriptAssets/rex/prelude.js
+@@ -89,6 +89,31 @@ globalThis.__rex = {
+         if (!meta || typeof meta !== 'object') throw new Error('The module has no WidgetMetadata');
+         return JSON.parse(JSON.stringify(meta));
+     },
++    // A "stream" function (loadResource) answers with an array of play lines, {name, description, url}, as the user's
++    // 看剧AI module does. Anything else is reported as an unknown answer form rather than guessed at. Lines are never
++    // dropped without a count: `invalid` is how many entries had no usable address text or were not objects.
++    // `headers` is kept when a line carries it (string values only).
++    async resources(name, params) {
++        try {
++            const fn = globalThis.__rexLookup(String(name));
++            if (typeof fn !== 'function') throw new Error('The module has no function ' + name);
++            const result = await fn(params || {});
++            if (!Array.isArray(result)) return { error: 'REX_SHAPE' };
++            const lines = [];
++            let invalid = 0;
++            for (const entry of result) {
++                if (!entry || typeof entry !== 'object' || typeof entry.url !== 'string' || !entry.url.trim()) { invalid += 1; continue; }
++                const headers = {};
++                if (entry.headers && typeof entry.headers === 'object' && !Array.isArray(entry.headers)) {
++                    for (const key of Object.keys(entry.headers)) if (typeof entry.headers[key] === 'string') headers[key] = entry.headers[key];
++                }
++                lines.push({ name: String(entry.name == null ? '' : entry.name), description: String(entry.description == null ? '' : entry.description), url: entry.url.trim(), headers });
++            }
++            return { lines, invalid };
++        } catch (error) {
++            return { error: String(error && error.message || error).slice(0, 300) };
++        }
++    },
+     async call(name, params) {
+         try {
+             const fn = globalThis.__rexLookup(String(name));
