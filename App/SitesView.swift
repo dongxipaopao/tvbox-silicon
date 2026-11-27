@@ -1259,6 +1259,10 @@ struct SiteBrowseView: View {
     /// Picks another source without leaving the page; nil for a folder's page.
     var switcher: ((Site) -> Void)? = nil
     @State private var switching = false
+    #if os(tvOS)
+    /// Apple TV opens on the first cover (`.defaultFocus`), not the source's name above it.
+    @FocusState private var tvFocus: String?
+    #endif
     let origin: URL
     let jarURL: URL?
     var initialQuery: String = ""
@@ -1376,6 +1380,7 @@ struct SiteBrowseView: View {
                         let landscape = showsBilibiliTiles
                         LazyVGrid(columns: landscape ? Self.bilibiliColumns : Layout.posterColumns, spacing: Layout.gridRowSpacing) {
                             ForEach(browser.videos) { video in
+                                let first = video.id == browser.videos.first?.id
                                 Group {
                                     // An index source (a ranking or list site) names titles; other sources play them.
                                     if isIndex {
@@ -1389,6 +1394,10 @@ struct SiteBrowseView: View {
                                         RouteLink { CatalogDestination(video: video, client: client) } label: { PosterCard(video: video) }.cardButton()
                                     }
                                 }
+                                #if os(tvOS)
+                                .focused($tvFocus, equals: first ? "site.firstPoster" : "site.poster.\(video.id)")
+                                .accessibilityIdentifier(first ? "site.firstPoster" : "site.poster")
+                                #endif
                                 .onAppear {
                                     // The last cover coming on screen appends the next page, so scrolling never stops
                                     // at a page boundary. A failed page waits for the footer's Retry instead.
@@ -1405,6 +1414,7 @@ struct SiteBrowseView: View {
                     }.pageContainer()
                 }
                 #if os(tvOS)
+                .defaultFocus($tvFocus, "site.firstPoster")
                 // Opens on the first cover; only the magnifier brings up the keyboard.
                 .tvSearchEntry(text: Binding(get: { query }, set: { value in
                     query = value

@@ -738,7 +738,7 @@ final class TVNavigationUITests: XCTestCase {
         remote.press(.right); sleep(2)
         note("source page after Right: \(focusInfo(app)) firstPoster=\(describe(firstPoster))")
         snap(app, "source-page-content-focus")
-        XCTAssertTrue(focusInfo(app).contains("测试影片 01") || firstPoster.hasFocus, "Right did not land on the first poster: \(focusInfo(app))")
+        XCTAssertTrue(focusInfo(app).contains("site.firstPoster") || firstPoster.hasFocus, "Right did not land on the first poster: \(focusInfo(app))")
         XCTAssertFalse(app.buttons["search.entry"].hasFocus, "The source page opened on the magnifier")
         trace(app, switcher, "source page")
         note("switcher focus attempt: \(focusInfo(app))")

@@ -13,6 +13,9 @@ struct MusicView: View {
     @State private var showsSettings = false
     /// Apple TV opens on the first playlist shelf's first cover, not on the search.
     @Namespace private var focusScope
+    #if os(tvOS)
+    @FocusState private var musicFocus: String?
+    #endif
     #if DEBUG
     /// `-qaMusicOpen 1` opens the first album or playlist found, for screenshots.
     @State private var qaOpened: MusicCollection?
@@ -46,6 +49,7 @@ struct MusicView: View {
         }
         #if os(tvOS)
         .focusScope(focusScope)
+        .defaultFocus($musicFocus, "music.firstCover")
         #endif
         .screenBackdrop()
         .tvSearchEntry(text: $query, prompt: L10n.text("Song, artist, album or playlist")) {
@@ -197,7 +201,11 @@ struct MusicView: View {
 
     @ViewBuilder private func content(_ search: MusicSearchModel) -> some View {
         if search.query.isEmpty {
-            MusicHome(focusScope: focusScope) { showsSettings = true }
+            #if os(tvOS)
+            MusicHome(focusScope: focusScope, pageFocus: $musicFocus) { showsSettings = true }
+            #else
+            MusicHome(focusScope: focusScope, pageFocus: nil) { showsSettings = true }
+            #endif
         } else if search.results.isEmpty && search.collections.isEmpty && search.busy {
             ProgressView().frame(maxWidth: .infinity).padding(.vertical, 80)
         } else if search.failed {
@@ -311,6 +319,7 @@ enum MusicLayout {
 private struct MusicHome: View {
     @Environment(Store.self) private var store
     let focusScope: Namespace.ID
+    let pageFocus: FocusState<String?>.Binding?
     let openSettings: () -> Void
 
     var body: some View {
@@ -330,7 +339,7 @@ private struct MusicHome: View {
         if playlists > 0 { MusicPlaylistsLink(count: playlists).padding(.bottom, 20) }
         if downloads { MusicDownloadsLink().padding(.bottom, 20) }
         if !browse.sections.isEmpty {
-            MusicBrowseShelves(sections: browse.sections, focusScope: focusScope).padding(.bottom, 28)
+            MusicBrowseShelves(sections: browse.sections, focusScope: focusScope, pageFocus: pageFocus).padding(.bottom, 28)
         } else if browse.loading {
             ProgressView().frame(maxWidth: .infinity).padding(.vertical, 60)
         }
