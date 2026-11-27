@@ -1,0 +1,157 @@
+name: build-tvos-python
+on:
+  workflow_dispatch:
+    inputs:
+      runtime_run_id:
+        description: "Reuse runtime-tvos from this earlier run id"
+        required: true
+        default: "46037197156"
+jobs:
+  ipa-tvos:
+    runs-on: xcode-27
+    timeout-minutes: 200
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime-tvos
+          run-id: ${{ inputs.runtime_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: mkdir -p build && tar -C build -xf runtime.tar
+      - name: Select newest Xcode (27 beta on the xcode-27 image)
+        run: |
+          ls -d /Applications/Xcode_*.app || true
+          best=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          echo "Using $best"
+          sudo xcode-select -s "$best/Contents/Developer"
+          xcodebuild -version
+          swift --version
+      - name: Tools
+        run: brew install xcodegen meson ninja 2>&1 | tail -2 || true
+      - name: Restore FFmpeg cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/tvbox-ffmpeg
+            ~/Library/Caches/tvbox-libass
+          key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
+      - name: FFmpeg and libass
+        run: |
+          Scripts/build-apple-ffmpeg.sh
+          Scripts/build-apple-libass.sh
+      - name: Save FFmpeg cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/Library/Caches/tvbox-ffmpeg
+            ~/Library/Caches/tvbox-libass
+          key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
+      - name: Restore Python cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/apple-python
+          key: python-tvos-v1-${{ hashFiles('Scripts/build-apple-python.sh', 'Scripts/build-apple-python-wheels.sh', 'Runtime/PythonHost/requirements.txt') }}
+      - name: Python runtime (tvOS device)
+        run: |
+          set -o pipefail
+          brew install python@3.14 2>&1 | tail -3 || true
+          export HOST_PYTHON="$(brew --prefix python@3.14)/bin/python3.14"
+          Scripts/build-apple-python.sh tvos 2>&1 | tee python-tvos.log | tail -80
+          ls build/ApplePython/appletvos | head
+      - name: Save Python cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: build/apple-python
+          key: python-tvos-v1-${{ hashFiles('Scripts/build-apple-python.sh', 'Scripts/build-apple-python-wheels.sh', 'Runtime/PythonHost/requirements.txt') }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-tvos-log
+          path: python-tvos.log
+          if-no-files-found: ignore
+      - name: XiPlayer icons
+        run: |
+          rm -rf /tmp/xi && mkdir /tmp/xi && unzip -qo Design/XiPlayer-icons.zip -d /tmp/xi
+          cp /tmp/xi/ios/AppIcon.png Config/iOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+          rm -rf "Config/tvOS/Assets.xcassets/App Icon & Top Shelf Image.brandassets"
+          cp -R "/tmp/xi/tvos/App Icon & Top Shelf Image.brandassets" Config/tvOS/Assets.xcassets/
+          git status --short | head
+      - name: Generate project
+        run: |
+          mkdir -p build/ScriptHost build/PythonHost
+          xcodegen generate
+      - name: Archive unsigned
+        run: |
+          set -o pipefail
+          xcodebuild -project TVBox.xcodeproj -scheme TVBox-tvOS -configuration Release \
+            -destination 'generic/platform=tvOS' -derivedDataPath build/DD \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee xcodebuild-tvos.log | tail -60
+      - name: Show compile errors
+        if: failure()
+        run: grep -E 'error:' xcodebuild-tvos.log | sort -u | head -600 || true
+      - name: Package IPA
+        run: |
+          APP=$(find build/DD/Build/Products -maxdepth 2 -name '*.app' | head -1)
+          rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
+          zip -qry Yingxia-tvOS-unsigned.ipa Payload
+          ls -l Yingxia-tvOS-unsigned.ipa
+      - name: Verify IPA contents
+        run: |
+          set +o pipefail
+          rm -rf /tmp/ipachk && mkdir /tmp/ipachk && unzip -q Yingxia-tvOS-unsigned.ipa -d /tmp/ipachk
+          A=$(ls -d /tmp/ipachk/Payload/*.app)
+          {
+            echo "ipa sha256: $(shasum -a 256 Yingxia-tvOS-unsigned.ipa | cut -d' ' -f1)"
+            echo "ipa bytes: $(stat -f%z Yingxia-tvOS-unsigned.ipa)"
+            echo "source commit: ${{ github.sha }}"
+            echo "app: $A"
+            for k in CFBundleDisplayName CFBundleIconName CFBundleIdentifier CFBundleShortVersionString CFBundleVersion MinimumOSVersion UIDeviceFamily DTPlatformName DTSDKName DTPlatformVersion UIRequiredDeviceCapabilities; do
+              echo "$k = $(/usr/libexec/PlistBuddy -c "Print :$k" "$A/Info.plist" 2>&1 | tr '\n' ' ')"
+            done
+            EXE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$A/Info.plist")
+            echo "executable: $EXE"
+            lipo -info "$A/$EXE"
+            vtool -show-build "$A/$EXE" | head -12
+            echo "--- bundle top level"; ls -la "$A" | head -60
+            echo "--- frameworks"; ls "$A/Frameworks" 2>/dev/null | head -40
+            echo "--- biggest files"; find "$A" -type f -exec stat -f '%z %N' {} + | sort -rn | head -25
+            echo "--- icons in Assets.car"; xcrun assetutil --info "$A/Assets.car" 2>/dev/null | grep -E '"(Name|Idiom)"' | grep -E 'App ?Icon|Top Shelf' | sort | uniq -c | head -12
+            echo "--- url schemes"; /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$A/Info.plist" 2>&1 | head -14
+            echo "--- file count: $(find "$A" -type f | wc -l)"
+            echo "--- codesign"; codesign -dv "$A" 2>&1 | head -5 || true
+          } 2>&1 | tee ipa-tvos-verify.txt
+          grep -q "arm64" ipa-tvos-verify.txt
+          echo "python entries in ipa: $(unzip -l Yingxia-tvOS-unsigned.ipa | grep -c 'Python.framework\|PythonHost')" | tee -a ipa-tvos-verify.txt
+          test "$(unzip -l Yingxia-tvOS-unsigned.ipa | grep -c 'Python.framework')" -gt 0
+      - name: Name IPA into ipa/ (version, build, commit, platform)
+        run: |
+          A=$(ls -d /tmp/ipachk/Payload/*.app)
+          V=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$A/Info.plist")
+          B=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$A/Info.plist")
+          mkdir -p ipa
+          cp Yingxia-tvOS-unsigned.ipa "ipa/XiPlayer-${V}-b${B}-$(echo ${{ github.sha }} | cut -c1-7)-tvos-unsigned.ipa"
+          ls -l ipa; (cd ipa && shasum -a 256 *.ipa) | tee ipa-named.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ipa-named
+          path: |
+            ipa/*.ipa
+            ipa-named.sha256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ipa-tvos-verify
+          path: ipa-tvos-verify.txt
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ipa-tvos
+          path: Yingxia-tvOS-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ipa-tvos-log
+          path: xcodebuild-tvos.log
+          if-no-files-found: ignore
