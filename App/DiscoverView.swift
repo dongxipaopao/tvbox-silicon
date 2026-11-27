@@ -1883,6 +1883,11 @@ private struct DoubanTitleView: View {
         .task(id: item.id) {
             guard !looked else { return }
             let started = ContinuousClock.now
+            #if DEBUG
+            // A controlled slow match for screenshots: with `-qaDiscoverOpen`, the lookup waits 20s first, so the card's
+            // waiting state shows (the simulator has no network, so the lookup would otherwise end at once).
+            if UserDefaults.standard.string(forKey: "qaDiscoverOpen") != nil { try? await Task.sleep(for: .seconds(20)) }
+            #endif
             let results = (try? await TMDBMatch.search(DoubanCatalog.searchTitle(item))) ?? []
             guard !Task.isCancelled else { return }
             match = DoubanCatalog.match(item, in: results)?.catalogItem

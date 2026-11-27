@@ -5360,7 +5360,11 @@ struct SourceSwitchSheet: View {
             guard !qaDone else { return }
             qaDone = true
             let all = store.sourceGroups(includeHidden: false)
-            if let n = UserDefaults.standard.object(forKey: "qaSwitchGroup") as? Int, all.indices.contains(n) { group = all[n].id }
+            // A launch argument arrives as a string, so read it as an integer, not `as? Int`.
+            if UserDefaults.standard.object(forKey: "qaSwitchGroup") != nil {
+                let n = UserDefaults.standard.integer(forKey: "qaSwitchGroup")
+                if all.indices.contains(n) { group = all[n].id }
+            }
             if let key = UserDefaults.standard.string(forKey: "qaSwitchPick") {
                 try? await Task.sleep(for: .seconds(6))
                 if let site = all.flatMap(\.sites).first(where: { $0.key == key }) { choose(site); dismiss() }
