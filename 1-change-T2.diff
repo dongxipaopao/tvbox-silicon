@@ -1,0 +1,251 @@
+diff --git a/App/DiscoverDetailView.swift b/App/DiscoverDetailView.swift
+index 0f5ba9b6..d2b0560b 100644
+--- a/App/DiscoverDetailView.swift
++++ b/App/DiscoverDetailView.swift
+@@ -1358,12 +1358,7 @@ extension DiscoverDetailView {
+             }.shadow(color: .black.opacity(0.4), radius: 12)
+             HStack(alignment: .top, spacing: 56) {
+                 VStack(alignment: .leading, spacing: 14) {
+-                    Button { tvFindSources() } label: {
+-                        Label(L10n.text(store.subscription == nil ? "Add Subscription" : "Search Sources"), systemImage: "magnifyingglass")
+-                            .frame(maxWidth: .infinity)
+-                    }
+-                    .buttonStyle(DiscoverTVActionStyle(height: 82, font: 30))
+-                    .accessibilityIdentifier("discover.findSources")
++                    tvPlayButton
+                     HStack(spacing: 7) {
+                         if details?.trailer != nil {
+                             tvIconButton("play.rectangle", "Trailer", "discover.detail.playTrailer") { trailerShown = true }
+@@ -1428,6 +1423,107 @@ extension DiscoverDetailView {
+         .ignoresSafeArea().foregroundStyle(.white).preferredColorScheme(.dark)
+     }
+ 
++    /// The hero's Play, as on the iPhone: the first episode on its best source once that address is resolved; a
++    /// disabled "Loading" before; an explanation with Try Again when no source had it. No subscription: Add Subscription.
++    @ViewBuilder private var tvPlayButton: some View {
++        if store.subscription == nil {
++            Button { tvFindSources() } label: {
++                Label(L10n.text("Add Subscription"), systemImage: "plus").frame(maxWidth: .infinity)
++            }
++            .buttonStyle(DiscoverTVActionStyle(height: 82, font: 30))
++            .accessibilityIdentifier("discover.play")
++        } else if let sources, sources.finished, sources.chosen == nil {
++            tvPlayRetry { sources.restart(store) }
++        } else {
++            switch topPlayReadiness {
++            case .ready:
++                Button {
++                    episode = nil
++                    playEpisode = EpisodePlayRequest(number: 1)
++                } label: {
++                    Label(L10n.text("Play"), systemImage: "play.fill").frame(maxWidth: .infinity)
++                }
++                .buttonStyle(DiscoverTVActionStyle(height: 82, font: 30))
++                .accessibilityIdentifier("discover.play")
++            case .loading:
++                Button {} label: {
++                    HStack(spacing: 12) {
++                        ProgressView()
++                        Text(L10n.text("Loading"))
++                    }.frame(maxWidth: .infinity).opacity(0.7)
++                }
++                .buttonStyle(DiscoverTVActionStyle(height: 82, font: 30))
++                .accessibilityIdentifier("discover.play")
++            case .failed:
++                tvPlayRetry { topPlayRetryTick += 1 }
++            }
++        }
++    }
++
++    private func tvPlayRetry(action: @escaping () -> Void) -> some View {
++        Button {
++            topPlayReadiness = .loading
++            action()
++        } label: {
++            VStack(spacing: 2) {
++                Text(L10n.text("No playable source")).font(.system(size: 20)).opacity(0.75)
++                Label(L10n.text("Try Again"), systemImage: "arrow.clockwise")
++            }.frame(maxWidth: .infinity)
++        }
++        .buttonStyle(DiscoverTVActionStyle(height: 96, font: 28))
++        .accessibilityIdentifier("discover.play")
++    }
++
++    /// Under an episode: the sources that have it, as each answers; choosing one plays the episode on it.
++    @ViewBuilder private func tvEpisodeSources(_ value: TMDBMatch.EpisodeInfo) -> some View {
++        if store.subscription == nil {
++            Button { tvFindSources() } label: {
++                Label(L10n.text("Add Subscription"), systemImage: "plus").frame(width: 380)
++            }
++            .buttonStyle(DiscoverTVActionStyle(height: 86, font: 30))
++            .accessibilityIdentifier("discover.episode.findSources")
++        } else if let sources {
++            let season = seasons.isEmpty ? nil : catalogSeason
++            let matches = season == nil ? sources.matches
++                : sources.matches.filter { (SeasonTitles.parse($0.video.name).season ?? 1) == season }
++            VStack(alignment: .leading, spacing: 14) {
++                Text(L10n.text("Sources")).font(.system(size: 30, weight: .semibold))
++                if !matches.isEmpty {
++                    ScrollView(.horizontal, showsIndicators: false) {
++                        LazyHStack(spacing: 20) {
++                            ForEach(matches) { match in
++                                Button {
++                                    sources.choose(match)
++                                    if !seasons.isEmpty { seasonNumber = SeasonTitles.parse(match.video.name).season ?? 1 }
++                                    playEpisode = EpisodePlayRequest(number: value.number)
++                                    episode = nil; pickedEpisode = nil
++                                } label: {
++                                    VStack(alignment: .leading, spacing: 4) {
++                                        Text(SourceLabel(match.site.name).text).font(.system(size: 28, weight: .semibold)).lineLimit(1)
++                                        Text(match.video.remarks.isEmpty ? match.video.year ?? "" : match.video.remarks)
++                                            .font(.system(size: 22)).opacity(0.7).lineLimit(1)
++                                    }.frame(width: 300, alignment: .leading)
++                                }
++                                .buttonStyle(DiscoverTVActionStyle(height: 100, font: 26, corner: 24))
++                                .accessibilityIdentifier("discover.episode.source")
++                            }
++                        }.padding(.vertical, 20)
++                    }.scrollClipDisabled().focusSection()
++                }
++                if !sources.finished {
++                    HStack(spacing: 12) {
++                        ProgressView()
++                        Text(L10n.text("Searched %lld of %lld sources", sources.search.completed, sources.search.total))
++                            .font(.system(size: 22)).opacity(0.7).monospacedDigit()
++                    }
++                } else if matches.isEmpty {
++                    Text(L10n.text(season == nil ? "None of your sources has this title." : "None of your sources has this season."))
++                        .font(.system(size: 24)).opacity(0.7)
++                }
++            }.frame(maxWidth: 1500, alignment: .leading)
++        }
++    }
++
+     private func tvFindSources() {
+         episode = nil
+         if store.subscription == nil { store.section = .settings } else { store.searchVideos(item.name) }
+@@ -1444,12 +1540,7 @@ extension DiscoverDetailView {
+                     Text(value.overview).font(.system(size: 28)).lineSpacing(4).lineLimit(4).opacity(0.8)
+                         .frame(maxWidth: 1300, alignment: .leading)
+                 }
+-                Button { tvFindSources() } label: {
+-                    Label(L10n.text(store.subscription == nil ? "Add Subscription" : "Search Sources"), systemImage: "magnifyingglass")
+-                        .frame(width: 380)
+-                }
+-                .buttonStyle(DiscoverTVActionStyle(height: 86, font: 30))
+-                .accessibilityIdentifier("discover.episode.findSources")
++                tvEpisodeSources(value)
+             }.padding(Self.tvGutter)
+         }
+         .ignoresSafeArea().foregroundStyle(.white).preferredColorScheme(.dark)
+diff --git a/App/SitesView.swift b/App/SitesView.swift
+index 39c261d7..413b64fa 100644
+--- a/App/SitesView.swift
++++ b/App/SitesView.swift
+@@ -1327,7 +1327,20 @@ struct SiteBrowseView: View {
+                         #if os(tvOS)
+                         // The source's name sits with its categories instead of in a bar pinned over the search field.
+                         if folder == nil, !isBilibiliSpace {
+-                            Text(site.name).font(.system(size: 30, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
++                            if switcher != nil, !showsBilibiliTVSpace {
++                                Button { switching = true } label: {
++                                    HStack(spacing: 10) {
++                                        Text(site.name).lineLimit(1)
++                                        Image(systemName: "chevron.down").font(.system(size: 22, weight: .semibold))
++                                    }.font(.system(size: 30, weight: .semibold))
++                                }
++                                .glassPill()
++                                .accessibilityLabel(L10n.text("Switch Source"))
++                                .accessibilityValue(site.name)
++                                .accessibilityIdentifier("site.switcher")
++                            } else {
++                                Text(site.name).font(.system(size: 30, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
++                            }
+                         }
+                         #endif
+                         if !browser.categories.isEmpty { categoryBar } else if initialLoading && folder == nil { ChipSkeletonRow() }
+@@ -1433,6 +1446,10 @@ struct SiteBrowseView: View {
+         .sheet(isPresented: $switching) {
+             if let switcher { SourceSwitchSheet(current: site, choose: switcher).environment(store) }
+         }
++        #else
++        .fullScreenCover(isPresented: $switching) {
++            if let switcher { TVSourceSwitchScreen(current: site, choose: switcher).environment(store) }
++        }
+         #endif
+         .onAppear {
+             guard site.isBilibili, browser.loaded else { return }
+@@ -5383,6 +5400,73 @@ struct SourceSwitchSheet: View {
+ }
+ #endif
+ 
++#if os(tvOS)
++/// The remote's version of the source switch: a row of subscription chips on top, that subscription's sources below.
++/// Selecting a source switches to it at once; Menu closes. Focus starts on the current source.
++struct TVSourceSwitchScreen: View {
++    @Environment(Store.self) private var store
++    @Environment(\.dismiss) private var dismiss
++    let current: Site
++    let choose: (Site) -> Void
++    @State private var group: String?
++    @FocusState private var focusedSite: String?
++
++    private func selected(_ groups: [SourceGroup]) -> String {
++        if let group, groups.contains(where: { $0.id == group }) { return group }
++        if let holding = groups.first(where: { $0.kind != .pinned && $0.sites.contains { $0.key == current.key } }) { return holding.id }
++        return groups.first?.id ?? ""
++    }
++
++    var body: some View {
++        let groups = store.sourceGroups(includeHidden: false)
++        let id = selected(groups)
++        let sites = groups.first { $0.id == id }?.sites ?? []
++        VStack(alignment: .leading, spacing: 28) {
++            Text(L10n.text("Switch Source")).font(.system(size: 44, weight: .bold))
++            ChipRow {
++                HStack(spacing: 16) {
++                    ForEach(groups) { value in
++                        Button { group = value.id } label: {
++                            Text("\(L10n.text(value.title)) \(value.sites.count)").lineLimit(1)
++                        }
++                        .glassPill(selected: value.id == id)
++                        .accessibilityIdentifier("site.switch.group." + value.id)
++                    }
++                }
++            }
++            .focusSection()
++            .accessibilityIdentifier("site.switch.groups")
++            ScrollView {
++                LazyVStack(spacing: 14) {
++                    ForEach(sites) { site in
++                        Button { choose(site); dismiss() } label: {
++                            HStack {
++                                Text(site.name).lineLimit(1)
++                                Spacer(minLength: 8)
++                                if site.key == current.key { Image(systemName: "checkmark") }
++                            }
++                            .font(.system(size: 30, weight: .medium))
++                            .padding(.horizontal, 28).padding(.vertical, 18)
++                        }
++                        .glassRow()
++                        .focused($focusedSite, equals: site.key)
++                        .accessibilityAddTraits(site.key == current.key ? .isSelected : [])
++                        .accessibilityIdentifier("site.switch.row." + site.key)
++                    }
++                }.padding(.horizontal, 40).padding(.vertical, 24)
++            }
++            .scrollClipDisabled()
++            .focusSection()
++        }
++        .padding(.horizontal, 96).padding(.vertical, 60)
++        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
++        .background(.black.opacity(0.92).ignoresSafeArea())
++        .defaultFocus($focusedSite, sites.contains { $0.key == current.key } ? current.key : sites.first?.key)
++        .onExitCommand { dismiss() }
++    }
++}
++#endif
++
+ #if DEBUG && !os(tvOS)
+ @MainActor enum QASwitchOnce { static var opened = false }
+ #endif
