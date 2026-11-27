@@ -82,6 +82,14 @@ class Spider(Spider):
 """,mime='text/x-python')
         # Same-source line failover: line one's only episode points at a dead address, line two's plays.
         if path == '/fo-config.json': return self.send({'sites': [{'key':'qa-fo','name':'线路切换 / Lines','type':4,'api':base+'/fo'}], 'lives': []})
+        # Line two has two entries of episode 1: the same episode can't be told for sure, so nothing may switch.
+        if path == '/fo2-config.json': return self.send({'sites': [{'key':'qa-fo2','name':'线路不明 / Ambiguous','type':4,'api':base+'/fo2'}], 'lives': []})
+        if path == '/fo2':
+            if 'play' in q: return self.send({'parse':0,'url':base+('/missing.mp4' if q['play'] == 'dead-1' else '/clip.mp4?ambiguous=1')})
+            if 'ids' in q:
+                return self.send({'list':[{'vod_id':q['ids'],'vod_name':'线路不明影片','vod_pic':base+'/poster.png',
+                    'vod_play_from':'坏线路$$$两个第一集','vod_play_url':'第1集$dead-1$$$第1集$episode-1#第1集$episode-2'}]})
+            return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'fo2','vod_name':'线路不明影片','vod_pic':base+'/poster.png'}]})
         if path == '/fo':
             if 'play' in q: return self.send({'parse':0,'url':base+('/missing.mp4' if q['play'] == 'dead-1' else '/clip.mp4')})
             if 'ids' in q:

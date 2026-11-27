@@ -619,6 +619,31 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground)
     }
 
+    /// When the other line has two entries that could be episode 1, nothing is switched to: the viewer sees the error and
+    /// chooses. The server must never be asked for the other line's clip.
+    func testAmbiguousSecondLineDoesNotSwitch() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-fo2", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/fo2-config.json", "-autoPlayNextEpisode", "NO",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let retry = app.buttons["Try Again"]
+        XCTAssertTrue(retry.waitForExistence(timeout: 40), "The error screen never showed")
+        sleep(15)
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "ambiguous second line"; shot.lifetime = .keepAlways; add(shot)
+        var counts: [String: Int] = [:]
+        let semaphore = DispatchSemaphore(value: 0)
+        URLSession.shared.dataTask(with: URL(string: "http://127.0.0.1:8776/counts")!) { data, _, _ in
+            if let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Int] { counts = json }
+            semaphore.signal()
+        }.resume()
+        _ = semaphore.wait(timeout: .now() + 10)
+        add(XCTAttachment(string: "counts missing=\(counts["/missing.mp4"] ?? 0) clip=\(counts["/clip.mp4"] ?? 0)"))
+        XCTAssertGreaterThan(counts["/missing.mp4"] ?? 0, 0, "The dead first line was never tried: \(counts)")
+        XCTAssertEqual(counts["/clip.mp4"] ?? 0, 0, "A line was switched to although the episode could not be told for sure: \(counts)")
+        XCTAssertTrue(retry.exists, "The error screen went away")
+    }
+
     // MARK: Apple TV parity checks (T1 to T3). They record what is on screen and where focus is, as screenshots and
     // attachments, and report each mismatch without stopping at the first one.
 

@@ -108,13 +108,15 @@ import TVCore
     }
     /// Lines (flags) of a video already tried for an episode by an automatic line switch, with when: a later,
     /// unrelated failure of the same episode starts over after a few minutes.
-    @ObservationIgnored private var triedLines: [String: (flags: Set<String>, at: Date)] = [:]
+    @ObservationIgnored private var triedLines: [String: (flags: Set<String>, last: String, at: Date)] = [:]
 
     /// The episode on the video's next untried line that is the same episode as `episode`: its number must match for
     /// sure (`SourceFailover.place`), else that line is skipped. Nil when no other line has it.
     private func nextLine(for episode: Episode, of video: Video) -> Episode? {
         let key = "\(video.id)|\(episode.name)"
-        var tried = triedLines[key].flatMap { Date().timeIntervalSince($0.at) < 300 ? $0.flags : nil } ?? []
+        // Only a failure of the line the last automatic switch chose continues the record: a line the viewer chose
+        // again starts over.
+        var tried = triedLines[key].flatMap { Date().timeIntervalSince($0.at) < 300 && $0.last == episode.flag ? $0.flags : nil } ?? []
         tried.insert(episode.flag)
         let current = video.episodes.filter { $0.flag == episode.flag }
         var flags: [String] = []
@@ -123,10 +125,10 @@ import TVCore
             let list = video.episodes.filter { $0.flag == flag }
             guard let place = SourceFailover.place(current: episode.name, currentCount: current.count, other: list.map(\.name)) else { continue }
             tried.insert(flag)
-            triedLines[key] = (tried, Date())
+            triedLines[key] = (tried, flag, Date())
             return list[place]
         }
-        triedLines[key] = (tried, Date())
+        triedLines[key] = (tried, episode.flag, Date())
         return nil
     }
     /// Set while a listening source's episode goes to the video player on purpose.
