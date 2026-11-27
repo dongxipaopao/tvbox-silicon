@@ -8,5 +8,13 @@ case "${SCENES:-}" in
     shot 25d-rex-row-zh 25 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
     shot 25e-rex-unsupported-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.html -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
     shot 25f-rex-module-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen 1 -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+    # Stream module (B72/B73). Lines are asked for by a state hook; none of these is a real tap.
+    shot 26a-stream-lines 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok
+    shot 26b-stream-lines-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+    shot 26c-stream-none-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-none -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+    shot 26d-stream-fail-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-fail -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+    shot 26e-stream-shape-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-shape -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+    shot 26f-stream-episode-cleared-zh 40 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -qaRexEpisodeAfter 2 -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+    shot 26g-stream-tap-player 40 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -qaRexTap 1
     ;;
 esac

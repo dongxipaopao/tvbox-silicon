@@ -189,6 +189,9 @@ struct RexModuleView: View {
     @State private var failure: String?
     @State private var request = 0
     @State private var pending: Task<Void, Never>?
+    #if DEBUG
+    @State private var qaItem: RexItem?
+    #endif
 
     var body: some View {
         ScrollView {
@@ -226,11 +229,21 @@ struct RexModuleView: View {
         .background { DiscoverCanvas(poster: nil) }
         .foregroundStyle(.white).preferredColorScheme(.dark)
         .navigationTitle(module?.title ?? widget.title)
+        #if DEBUG
+        .navigationDestination(item: $qaItem) { item in RexItemView(widget: widget, stream: module?.functions.first(where: \.isStream), item: item) }
+        #endif
         .task {
             do {
                 let loaded = try await RexRuntime.shared.module(widget)
                 module = loaded
                 if let first = loaded.functions.first(where: \.listsTitles) { select(first) }
+                #if DEBUG
+                // `-qaRexItem <id>` opens that title's page once the list is in (state trigger for screenshots, not a tap).
+                if let want = UserDefaults.standard.string(forKey: "qaRexItem") {
+                    for _ in 0..<40 where items.isEmpty { try? await Task.sleep(for: .milliseconds(250)) }
+                    qaItem = items.first { $0.id == want }
+                }
+                #endif
             } catch { failure = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription }
         }
     }
@@ -283,7 +296,7 @@ struct RexItemView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                PosterImage(url: item.poster).frame(width: 220, height: 330).clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                PosterImage(url: item.poster).frame(width: qaCompact ? 60 : 220, height: qaCompact ? 90 : 330).clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 Text(item.title).font(.title2.weight(.semibold)).multilineTextAlignment(.center)
                 if !item.subtitle.isEmpty { Text(item.subtitle).font(.subheadline).opacity(0.7) }
                 if !item.overview.isEmpty { Text(item.overview).font(.footnote).opacity(0.7).multilineTextAlignment(.leading) }
@@ -294,6 +307,9 @@ struct RexItemView: View {
         .background { DiscoverCanvas(poster: item.poster) }
         .foregroundStyle(.white).preferredColorScheme(.dark)
         .onDisappear { reset() }
+        #if DEBUG
+        .task { await qaDrive() }
+        #endif
     }
 
     @ViewBuilder private func playLines(_ stream: RexFunction) -> some View {
@@ -318,6 +334,30 @@ struct RexItemView: View {
             if skipped > 0 { Text(L10n.text("%lld lines had no address and were skipped.", skipped)).font(.caption).opacity(0.7) }
         }
     }
+
+    private var qaCompact: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: "qaRexLines")
+        #else
+        false
+        #endif
+    }
+
+    #if DEBUG
+    /// Screenshot hooks, state triggers and not taps: `-qaRexLines 1` asks for the lines, `-qaRexEpisodeAfter N` then moves the
+    /// episode (the answer must clear), `-qaRexTap 1` then plays the first line that can play.
+    private func qaDrive() async {
+        let defaults = UserDefaults.standard
+        guard defaults.bool(forKey: "qaRexLines"), let stream else { return }
+        start(stream)
+        for _ in 0..<40 where !asked { try? await Task.sleep(for: .milliseconds(250)) }
+        if defaults.integer(forKey: "qaRexEpisodeAfter") > 0 {
+            try? await Task.sleep(for: .seconds(2))
+            episode = defaults.integer(forKey: "qaRexEpisodeAfter")
+        }
+        if defaults.bool(forKey: "qaRexTap"), let line = lines.first(where: { $0.playURL != nil }) { play(line) }
+    }
+    #endif
 
     /// A newer request, a changed episode or leaving the page drops the old answer: the generation number decides whether a
     /// finished request may still write, so a late answer never replaces what is on screen. Only the previous request is
