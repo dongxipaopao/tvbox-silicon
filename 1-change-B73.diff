@@ -1,0 +1,121 @@
+diff --git a/App/RexView.swift b/App/RexView.swift
+index 0969c3d8..ff1b27d1 100644
+--- a/App/RexView.swift
++++ b/App/RexView.swift
+@@ -187,6 +187,8 @@ struct RexModuleView: View {
+     @State private var loading = false
+     @State private var more = true
+     @State private var failure: String?
++    @State private var request = 0
++    @State private var pending: Task<Void, Never>?
+ 
+     var body: some View {
+         ScrollView {
+@@ -291,12 +293,14 @@ struct RexItemView: View {
+         }
+         .background { DiscoverCanvas(poster: item.poster) }
+         .foregroundStyle(.white).preferredColorScheme(.dark)
++        .onDisappear { reset() }
+     }
+ 
+     @ViewBuilder private func playLines(_ stream: RexFunction) -> some View {
+         VStack(spacing: 10) {
+             Stepper(value: $episode, in: 1...999) { Text(L10n.text("Episode %lld", episode)) }
+-            Button { Task { await load(stream) } } label: { Text(L10n.text("Show Play Lines")).frame(maxWidth: .infinity) }
++                .onChange(of: episode) { _, _ in reset() }
++            Button { start(stream) } label: { Text(L10n.text("Show Play Lines")).frame(maxWidth: .infinity) }
+                 .buttonStyle(.borderedProminent).disabled(loading).accessibilityIdentifier("rex.showLines")
+             if loading { ProgressView().accessibilityIdentifier("rex.lines.loading") }
+             if let failure { Text(failure).font(.footnote).opacity(0.7).multilineTextAlignment(.center) }
+@@ -315,16 +319,34 @@ struct RexItemView: View {
+         }
+     }
+ 
+-    private func load(_ stream: RexFunction) async {
+-        loading = true; failure = nil; defer { loading = false; asked = true }
++    /// A newer request, a changed episode or leaving the page drops the old answer: the generation number decides whether a
++    /// finished request may still write, so a late answer never replaces what is on screen. Only the previous request is
++    /// cancelled, never the one just started.
++    private func reset() {
++        request += 1
++        pending?.cancel(); pending = nil
++        lines = []; skipped = 0; failure = nil; asked = false; loading = false
++    }
++
++    private func start(_ stream: RexFunction) {
++        request += 1
++        let mine = request
++        pending?.cancel()
++        lines = []; skipped = 0; failure = nil; asked = false; loading = true
+         var params = ["id": item.id, "link": item.id, "episode": String(episode)]
+         if !item.kind.isEmpty { params["type"] = item.kind; params["mediaType"] = item.kind }
+-        do {
+-            let answer = try await RexRuntime.shared.lines(widget, function: stream, params: params)
+-            lines = answer.lines; skipped = answer.invalid
+-        } catch {
+-            lines = []; skipped = 0
+-            failure = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
++        pending = Task {
++            let result: Result<RexLines, Error>
++            do { result = .success(try await RexRuntime.shared.lines(widget, function: stream, params: params)) }
++            catch { result = .failure(error) }
++            guard mine == request else { return }
++            loading = false; asked = true
++            switch result {
++            case .success(let answer): lines = answer.lines; skipped = answer.invalid
++            case .failure(let error):
++                guard !(error is CancellationError) else { return }
++                failure = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
++            }
+         }
+     }
+ 
+diff --git a/Sources/TVCore/ScriptAssets/rex/fixture-stream.js b/Sources/TVCore/ScriptAssets/rex/fixture-stream.js
+new file mode 100644
+index 00000000..255d2e3d
+--- /dev/null
++++ b/Sources/TVCore/ScriptAssets/rex/fixture-stream.js
+@@ -0,0 +1,32 @@
++const WidgetMetadata = {
++  id: "fixture.stream",
++  title: "Sample stream module",
++  version: "1.0.0",
++  requiredVersion: "0.0.1",
++  globalParams: [],
++  modules: [
++    { id: "list", title: "Titles", functionName: "loadTitles", params: [ { name: "page", title: "Page", type: "page" } ] },
++    { id: "resource", title: "Play lines", functionName: "loadResource", type: "stream", params: [] }
++  ]
++};
++// Offline and keyless. The addresses use the reserved .invalid domain and never play; they only show the lines list.
++const titles = [
++  { id: "fx-ok", title: "Lines sample" },
++  { id: "fx-none", title: "No lines sample" },
++  { id: "fx-fail", title: "Failure sample" },
++  { id: "fx-shape", title: "Wrong shape sample" }
++];
++async function loadTitles() {
++  return titles.map(t => ({ id: t.id, type: "url", title: t.title, subtitle: "stream", posterPath: "", description: "Fixture title", releaseDate: "2026-01-01", rating: 7 }));
++}
++async function loadResource(params) {
++  const id = String(params.id || params.link || ""), episode = Number(params.episode || 1);
++  if (id === "fx-ok") return [
++    { name: "Line A · episode " + episode, description: "https fixture line", url: "https://example.invalid/a/" + episode + ".m3u8", headers: { Referer: "https://example.invalid/" } },
++    { name: "Line B (not a web address)", description: "ftp fixture line", url: "ftp://example.invalid/b/" + episode + ".mp4" },
++    { name: "Line C (no address)" }
++  ];
++  if (id === "fx-none") return [];
++  if (id === "fx-shape") return { items: [] };
++  throw new Error("该集暂无可用线路（样例失败）");
++}
+diff --git a/Sources/TVCore/ScriptAssets/rex/fixture.json b/Sources/TVCore/ScriptAssets/rex/fixture.json
+index 925b2f76..409630e2 100644
+--- a/Sources/TVCore/ScriptAssets/rex/fixture.json
++++ b/Sources/TVCore/ScriptAssets/rex/fixture.json
+@@ -1,4 +1,5 @@
+ {"title":"Rex fixture","description":"Built-in sample for testing","widgets":[
+ {"id":"fixture.list","title":"Sample list module","description":"","version":"1.0.0","author":"","url":"assets://rex/fixture-module.js"},
+ {"id":"fixture.html","title":"Sample TMDB module","description":"","version":"1.0.0","author":"","url":"assets://rex/fixture-html.js"},
+-{"id":"fixture.enc","title":"Sample encrypted module","description":"","version":"2.0.0","author":"","url":"assets://rex/fixture-encrypted.js"}]}
++{"id":"fixture.enc","title":"Sample encrypted module","description":"","version":"2.0.0","author":"","url":"assets://rex/fixture-encrypted.js"},
++{"id":"fixture.stream","title":"Sample stream module","description":"","version":"1.0.0","author":"","url":"assets://rex/fixture-stream.js"}]}
