@@ -1,0 +1,13 @@
+diff --git a/App/RexView.swift b/App/RexView.swift
+index dd211718..19ffa9ca 100644
+--- a/App/RexView.swift
++++ b/App/RexView.swift
+@@ -219,6 +219,8 @@ struct RexModuleView: View {
+                 }
+             }.padding()
+         }
++        .background { DiscoverCanvas(poster: nil) }
++        .foregroundStyle(.white).preferredColorScheme(.dark)
+         .navigationTitle(module?.title ?? widget.title)
+         .task {
+             do {
