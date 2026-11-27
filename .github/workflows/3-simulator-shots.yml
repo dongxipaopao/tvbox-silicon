@@ -1,6 +1,10 @@
 name: simulator-shots
 on:
   workflow_dispatch:
+    inputs:
+      scenes:
+        description: full (default) or targeted (zh-Hans settings, zh-Hans whatsnew, music without subscriptions)
+        default: full
 permissions:
   contents: write
 jobs:
@@ -129,6 +133,20 @@ jobs:
             sleep "$wait"
             xcrun simctl io "$UDID" screenshot "shots/$name.png" || true
           }
+          if [ "${{ inputs.scenes }}" = "targeted" ]; then
+            shot 20a-settings-zh 12 -qaSection settings -AppleLanguages "(zh-Hans)"
+            shot 20b-whatsnew-zh 25 -qaWhatsNew 1 -AppleLanguages "(zh-Hans)"
+            shotns() { name=$1; wait=$2; shift 2
+              xcrun simctl terminate "$UDID" $B 2>/dev/null || true
+              xcrun simctl launch "$UDID" $B -qaIsolatedData 1 "$@" || true
+              sleep "$wait"
+              xcrun simctl io "$UDID" screenshot "shots/$name.png" || true
+            }
+            shotns 21a-music-nosubs-a 15 -qaSection music
+            shotns 21b-music-nosubs-b 15 -qaSection music
+            ls -l shots
+            exit 0
+          fi
           shot 01-home 30 -qaSection home -qaSeedHistory qa-standard:1,qa-standard:2
           shot 02-discover 25 -qaSection discover
           shot 03-music 15 -qaSection music
@@ -176,7 +194,7 @@ jobs:
         if: always()
         run: |
           rm -rf /tmp/pub && mkdir /tmp/pub
-          cp shots/0*.png shots/1*.png shots/applog-python-timing.txt /tmp/pub/ || true
+          cp shots/*.png shots/applog-python-timing.txt /tmp/pub/ || true
           cp qa-server.log crash-list.txt /tmp/pub/ || true
           tail -300 sim-build.log > /tmp/pub/sim-build-tail.log || true
           cd /tmp/pub
