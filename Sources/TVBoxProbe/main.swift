@@ -138,6 +138,10 @@ import TVCore
             try await timing(subscription: args[2], query: args[3], label: args[4])
             return
         }
+        if args[1] == "--sub-play", args.count >= 5 {
+            try await subPlay(subscription: args[2], query: args[3], label: args[4], siteFilter: args.count > 5 ? args[5] : nil)
+            return
+        }
         if args[1] == "--download", args.count >= 4 {
             // --download <media URL | bili:<BV>[:part]> <folder> [pause after seconds]: the download queue end to end,
             // optionally paused and resumed partway, then the result played through AVPlayer.
