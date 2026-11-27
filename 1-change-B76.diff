@@ -1,0 +1,255 @@
+diff --git a/App/AppIcons.swift b/App/AppIcons.swift
+index 1760b0df..be0c1b21 100644
+--- a/App/AppIcons.swift
++++ b/App/AppIcons.swift
+@@ -17,12 +17,8 @@ import UIKit
+ 
+ /// An icon the app ships with. Pocket (MediaPocketPurple) is the app's own; the rest are alternates.
+ enum AppIconChoice: String, CaseIterable, Identifiable {
+-    // Keep in step with ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES (project.yml) and Design/make-app-icons.swift.
+-    case pocket = "MediaPocketPurple", grayPocket = "MediaPocketGray", layers = "MediaLayers", play = "PlayTriangle"
+-    case seal = "SealMusic", shiba = "ShibaManga", cat = "CatCinema", friends = "AnimalTrio"
+-    case panda = "Panda", arc = "Arc"
+-    case classic = "Classic", aurora = "Aurora", porcelain = "Porcelain", obsidian = "Obsidian", azure = "Azure"
+-    case daybreak = "Daybreak", iris = "Iris", lagoon = "Lagoon", roseQuartz = "RoseQuartz", citrus = "Citrus", cosmic = "Cosmic"
++    // Keep in step with ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES (project.yml). A saved choice that is gone falls back to Pocket.
++    case pocket = "MediaPocketPurple", seal = "SealMusic", shiba = "ShibaManga"
+ 
+     static let standard = AppIconChoice.pocket
+     var id: String { rawValue }
+@@ -30,26 +26,8 @@ enum AppIconChoice: String, CaseIterable, Identifiable {
+     var title: String {
+         switch self {
+         case .pocket: L10n.text("Pocket")
+-        case .grayPocket: L10n.text("Gray Pocket")
+-        case .layers: L10n.text("Layers")
+-        case .play: L10n.text("Glass Play")
+         case .seal: L10n.text("Seal")
+         case .shiba: L10n.text("Shiba")
+-        case .cat: L10n.text("Cat")
+-        case .friends: L10n.text("Friends")
+-        case .panda: L10n.text("Panda")
+-        case .arc: L10n.text("Arc")
+-        case .classic: L10n.text("Classic")
+-        case .aurora: L10n.text("Aurora")
+-        case .porcelain: L10n.text("Porcelain")
+-        case .obsidian: L10n.text("Obsidian")
+-        case .azure: L10n.text("Azure")
+-        case .daybreak: L10n.text("Daybreak")
+-        case .iris: L10n.text("Iris")
+-        case .lagoon: L10n.text("Lagoon")
+-        case .roseQuartz: L10n.text("Rose Quartz")
+-        case .citrus: L10n.text("Citrus")
+-        case .cosmic: L10n.text("Cosmic")
+         }
+     }
+     /// The artwork's image set.
+diff --git a/Config/Info-TVBox-tvOS.plist b/Config/Info-TVBox-tvOS.plist
+index 316b9e81..9f5573a9 100644
+--- a/Config/Info-TVBox-tvOS.plist
++++ b/Config/Info-TVBox-tvOS.plist
+@@ -12,26 +12,8 @@
+ 	<dict>
+ 		<key>CFBundleAlternateIcons</key>
+ 		<array>
+-			<string>AppIcon-MediaPocketGray</string>
+-			<string>AppIcon-MediaLayers</string>
+-			<string>AppIcon-PlayTriangle</string>
+ 			<string>AppIcon-SealMusic</string>
+ 			<string>AppIcon-ShibaManga</string>
+-			<string>AppIcon-CatCinema</string>
+-			<string>AppIcon-AnimalTrio</string>
+-			<string>AppIcon-Panda</string>
+-			<string>AppIcon-Arc</string>
+-			<string>AppIcon-Classic</string>
+-			<string>AppIcon-Aurora</string>
+-			<string>AppIcon-Porcelain</string>
+-			<string>AppIcon-Obsidian</string>
+-			<string>AppIcon-Azure</string>
+-			<string>AppIcon-Daybreak</string>
+-			<string>AppIcon-Iris</string>
+-			<string>AppIcon-Lagoon</string>
+-			<string>AppIcon-RoseQuartz</string>
+-			<string>AppIcon-Citrus</string>
+-			<string>AppIcon-Cosmic</string>
+ 		</array>
+ 	</dict>
+ 	<key>CFBundleIdentifier</key>
+diff --git a/Design/make-tvos-icon.swift b/Design/make-tvos-icon.swift
+index 21609155..27c495a4 100644
+--- a/Design/make-tvos-icon.swift
++++ b/Design/make-tvos-icon.swift
+@@ -170,7 +170,7 @@ let alternates = try! FileManager.default.contentsOfDirectory(atPath: iosIcons.p
+ for set in alternates {
+     let name = (set as NSString).deletingPathExtension
+     let icon = Icon(iosIcons.appendingPathComponent("\(set)/AppIcon.png"),
+-                    oneTone: ["AppIcon-SealMusic", "AppIcon-ShibaManga", "AppIcon-CatCinema", "AppIcon-AnimalTrio", "AppIcon-Panda"].contains(name))
++                    oneTone: ["AppIcon-SealMusic", "AppIcon-ShibaManga"].contains(name))
+     writeStack(icon, root.appendingPathComponent("\(name).imagestack"), width: 400, height: 240, scales: [1, 2])
+     print("Wrote \(name)")
+ }
+diff --git a/Sources/TVCore/Resources/en.lproj/Localizable.strings b/Sources/TVCore/Resources/en.lproj/Localizable.strings
+index 715e62a6..9d923527 100644
+--- a/Sources/TVCore/Resources/en.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/en.lproj/Localizable.strings
+@@ -2044,26 +2044,11 @@
+ /* Settings › App Icon */
+ "App Icon" = "App Icon";
+ "Pocket" = "Pocket";
+-"Gray Pocket" = "Gray Pocket";
+-"Layers" = "Layers";
+-"Glass Play" = "Glass Play";
+ "Seal" = "Seal";
+ "Shiba" = "Shiba";
+-"Cat" = "Cat";
+-"Friends" = "Friends";
+-"Panda" = "Panda";
+-"Arc" = "Arc";
+ "Aurora" = "Aurora";
+ "Classic" = "Classic";
+-"Porcelain" = "Porcelain";
+-"Obsidian" = "Obsidian";
+-"Azure" = "Azure";
+-"Daybreak" = "Daybreak";
+-"Iris" = "Iris";
+ "Lagoon" = "Lagoon";
+-"Rose Quartz" = "Rose Quartz";
+-"Citrus" = "Citrus";
+-"Cosmic" = "Cosmic";
+ "Couldn't change the app icon: %@" = "Couldn't change the app icon: %@";
+ "Couldn't open that picture." = "Couldn't open that picture.";
+ "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is." = "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is.";
+diff --git a/Sources/TVCore/Resources/ja.lproj/Localizable.strings b/Sources/TVCore/Resources/ja.lproj/Localizable.strings
+index 0dbee9c3..434c86b5 100644
+--- a/Sources/TVCore/Resources/ja.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/ja.lproj/Localizable.strings
+@@ -2044,26 +2044,11 @@
+ /* Settings › App Icon */
+ "App Icon" = "アプリアイコン";
+ "Pocket" = "ポケット";
+-"Gray Pocket" = "グレーポケット";
+-"Layers" = "レイヤー";
+-"Glass Play" = "ガラスの再生";
+ "Seal" = "アザラシ";
+ "Shiba" = "柴犬";
+-"Cat" = "ネコ";
+-"Friends" = "なかま";
+-"Panda" = "パンダ";
+-"Arc" = "Arc";
+ "Aurora" = "オーロラ";
+ "Classic" = "クラシック";
+-"Porcelain" = "ポーセリン";
+-"Obsidian" = "オブシディアン";
+-"Azure" = "アズール";
+-"Daybreak" = "夜明け";
+-"Iris" = "アイリス";
+ "Lagoon" = "ラグーン";
+-"Rose Quartz" = "ローズクォーツ";
+-"Citrus" = "シトラス";
+-"Cosmic" = "コズミック";
+ "Couldn't change the app icon: %@" = "アプリアイコンを変更できませんでした：%@";
+ "Couldn't open that picture." = "その画像を開けませんでした。";
+ "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is." = "正方形の画像がおすすめです。Mac 用アイコンのように四隅が透明な画像は、そのまま表示されます。";
+diff --git a/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings b/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
+index 8297a593..1e165c4c 100644
+--- a/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
+@@ -2044,26 +2044,11 @@
+ /* Settings › App Icon */
+ "App Icon" = "应用图标";
+ "Pocket" = "口袋";
+-"Gray Pocket" = "灰口袋";
+-"Layers" = "层叠";
+-"Glass Play" = "玻璃播放";
+ "Seal" = "海豹";
+ "Shiba" = "柴犬";
+-"Cat" = "猫咪";
+-"Friends" = "小伙伴";
+-"Panda" = "熊猫";
+-"Arc" = "Arc";
+ "Aurora" = "极光";
+ "Classic" = "经典";
+-"Porcelain" = "白瓷";
+-"Obsidian" = "黑曜石";
+-"Azure" = "蔚蓝";
+-"Daybreak" = "破晓";
+-"Iris" = "鸢尾";
+ "Lagoon" = "泻湖";
+-"Rose Quartz" = "玫瑰石英";
+-"Citrus" = "柑橘";
+-"Cosmic" = "宇宙";
+ "Couldn't change the app icon: %@" = "无法更换应用图标：%@";
+ "Couldn't open that picture." = "无法打开这张图片。";
+ "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is." = "方形图片效果最好。四角透明的图片（例如为 Mac 制作的图标）会按原样显示。";
+diff --git a/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings b/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
+index 3e122511..4334f570 100644
+--- a/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
+@@ -2044,26 +2044,11 @@
+ /* Settings › App Icon */
+ "App Icon" = "App 圖像";
+ "Pocket" = "口袋";
+-"Gray Pocket" = "灰口袋";
+-"Layers" = "層疊";
+-"Glass Play" = "玻璃播放";
+ "Seal" = "海豹";
+ "Shiba" = "柴犬";
+-"Cat" = "貓咪";
+-"Friends" = "小夥伴";
+-"Panda" = "熊貓";
+-"Arc" = "Arc";
+ "Aurora" = "極光";
+ "Classic" = "經典";
+-"Porcelain" = "白瓷";
+-"Obsidian" = "黑曜石";
+-"Azure" = "蔚藍";
+-"Daybreak" = "破曉";
+-"Iris" = "鳶尾";
+ "Lagoon" = "瀉湖";
+-"Rose Quartz" = "玫瑰石英";
+-"Citrus" = "柑橘";
+-"Cosmic" = "宇宙";
+ "Couldn't change the app icon: %@" = "無法更換 App 圖像：%@";
+ "Couldn't open that picture." = "無法打開這張圖片。";
+ "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is." = "方形圖片效果最好。四角透明的圖片（例如為 Mac 製作的圖像）會按原樣顯示。";
+diff --git a/TVBox.xcodeproj/project.pbxproj b/TVBox.xcodeproj/project.pbxproj
+index a4b89cc4..018db240 100644
+--- a/TVBox.xcodeproj/project.pbxproj
++++ b/TVBox.xcodeproj/project.pbxproj
+@@ -1843,7 +1843,7 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ARCHS = arm64;
+-				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-MediaPocketGray AppIcon-MediaLayers AppIcon-PlayTriangle AppIcon-SealMusic AppIcon-ShibaManga AppIcon-CatCinema AppIcon-AnimalTrio AppIcon-Panda AppIcon-Arc AppIcon-Classic AppIcon-Aurora AppIcon-Porcelain AppIcon-Obsidian AppIcon-Azure AppIcon-Daybreak AppIcon-Iris AppIcon-Lagoon AppIcon-RoseQuartz AppIcon-Citrus AppIcon-Cosmic";
++				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-SealMusic AppIcon-ShibaManga";
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ 				CODE_SIGN_ENTITLEMENTS = "$(ICLOUD_ENTITLEMENTS)";
+ 				CODE_SIGN_IDENTITY = "iPhone Developer";
+@@ -1890,7 +1890,7 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ARCHS = arm64;
+-				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-MediaPocketGray AppIcon-MediaLayers AppIcon-PlayTriangle AppIcon-SealMusic AppIcon-ShibaManga AppIcon-CatCinema AppIcon-AnimalTrio AppIcon-Panda AppIcon-Arc AppIcon-Classic AppIcon-Aurora AppIcon-Porcelain AppIcon-Obsidian AppIcon-Azure AppIcon-Daybreak AppIcon-Iris AppIcon-Lagoon AppIcon-RoseQuartz AppIcon-Citrus AppIcon-Cosmic";
++				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-SealMusic AppIcon-ShibaManga";
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ 				CODE_SIGN_ENTITLEMENTS = "$(ICLOUD_ENTITLEMENTS)";
+ 				CODE_SIGN_IDENTITY = "iPhone Developer";
+diff --git a/project.yml b/project.yml
+index 957fb73a..4a74fe8b 100644
+--- a/project.yml
++++ b/project.yml
+@@ -184,7 +184,7 @@ targets:
+       CODE_SIGN_ENTITLEMENTS: $(ICLOUD_ENTITLEMENTS)
+       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+       # Keep in step with AppIconChoice (App/AppIcons.swift).
+-      ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIcon-MediaPocketGray AppIcon-MediaLayers AppIcon-PlayTriangle AppIcon-SealMusic AppIcon-ShibaManga AppIcon-CatCinema AppIcon-AnimalTrio AppIcon-Panda AppIcon-Arc AppIcon-Classic AppIcon-Aurora AppIcon-Porcelain AppIcon-Obsidian AppIcon-Azure AppIcon-Daybreak AppIcon-Iris AppIcon-Lagoon AppIcon-RoseQuartz AppIcon-Citrus AppIcon-Cosmic
++      ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIcon-SealMusic AppIcon-ShibaManga
+       TARGETED_DEVICE_FAMILY: '1,2'
+     info:
+       properties:
+@@ -272,4 +272,4 @@ targets:
+         # which App Store Connect refuses for tvOS (ITMS-90471, "missing the Alternate Icon asset").
+         # Keep in step with AppIconChoice (App/AppIcons.swift) and the iOS list above.
+         CFBundleIcons:
+-          CFBundleAlternateIcons: [AppIcon-MediaPocketGray, AppIcon-MediaLayers, AppIcon-PlayTriangle, AppIcon-SealMusic, AppIcon-ShibaManga, AppIcon-CatCinema, AppIcon-AnimalTrio, AppIcon-Panda, AppIcon-Arc, AppIcon-Classic, AppIcon-Aurora, AppIcon-Porcelain, AppIcon-Obsidian, AppIcon-Azure, AppIcon-Daybreak, AppIcon-Iris, AppIcon-Lagoon, AppIcon-RoseQuartz, AppIcon-Citrus, AppIcon-Cosmic]
++          CFBundleAlternateIcons: [AppIcon-SealMusic, AppIcon-ShibaManga]
