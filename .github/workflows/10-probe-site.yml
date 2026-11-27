@@ -7,7 +7,7 @@ on:
         default: 后会发期
       site:
         description: optional site key/name filter (empty = all matches)
-        default: "555"
+        default: ""
 jobs:
   play:
     runs-on: xcode-27
