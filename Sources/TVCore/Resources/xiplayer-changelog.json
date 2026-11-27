@@ -2,6 +2,36 @@
   "releases": [
     {
       "version": "1.8.32",
+      "build": 80,
+      "date": "2026-11-28",
+      "links": {},
+      "features": [
+        {
+          "symbol": "magnifyingglass",
+          "title": {
+            "en": "Apple TV: Music and Sources open on content",
+            "zh-Hans": "Apple TV：音乐和点播源直接显示内容"
+          },
+          "detail": {
+            "en": "Music and Sources no longer open on the search keyboard. Music starts on its first playlist cover and Sources on the first source. A magnifier at the top right opens the search, and only then does the keyboard appear.",
+            "zh-Hans": "音乐和点播源打开后不再直接弹出搜索键盘。音乐默认停在第一个歌单封面，点播源默认停在第一个源。右上角的放大镜按下后才进入搜索输入。"
+          }
+        },
+        {
+          "symbol": "trash",
+          "title": {
+            "en": "Apple TV Settings: Account, Send Feedback and Telegram Group removed",
+            "zh-Hans": "Apple TV 设置：已移除账号、反馈问题和 Telegram 群组"
+          },
+          "detail": {
+            "en": "The three rows are gone from Settings on Apple TV. Cloud Drive Accounts stays.",
+            "zh-Hans": "Apple TV 设置里的这三项已移除。网盘账号保留。"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.8.32",
       "build": 79,
       "date": "2026-11-28",
       "links": {},

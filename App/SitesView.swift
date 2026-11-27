@@ -87,6 +87,9 @@ struct SitesView: View {
                                                 .id(site.key)
                                         } else {
                                         RouteLink { SiteView(site: site, origin: config.origin, jarURL: config.spiderURL) } label: { SiteCard(site: site, dimmed: group.kind == .hidden) }.tileButton()
+                                            #if os(tvOS)
+                                            .focused($focusedSite, equals: site.key)
+                                            #endif
                                             .contextMenu {
                                                 PinSourceButton(site: site, origin: config.origin)
                                                 HideSourceButton(site: site, origin: config.origin)
@@ -121,7 +124,12 @@ struct SitesView: View {
                     .transaction(value: query) { $0.animation = nil }
                 }
                 // Picking opens on the current choice rather than the top of a long page.
+                #if os(tvOS)
+                // Opens on the first source, not the search: the page is its sources, and search sits at the top right.
+                .defaultFocus($focusedSite, picked ?? shown(groups).first(where: { !folded.contains($0.id) })?.sites.first?.key)
+                #else
                 .defaultFocus($focusedSite, picked)
+                #endif
                 .onAppear { if pick != nil, let picked { proxy.scrollTo(picked, anchor: .center) } }
                 #if os(iOS)
                 .sensoryFeedback(.selection, trigger: swipes)
@@ -143,7 +151,7 @@ struct SitesView: View {
             } else { EmptyResults(symbol: "square.grid.2x2", title: L10n.text("No Sources Yet"), message: L10n.text("Add a TVBox subscription in Settings."), fills: true) }
         }
         .screenBackdrop()
-        .catalogSearchable(text: $query, prompt: L10n.text("Find a source"))
+        .tvSearchEntry(text: $query, prompt: L10n.text("Find a source"))
         .modifier(SitesTitle(picking: pick != nil))
         #if DEBUG
         // `-qaSection sites -qaQuery <text>` shows the Sources page's search.

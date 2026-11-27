@@ -2274,12 +2274,6 @@ struct TVSettingsView: View {
             TVSettingsHero()
         } list: {
             if !updates.available.isEmpty { updateSection }
-            TVSettingsSection { AccountSettingsRow() }
-            // First in the list, beside the app: a problem or an idea is one press away.
-            TVSettingsSection {
-                TVSettingsLink(title: L10n.text("Send Feedback")) { FeedbackView() }
-                TVSettingsLink(title: L10n.text("Telegram Group")) { TelegramGroupView() }
-            }
             subscriptionSection
             // Each kind in its own section rather than mixed in with the subscriptions (#1261).
             if !store.lxSources.isEmpty {

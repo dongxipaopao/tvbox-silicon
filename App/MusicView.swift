@@ -11,6 +11,8 @@ struct MusicView: View {
     /// something else clears it.
     @State private var autoPlayQuery: String?
     @State private var showsSettings = false
+    /// Apple TV opens on the first playlist shelf's first cover, not on the search.
+    @Namespace private var focusScope
     #if DEBUG
     /// `-qaMusicOpen 1` opens the first album or playlist found, for screenshots.
     @State private var qaOpened: MusicCollection?
@@ -42,8 +44,14 @@ struct MusicView: View {
             .glassRowInsets()
             .pageContainer()
         }
+        #if os(tvOS)
+        .focusScope(focusScope)
+        #endif
         .screenBackdrop()
-        .catalogSearchable(text: $query, prompt: L10n.text("Song, artist, album or playlist"))
+        .tvSearchEntry(text: $query, prompt: L10n.text("Song, artist, album or playlist")) {
+            autoPlayQuery = search.kind == .songs || search.kind == .top ? query.trimmingCharacters(in: .whitespacesAndNewlines) : nil
+            search.search(query, kind: Self.searchKind, immediately: true); playDirectHitIfReady()
+        }
         .onChange(of: query) { _, text in
             if text.trimmingCharacters(in: .whitespacesAndNewlines) != autoPlayQuery { autoPlayQuery = nil }
             #if os(tvOS)
@@ -189,7 +197,7 @@ struct MusicView: View {
 
     @ViewBuilder private func content(_ search: MusicSearchModel) -> some View {
         if search.query.isEmpty {
-            MusicHome { showsSettings = true }
+            MusicHome(focusScope: focusScope) { showsSettings = true }
         } else if search.results.isEmpty && search.collections.isEmpty && search.busy {
             ProgressView().frame(maxWidth: .infinity).padding(.vertical, 80)
         } else if search.failed {
@@ -302,6 +310,7 @@ enum MusicLayout {
 /// The Music page with nothing searched: continue listening, shelves to browse, and what played recently.
 private struct MusicHome: View {
     @Environment(Store.self) private var store
+    let focusScope: Namespace.ID
     let openSettings: () -> Void
 
     var body: some View {
@@ -331,7 +340,7 @@ private struct MusicHome: View {
         if playlists > 0 { MusicPlaylistsLink(count: playlists).padding(.bottom, 20) }
         if downloads { MusicDownloadsLink().padding(.bottom, 20) }
         if !browse.sections.isEmpty {
-            MusicBrowseShelves(sections: browse.sections).padding(.bottom, 28)
+            MusicBrowseShelves(sections: browse.sections, focusScope: focusScope).padding(.bottom, 28)
         } else if browse.loading {
             ProgressView().frame(maxWidth: .infinity).padding(.vertical, 60)
         }

@@ -98,17 +98,20 @@ private struct MusicSectionLink<Destination: View>: View {
 struct MusicCollectionTile: View {
     let collection: MusicCollection
     var size: CGFloat?
+    /// Apple TV: the focus scope this cover is the preferred first focus of, if any.
+    var firstFocusIn: Namespace.ID?
     @State private var hovering = false
 
     var body: some View {
         #if os(tvOS)
         // Watch Now's and Discover's card: the cover lifts and the captions move down from under it.
-        RouteLink { MusicCollectionView(collection: collection) } label: {
+        let card = RouteLink { MusicCollectionView(collection: collection) } label: {
             WatchNowTVCover(title: collection.title, detail: collection.subtitle ?? collection.platform.name, poster: collection.artwork,
                             square: true, symbol: collection.kind == .album ? "square.stack" : "music.note.list")
         }
         .cardButton()
         .contextMenu { MusicCollectionLikeButton(collection: collection) }
+        if let firstFocusIn { card.prefersDefaultFocus(true, in: firstFocusIn) } else { card }
         #else
         let link = RouteLink { MusicCollectionView(collection: collection) } label: {
             VStack(alignment: .leading, spacing: 7) {
@@ -143,16 +146,20 @@ struct MusicCollectionTile: View {
 /// opens all of it as a grid. The shelves come from `MusicBrowseModel`, whatever catalog filled them.
 struct MusicBrowseShelves: View {
     let sections: [MusicBrowseSection]
+    /// Apple TV: the page's focus scope, whose first focus is the first cover of the first shelf.
+    var focusScope: Namespace.ID?
 
     var body: some View {
         #if os(tvOS)
         // Watch Now's rails: a heading, covers that lift, and See All waiting left of the first cover.
         VStack(alignment: .leading, spacing: 6) {
-            ForEach(sections) { section in
+            ForEach(Array(sections.enumerated()), id: \.element.id) { shelf, section in
                 let all = Route { AnyView(MusicCollectionsPage(title: section.title, collections: section.collections)) }
                 WatchNowTVRail(title: section.title, seeAll: WatchNowTVSeeAll(height: WatchNowTVCover.width, route: all),
                                gutter: MusicBrowseMetrics.inset) {
-                    ForEach(section.collections) { MusicCollectionTile(collection: $0) }
+                    ForEach(Array(section.collections.enumerated()), id: \.element.id) { index, collection in
+                        MusicCollectionTile(collection: collection, firstFocusIn: shelf == 0 && index == 0 ? focusScope : nil)
+                    }
                 }
             }
         }

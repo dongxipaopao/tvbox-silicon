@@ -23,6 +23,19 @@ extension View {
     }
 }
 
+extension View {
+    /// Apple TV opens the page on its content, with a magnifier at the top right: only pressing it opens the keyboard
+    /// (the system search line sat over the keyboard row and pushed the page down). Elsewhere it is `catalogSearchable`.
+    /// `onSubmit` runs when a search is submitted from the keyboard's screen, which closes first.
+    @ViewBuilder func tvSearchEntry(text: Binding<String>, prompt: String, onSubmit: @escaping () -> Void = {}) -> some View {
+        #if os(tvOS)
+        modifier(TVSearchEntry(text: text, prompt: prompt, onSubmit: onSubmit))
+        #else
+        catalogSearchable(text: text, prompt: prompt)
+        #endif
+    }
+}
+
 #if os(iOS)
 /// The system search field, whose search mode ends when the page is scrolled or the keyboard hides with the field empty.
 /// Left alone, tapping the field and then scrolling kept the page in search mode until Cancel: no title, no back button,
@@ -748,6 +761,48 @@ struct SearchQueryButton: View {
         Button(action: action) { Label(query, systemImage: "magnifyingglass").lineLimit(1) }
             .glassPill()
             .accessibilityLabel(L10n.text("Search %@", query))
+    }
+}
+
+/// A magnifier pinned at the page's top right, as a focus section so pressing up from anywhere on the page reaches it.
+/// It opens the system search keyboard full screen, over the page: Back closes it, and so does a submitted search.
+struct TVSearchEntry: ViewModifier {
+    @Binding var text: String
+    let prompt: String
+    let onSubmit: () -> Void
+    @State private var entering = false
+
+    func body(content: Content) -> some View {
+        content
+            .safeAreaInset(edge: .top, spacing: 0) {
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    Button { entering = true } label: { Image(systemName: "magnifyingglass") }
+                        .glassPill()
+                        .accessibilityLabel(prompt)
+                        .accessibilityIdentifier("search.entry")
+                }
+                .focusSection()
+                .padding(.trailing, Layout.gutter).padding(.top, 8).padding(.bottom, 8)
+            }
+            .fullScreenCover(isPresented: $entering) { keyboard }
+    }
+
+    private var keyboard: some View {
+        let typed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // The remote's keyboard has no return key: this is what runs the typed search.
+                    if !typed.isEmpty {
+                        SearchQueryButton(query: typed) { entering = false; onSubmit() }.accessibilityIdentifier("search.submit")
+                    }
+                }.pageContainer()
+            }
+            .searchable(text: $text, prompt: Text(prompt))
+            .onSubmit(of: .search) { entering = false; onSubmit() }
+            .screenBackdrop()
+        }
     }
 }
 #endif
