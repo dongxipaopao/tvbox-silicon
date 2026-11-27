@@ -1,0 +1,76 @@
+name: probe-spy-play
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: title to search (appears in the log)
+        default: åä¼åæ
+jobs:
+  play:
+    runs-on: xcode-27
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime
+          run-id: 45819094996
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: mkdir -p build && tar -C build -xf runtime.tar
+      - name: Select newest Xcode
+        run: |
+          best=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$best/Contents/Developer"
+      - name: Tools
+        run: brew install xcodegen meson ninja uv 2>&1 | tail -2 || true
+      - name: Restore FFmpeg cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/tvbox-ffmpeg
+            ~/Library/Caches/tvbox-libass
+          key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
+      - name: FFmpeg and libass
+        run: |
+          Scripts/build-apple-ffmpeg.sh
+          Scripts/build-apple-libass.sh
+      - name: Restore Python host cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/PythonHost
+          key: pythonhost-v1-${{ hashFiles('Scripts/build-python-host.sh', 'Runtime/PythonHost/requirements.txt', 'Runtime/PythonHost/host.py') }}
+      - name: Python host
+        run: |
+          Scripts/build-python-host.sh
+          test -x build/PythonHost/python/bin/python3 && echo "python3 executable: OK"
+      - name: Save Python host cache
+        uses: actions/cache/save@v4
+        with:
+          path: build/PythonHost
+          key: pythonhost-v1-${{ hashFiles('Scripts/build-python-host.sh', 'Runtime/PythonHost/requirements.txt', 'Runtime/PythonHost/host.py') }}
+      - name: Build probe
+        run: swift build -c release --product TVBoxProbe 2>&1 | tail -30
+      - name: Link Python host for the probe
+        run: |
+          set -e
+          ln -sfn "$PWD/build/PythonHost" .build/release/PythonHost
+          REAL=$(cd .build/release && pwd -P)
+          cat > /tmp/resprobe.swift <<SWIFT
+          import Foundation
+          print("resourceURL=" + (Bundle.main.resourceURL?.path ?? "nil"))
+          SWIFT
+          swiftc /tmp/resprobe.swift -o "$REAL/resprobe"
+          RESDIR=$("$REAL/resprobe" | sed "s/^resourceURL=//")
+          echo "probe Bundle.main.resourceURL=$RESDIR"
+          ln -sfn "$PWD/build/PythonHost" "$RESDIR/PythonHost"
+          test -x "$RESDIR/PythonHost/python/bin/python3" && echo "python3 executable at probe resourceURL: OK" || { echo "python3 NOT executable at $RESDIR"; exit 1; }
+      - name: Spy play
+        continue-on-error: true
+        env:
+          SPY_555_PY_B64: ${{ secrets.SPY_555_PY_B64 }}
+          TVBOX_DISABLE_SANDBOX: "1"
+        run: |
+          [ -n "$SPY_555_PY_B64" ] || { echo "SPY_555_PY_B64 not set"; exit 0; }
+          echo "$SPY_555_PY_B64" | base64 -D > /tmp/spy-source.py
+          .build/release/TVBoxProbe --spy-play /tmp/spy-source.py "${{ inputs.query }}" "A" 2>&1 || true
+          rm -f /tmp/spy-source.py
