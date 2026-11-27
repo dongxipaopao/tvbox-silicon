@@ -17,7 +17,7 @@ settings:
     # https://developer.apple.com/forums/thread/802729
     OTHER_SWIFT_FLAGS: $(inherited) -Xfrontend -disable-dynamic-actor-isolation
     MARKETING_VERSION: '1.8.32'
-    CURRENT_PROJECT_VERSION: '75'
+    CURRENT_PROJECT_VERSION: '76'
     # The package build that first carried this MARKETING_VERSION: it is the version's R1, and every later build
     # on the same base raises the R revision (Settings shows "1.8.32 R1"). Change it with MARKETING_VERSION.
     XI_BASE_BUILD: '71'

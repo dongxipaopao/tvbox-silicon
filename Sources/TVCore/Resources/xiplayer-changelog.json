@@ -2,6 +2,25 @@
   "releases": [
     {
       "version": "1.8.32",
+      "build": 76,
+      "date": "2026-11-27",
+      "links": {},
+      "features": [
+        {
+          "symbol": "square.grid.2x2",
+          "title": {
+            "en": "Rex list modules (experimental)",
+            "zh-Hans": "Rex 列表模块（实验性）"
+          },
+          "detail": {
+            "en": "Discover has a Rex Modules row. Import a Rex subscription address, and modules that are plain JavaScript list modules open as a browsable grid. Encrypted modules and modules that need an HTML loader or TMDB lookup are shown as not supported. Only the built-in offline sample has been checked in the simulator; importing a real address over the network, video-source modules and Apple TV are not done.",
+            "zh-Hans": "发现页新增“Rex 模块”一行。导入 Rex 订阅地址后，未加密的纯 JavaScript 列表模块可在应用内以网格浏览；加密模块、需要 HTML 加载或 TMDB 查询的模块会标为暂不支持。目前只在模拟器里用内置离线样例检查过；真实网络导入、视频源模块和 Apple TV 尚未完成。"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.8.32",
       "build": 75,
       "date": "2026-11-27",
       "links": {},
