@@ -1,0 +1,286 @@
+diff --git a/App/DiscoverView.swift b/App/DiscoverView.swift
+index df54d2f4..c81a7dc6 100644
+--- a/App/DiscoverView.swift
++++ b/App/DiscoverView.swift
+@@ -120,12 +120,6 @@ struct DiscoverView: View {
+         GeometryReader { proxy in
+             let heroHeight = DiscoverLayout.heroHeight(proxy.size.width)
+             ZStack(alignment: .top) {
+-                #if DEBUG && !os(tvOS)
+-                // Screenshot-only (-qaRexRow 1): pins the Rex row over the page, since the row sits far below the full-height hero.
+-                if UserDefaults.standard.bool(forKey: "qaRexRow") {
+-                    RexShelf().padding(.top, 140).background(.black.opacity(0.75)).zIndex(5)
+-                }
+-                #endif
+                 if heroShown {
+                     DiscoverHeroBackground(state: heroState, items: featured, width: proxy.size.width, height: heroHeight,
+                                            active: onScreen && scenePhase == .active)
+@@ -138,16 +132,8 @@ struct DiscoverView: View {
+                         if waiting {
+                             ProgressView().frame(maxWidth: .infinity).frame(height: heroShown ? min(proxy.size.width * 1.5, 660) : 160)
+                         }
+-                        #if !os(tvOS)
+-                        // Without Featured Titles the Rex row, with its import button, leads the page.
+-                        if !heroShown { RexShelf().padding(.top, 8).id("discover.rex") }
+-                        #endif
+                         ForEach(orderedSections.filter(visible)) { section in
+                             sectionView(section, width: proxy.size.width)
+-                            #if !os(tvOS)
+-                            // The Rex row sits right under the featured titles, empty or not, so its import button is near the top.
+-                            if section == .hero { RexShelf().padding(.top, 8).id("discover.rex") }
+-                            #endif
+                         }
+                         if !model.failures.isEmpty || model.collectionsFailed {
+                             Button { Task { await model.load() } } label: {
+@@ -215,16 +201,6 @@ struct DiscoverView: View {
+                         await douban
+                     } else { await model.load(refresh: true) }
+                 }
+-                #if DEBUG && !os(tvOS)
+-                // `-qaScroll rex` scrolls Discover to the Rex row (automatic scroll for screenshots, not a touch).
+-                .task {
+-                    guard UserDefaults.standard.string(forKey: "qaScroll") == "rex" else { return }
+-                    for _ in 0..<2 {
+-                        try? await Task.sleep(for: .seconds(4))
+-                        reader.scrollTo("discover.rex", anchor: .top)
+-                    }
+-                }
+-                #endif
+                 }
+             }
+             #if os(macOS)
+diff --git a/App/SettingsView.swift b/App/SettingsView.swift
+index 40358f87..aa8e57a7 100644
+--- a/App/SettingsView.swift
++++ b/App/SettingsView.swift
+@@ -526,7 +526,6 @@ struct FormSettingsView: View {
+     #if os(iOS)
+     @State private var addingSubscription = false
+     @State private var showsFeedback = false
+-    @State private var showsRexImport = false
+     @Environment(\.openURL) private var openURL
+     @AppStorage(PhoneTabs.labelsKey) private var showsTabLabels = true
+     @AppStorage(PhoneTabs.collapsesKey) private var collapsesTabBar = true
+@@ -698,9 +697,6 @@ struct FormSettingsView: View {
+                 }
+                 FormLink(symbol: "externaldrive.fill.badge.person.crop", tint: .brown, title: L10n.text("Cloud Drive Accounts"), value: cloudSummary) { CloudDriveView() }
+                     .settingsAnchor(.cloudDrive)
+-                SettingsActionRow(title: L10n.text("Import Rex Subscription")) { showsRexImport = true }
+-                    .accessibilityIdentifier("settings.rexImport")
+-                    .sheet(isPresented: $showsRexImport) { RexImportPage { showsRexImport = false } }
+             }
+ 
+             Section {
+diff --git a/App/TVBoxApp.swift b/App/TVBoxApp.swift
+index 0a8c5585..053f9241 100644
+--- a/App/TVBoxApp.swift
++++ b/App/TVBoxApp.swift
+@@ -32,6 +32,9 @@ import TVCore
+         DownloadsLifecycle.install()
+         #endif
+         SubtitleTranslationSetup.install()
++        // Rex was removed in build 78: drop the subscription list it saved and its module caches.
++        UserDefaults.standard.removeObject(forKey: "rex.collections")
++        ScriptRuntime.removeRexLeftovers()
+     }
+     var body: some Scene {
+         WindowGroup {
+diff --git a/Scripts/qa-scenes-extra.sh b/Scripts/qa-scenes-extra.sh
+index c01a8010..8357bf31 100644
+--- a/Scripts/qa-scenes-extra.sh
++++ b/Scripts/qa-scenes-extra.sh
+@@ -2,33 +2,14 @@
+ # not the web editor). Uses the workflow's own shot function. Offline fixtures only: no real network in CI.
+ case "${SCENES:-}" in
+   rex)
+-    shot 25a-rex-row 25 -qaSection discover -qaRexFixture 1 -qaRexRow 1
+-    shot 25b-rex-module 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen 1
+-    shot 25c-rex-unsupported 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.html
+-    shot 25d-rex-row-zh 25 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    shot 25e-rex-unsupported-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.html -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    shot 25f-rex-module-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen 1 -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    # Stream module (B72/B73). Lines are asked for by a state hook; none of these is a real tap.
+-    shot 26a-stream-lines 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok
+-    shot 26b-stream-lines-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    shot 26c-stream-none-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-none -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    shot 26d-stream-fail-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-fail -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    shot 26e-stream-shape-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-shape -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    shot 26f-stream-episode-cleared-zh 40 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -qaRexEpisodeAfter 2 -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    shot 26g-stream-tap-player 40 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -qaRexTap 1
+-    # 26g showed Discover, not a player, at 40 s: earlier shots to see whether the player opened and closed (example.invalid line, so an error state is expected).
+-    shot 26h-stream-tap-player-early 14 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -qaRexTap 1
+-    shot 26i-stream-tap-player-mid 22 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -qaRexTap 1
+     # The removal of Danmaku, Sharper Picture and Smooth Motion, and the three kept app icons (B76/B77).
+     shot 27a-settings-root-zh 20 -qaSection settings -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     shot 27b-settings-playback-zh 20 -qaSection settings -qaPage playback -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     shot 27c-settings-app-icon-zh 20 -qaSection settings -qaPage app-icon -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     shot 27d-settings-cache-zh 20 -qaSection settings -qaPage cache -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    # Discover with no Rex module imported (no fixture, no pin): where the Rex row and its import button sit by themselves (B79).
++    # Discover after the Rex removal (B78): no Rex row.
+     shot 27e-discover-no-rex-zh 35 -qaSection discover -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    # Settings opened by a launch argument at the Cloud Drive Accounts row (automatic scroll, not a touch); the Rex import row is the next one (B79).
+-    # Offline fixture imported through the real store path, no -qaRexRow pin; Discover is scrolled to the Rex row automatically (not a touch).
+-    shot 27g-discover-rex-after-import-zh 40 -qaSection discover -qaRexFixture 1 -qaScroll rex -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+-    shot 27f-settings-rex-import-zh 25 -qaSection settings -qaScrollTo 'settings.search cloudDrive' -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
++    # Settings opened by a launch argument at the Cloud Drive Accounts row (automatic scroll, not a touch): the Rex import row that used to follow is gone (B78).
++    shot 27f-settings-no-rex-import-zh 25 -qaSection settings -qaScrollTo 'settings.search cloudDrive' -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     ;;
+ esac
+diff --git a/Sources/TVCore/Resources/en.lproj/Localizable.strings b/Sources/TVCore/Resources/en.lproj/Localizable.strings
+index a2a5a9b9..a036bb03 100644
+--- a/Sources/TVCore/Resources/en.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/en.lproj/Localizable.strings
+@@ -2259,20 +2259,6 @@
+ "Delete %lld episodes" = "Delete %lld episodes";
+ "Search settings" = "Search settings";
+ "Switch Source" = "Switch Source";
+-"Can't open" = "Can't open";
+-"Encrypted Rex modules are not supported yet." = "Encrypted Rex modules are not supported yet.";
+-"Encrypted, not supported yet" = "Encrypted, not supported yet";
+-"Import Rex Subscription" = "Import Rex Subscription";
+-"Import a Rex subscription to browse its list modules here." = "Import a Rex subscription to browse its list modules here.";
+-"Import" = "Import";
+-"Only list modules that are not encrypted run for now. The address is kept on this device." = "Only list modules that are not encrypted run for now. The address is kept on this device.";
+-"Ready" = "Ready";
+-"Rex Modules" = "Rex Modules";
+-"This is not a Rex subscription." = "This is not a Rex subscription.";
+-"This is not a web address." = "This is not a web address.";
+-"This list is empty." = "This list is empty.";
+-"This subscription has no modules." = "This subscription has no modules.";
+-"This module needs %@, which this app does not support yet." = "This module needs %@, which this app does not support yet.";
+ "Episode %lld" = "Episode %lld";
+ "Show Play Lines" = "Show Play Lines";
+ "Play Line" = "Play Line";
+diff --git a/Sources/TVCore/Resources/ja.lproj/Localizable.strings b/Sources/TVCore/Resources/ja.lproj/Localizable.strings
+index ac5067a8..fa92d24a 100644
+--- a/Sources/TVCore/Resources/ja.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/ja.lproj/Localizable.strings
+@@ -2259,20 +2259,6 @@
+ "Delete %lld episodes" = "%lld 話を削除";
+ "Search settings" = "設定を検索";
+ "Switch Source" = "ソースを切り替え";
+-"Can't open" = "開けません";
+-"Encrypted Rex modules are not supported yet." = "暗号化された Rex モジュールにはまだ対応していません。";
+-"Encrypted, not supported yet" = "暗号化済み・未対応";
+-"Import Rex Subscription" = "Rex サブスクリプションを読み込む";
+-"Import a Rex subscription to browse its list modules here." = "Rex サブスクリプションを読み込むと、リスト型モジュールをここで閲覧できます。";
+-"Import" = "読み込む";
+-"Only list modules that are not encrypted run for now. The address is kept on this device." = "現在は暗号化されていないリスト型モジュールのみ動作します。アドレスはこの端末にのみ保存されます。";
+-"Ready" = "利用可能";
+-"Rex Modules" = "Rex モジュール";
+-"This is not a Rex subscription." = "Rex サブスクリプションではありません。";
+-"This is not a web address." = "Web アドレスではありません。";
+-"This list is empty." = "このリストは空です。";
+-"This subscription has no modules." = "このサブスクリプションにモジュールはありません。";
+-"This module needs %@, which this app does not support yet." = "このモジュールには「%@」が必要ですが、このアプリはまだ対応していません。";
+ "Episode %lld" = "第 %lld 話";
+ "Show Play Lines" = "再生ラインを表示";
+ "Play Line" = "再生ライン";
+diff --git a/Sources/TVCore/Resources/xiplayer-changelog.json b/Sources/TVCore/Resources/xiplayer-changelog.json
+index bcd76d44..977bb9e4 100644
+--- a/Sources/TVCore/Resources/xiplayer-changelog.json
++++ b/Sources/TVCore/Resources/xiplayer-changelog.json
+@@ -1,5 +1,24 @@
+ {
+   "releases": [
++    {
++      "version": "1.8.32",
++      "build": 78,
++      "date": "2026-11-27",
++      "links": {},
++      "features": [
++        {
++          "symbol": "trash",
++          "title": {
++            "en": "Rex removed",
++            "zh-Hans": "已移除 Rex"
++          },
++          "detail": {
++            "en": "The Rex Modules row on Discover, the Import Rex Subscription row in Settings and the code behind them are removed. A Rex subscription saved earlier is cleared from this app.",
++            "zh-Hans": "发现页的 Rex 模块一行、设置里的“导入 Rex 订阅”以及相关功能代码已移除。此前在应用里保存的 Rex 订阅会被清除。"
++          }
++        }
++      ]
++    },
+     {
+       "version": "1.8.32",
+       "build": 77,
+diff --git a/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings b/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
+index c5707753..b8b77171 100644
+--- a/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
+@@ -2259,20 +2259,6 @@
+ "Delete %lld episodes" = "删除 %lld 集";
+ "Search settings" = "搜索设置";
+ "Switch Source" = "切换源";
+-"Can't open" = "无法打开";
+-"Encrypted Rex modules are not supported yet." = "暂不支持加密的 Rex 模块。";
+-"Encrypted, not supported yet" = "已加密，暂不支持";
+-"Import Rex Subscription" = "导入 Rex 订阅";
+-"Import a Rex subscription to browse its list modules here." = "导入 Rex 订阅后，可在这里浏览其中的列表模块。";
+-"Import" = "导入";
+-"Only list modules that are not encrypted run for now. The address is kept on this device." = "目前只运行未加密的列表模块。地址仅保存在本机。";
+-"Ready" = "可用";
+-"Rex Modules" = "Rex 模块";
+-"This is not a Rex subscription." = "这不是 Rex 订阅。";
+-"This is not a web address." = "这不是网页地址。";
+-"This list is empty." = "这个列表是空的。";
+-"This subscription has no modules." = "这个订阅里没有模块。";
+-"This module needs %@, which this app does not support yet." = "这个模块需要“%@”，本应用暂不支持。";
+ "Episode %lld" = "第 %lld 集";
+ "Show Play Lines" = "显示播放线路";
+ "Play Line" = "播放线路";
+diff --git a/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings b/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
+index 2acfa423..09032a24 100644
+--- a/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
+@@ -2259,20 +2259,6 @@
+ "Delete %lld episodes" = "刪除 %lld 集";
+ "Search settings" = "搜尋設定";
+ "Switch Source" = "切換來源";
+-"Can't open" = "無法開啟";
+-"Encrypted Rex modules are not supported yet." = "暫不支援加密的 Rex 模組。";
+-"Encrypted, not supported yet" = "已加密，暫不支援";
+-"Import Rex Subscription" = "匯入 Rex 訂閱";
+-"Import a Rex subscription to browse its list modules here." = "匯入 Rex 訂閱後，可在這裡瀏覽其中的列表模組。";
+-"Import" = "匯入";
+-"Only list modules that are not encrypted run for now. The address is kept on this device." = "目前只執行未加密的列表模組。位址僅儲存在本機。";
+-"Ready" = "可用";
+-"Rex Modules" = "Rex 模組";
+-"This is not a Rex subscription." = "這不是 Rex 訂閱。";
+-"This is not a web address." = "這不是網頁位址。";
+-"This list is empty." = "這個列表是空的。";
+-"This subscription has no modules." = "這個訂閱裡沒有模組。";
+-"This module needs %@, which this app does not support yet." = "這個模組需要「%@」，本應用暫不支援。";
+ "Episode %lld" = "第 %lld 集";
+ "Show Play Lines" = "顯示播放線路";
+ "Play Line" = "播放線路";
+diff --git a/Sources/TVCore/ScriptRuntime.swift b/Sources/TVCore/ScriptRuntime.swift
+index 5183c7a9..d9ad7542 100644
+--- a/Sources/TVCore/ScriptRuntime.swift
++++ b/Sources/TVCore/ScriptRuntime.swift
+@@ -6,6 +6,11 @@ import QuickJS
+ /// work on iOS and tvOS where no separate script process can be started. Each source keeps its
+ /// own runtime on its own large-stack thread; the TVBox environment comes from ScriptAssets.
+ public actor ScriptRuntime {
++    /// Rex was removed in build 78: delete the module caches it left in the script profiles folder.
++    public nonisolated static func removeRexLeftovers() {
++        guard let items = try? FileManager.default.contentsOfDirectory(at: ScriptAssets.profiles, includingPropertiesForKeys: nil) else { return }
++        for url in items where url.lastPathComponent.hasPrefix("rex-") { try? FileManager.default.removeItem(at: url) }
++    }
+     public static let shared = ScriptRuntime()
+     public static var available: Bool { ScriptAssets.root != nil }
+     private var sessions: [String: ScriptSession] = [:]
+diff --git a/project.yml b/project.yml
+index 2053e37b..a08da54a 100644
+--- a/project.yml
++++ b/project.yml
+@@ -17,7 +17,7 @@ settings:
+     # https://developer.apple.com/forums/thread/802729
+     OTHER_SWIFT_FLAGS: $(inherited) -Xfrontend -disable-dynamic-actor-isolation
+     MARKETING_VERSION: '1.8.32'
+-    CURRENT_PROJECT_VERSION: '77'
++    CURRENT_PROJECT_VERSION: '78'
+     # The package build that first carried this MARKETING_VERSION: it is the version's R1, and every later build
+     # on the same base raises the R revision (Settings shows "1.8.32 R1"). Change it with MARKETING_VERSION.
+     XI_BASE_BUILD: '71'
