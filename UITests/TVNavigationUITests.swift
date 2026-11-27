@@ -643,6 +643,12 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening the Sources page")
         XCTAssertFalse(entry.hasFocus, "The magnifier, not the first source, has the initial focus")
         let remote = XCUIRemote.shared
+        // Into the content from the sidebar, as a user does: the first press of Right must land on the first source.
+        remote.press(.right); sleep(2)
+        note("after Right from the sidebar: \(focusInfo(app))")
+        snap(app, "sources-content-focus")
+        let firstSource = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Discover")).firstMatch
+        XCTAssertTrue(focusInfo(app).contains("Discover") || firstSource.hasFocus, "Right from the sidebar did not land on the first source: \(focusInfo(app))")
         note("magnifier: \(describe(entry))")
         trace(app, entry, "sources")
         note("after Up: \(focusInfo(app))")
@@ -670,6 +676,9 @@ final class TVNavigationUITests: XCTestCase {
         note("Music initial focus: \(focusInfo(app)); keyboards=\(app.keyboards.count)")
         snap(app, "music-initial")
         XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening the Music page")
+        let focus = focusInfo(app)
+        XCTAssertFalse(focus.contains("Music Settings"), "Music opened with focus on Music Settings, not the first playlist: \(focus)")
+        XCTAssertFalse(focus.hasPrefix("none"), "Music opened with nothing focused")
     }
 
     /// Music Settings lists Music Extensions, with the address row (Apple TV adds by address, there is no file picker).

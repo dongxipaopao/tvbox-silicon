@@ -148,6 +148,9 @@ struct MusicBrowseShelves: View {
     let sections: [MusicBrowseSection]
     /// Apple TV: the page's focus scope, whose first focus is the first cover of the first shelf.
     var focusScope: Namespace.ID?
+    #if os(tvOS)
+    @Environment(\.resetFocus) private var resetFocus
+    #endif
 
     var body: some View {
         #if os(tvOS)
@@ -164,6 +167,9 @@ struct MusicBrowseShelves: View {
             }
         }
         .padding(.horizontal, -MusicBrowseMetrics.inset)
+        // The shelves load after the page opens, by which time the Music Settings button above has taken focus:
+        // ask the page's scope again so the first cover of the first shelf (its default) gets it.
+        .onAppear { if let focusScope { resetFocus(in: focusScope) } }
         #else
         VStack(alignment: .leading, spacing: MusicBrowseMetrics.sectionSpacing) {
             ForEach(sections) { section in
