@@ -1,0 +1,51 @@
+diff --git a/App/MusicMacBrowse.swift b/App/MusicMacBrowse.swift
+index 57ea44ba..fc4efa7e 100644
+--- a/App/MusicMacBrowse.swift
++++ b/App/MusicMacBrowse.swift
+@@ -148,6 +148,9 @@ struct MusicBrowseShelves: View {
+     let sections: [MusicBrowseSection]
+     /// Apple TV: the page's focus scope, whose first focus is the first cover of the first shelf.
+     var focusScope: Namespace.ID?
++    #if os(tvOS)
++    @Environment(\.resetFocus) private var resetFocus
++    #endif
+ 
+     var body: some View {
+         #if os(tvOS)
+@@ -164,6 +167,9 @@ struct MusicBrowseShelves: View {
+             }
+         }
+         .padding(.horizontal, -MusicBrowseMetrics.inset)
++        // The shelves load after the page opens, by which time the Music Settings button above has taken focus:
++        // ask the page's scope again so the first cover of the first shelf (its default) gets it.
++        .onAppear { if let focusScope { resetFocus(in: focusScope) } }
+         #else
+         VStack(alignment: .leading, spacing: MusicBrowseMetrics.sectionSpacing) {
+             ForEach(sections) { section in
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index e2153a5c..07fd5c2b 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -643,6 +643,12 @@ final class TVNavigationUITests: XCTestCase {
+         XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening the Sources page")
+         XCTAssertFalse(entry.hasFocus, "The magnifier, not the first source, has the initial focus")
+         let remote = XCUIRemote.shared
++        // Into the content from the sidebar, as a user does: the first press of Right must land on the first source.
++        remote.press(.right); sleep(2)
++        note("after Right from the sidebar: \(focusInfo(app))")
++        snap(app, "sources-content-focus")
++        let firstSource = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Discover")).firstMatch
++        XCTAssertTrue(focusInfo(app).contains("Discover") || firstSource.hasFocus, "Right from the sidebar did not land on the first source: \(focusInfo(app))")
+         note("magnifier: \(describe(entry))")
+         trace(app, entry, "sources")
+         note("after Up: \(focusInfo(app))")
+@@ -670,6 +676,9 @@ final class TVNavigationUITests: XCTestCase {
+         note("Music initial focus: \(focusInfo(app)); keyboards=\(app.keyboards.count)")
+         snap(app, "music-initial")
+         XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening the Music page")
++        let focus = focusInfo(app)
++        XCTAssertFalse(focus.contains("Music Settings"), "Music opened with focus on Music Settings, not the first playlist: \(focus)")
++        XCTAssertFalse(focus.hasPrefix("none"), "Music opened with nothing focused")
+     }
+ 
+     /// Music Settings lists Music Extensions, with the address row (Apple TV adds by address, there is no file picker).
