@@ -1,0 +1,193 @@
+name: simulator-shots
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  runtime-sim:
+    if: false
+    runs-on: macos-15
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore runtime cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            build/apple-runtime
+            build/AppleRuntime
+            build/JavaHost
+          key: runtime-sim-v1-${{ github.run_id }}
+          restore-keys: runtime-sim-v1-
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '19'
+      - name: Tools
+        run: brew install xcodegen maven autoconf automake libtool cmake ninja meson 2>&1 | tail -3 || true
+      - name: Java host
+        run: Scripts/build-java-host.sh
+      - name: Apple runtime (iOS simulator)
+        run: Scripts/package-apple-runtime.sh ios-simulator 2>&1 | tee runtime.log | tail -200
+      - name: Save runtime cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            build/apple-runtime
+            build/AppleRuntime
+            build/JavaHost
+          key: runtime-sim-v1-${{ github.run_id }}
+      - name: Pack runtime
+        if: success()
+        run: tar -C build -cf runtime.tar AppleRuntime JavaHost
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: runtime-sim
+          path: runtime.tar
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: runtime-sim-log
+          path: runtime.log
+          if-no-files-found: ignore
+  shots:
+    runs-on: xcode-27
+    timeout-minutes: 200
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime-sim
+          run-id: 45819094996
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: mkdir -p build && tar -C build -xf runtime.tar
+      - name: Select newest Xcode
+        run: |
+          best=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$best/Contents/Developer"
+          xcodebuild -version
+      - name: Tools
+        run: brew install xcodegen meson ninja ffmpeg 2>&1 | tail -2 || true
+      - name: Restore FFmpeg cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/tvbox-ffmpeg
+            ~/Library/Caches/tvbox-libass
+          key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
+      - name: FFmpeg and libass
+        run: |
+          Scripts/build-apple-ffmpeg.sh
+          Scripts/build-apple-libass.sh
+      - name: Python runtime (iOS simulator)
+        continue-on-error: true
+        run: |
+          brew install python@3.14 2>&1 | tail -3 || true
+          export HOST_PYTHON="$(brew --prefix python@3.14)/bin/python3.14"
+          Scripts/build-apple-python.sh ios-simulator 2>&1 | tail -30
+          ls build/ApplePython/iphonesimulator | head
+      - name: Generate project
+        run: |
+          mkdir -p build/ScriptHost build/PythonHost
+          xcodegen generate
+      - name: Build Debug for iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild -project TVBox.xcodeproj -scheme TVBox-iOS -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DDsim \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee sim-build.log | tail -40
+      - name: Show compile errors
+        if: failure()
+        run: grep -E 'error:' sim-build.log | sort -u | head -300 || true
+      - name: Boot simulator and take screenshots
+        run: |
+          set -x
+          mkdir -p shots build/LibraryUI
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          c=[x for k,v in d.items() if 'iOS' in k for x in v if 'iPhone' in x['name']]
+          pro=[x for x in c if 'Pro' in x['name'] and 'Max' not in x['name']]
+          print((pro or c)[-1]['udid'])")
+          echo "UDID=$UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          APP=$(find build/DDsim/Build/Products -maxdepth 2 -name '*.app' | head -1)
+          xcrun simctl install "$UDID" "$APP"
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'testsrc2=size=640x360:rate=24' -f lavfi -i 'sine=frequency=440' -t 300 -c:v libx264 -preset ultrafast -g 48 -c:a aac -movflags +faststart build/LibraryUI/clip.mp4
+          cp build/LibraryUI/clip.mp4 build/LibraryUI/portrait.mp4
+          python3 Scripts/qa-server.py --port 8765 --media build/LibraryUI/clip.mp4 > qa-server.log 2>&1 &
+          sleep 2
+          B=com.dongxipaopao.xiplayer.ios
+          SUB=http://127.0.0.1:8765/config.json
+          shot() { name=$1; wait=$2; shift 2
+            xcrun simctl terminate "$UDID" $B 2>/dev/null || true
+            xcrun simctl launch "$UDID" $B -qaIsolatedData 1 -qaSubscription "$SUB" "$@" || true
+            sleep "$wait"
+            xcrun simctl io "$UDID" screenshot "shots/$name.png" || true
+          }
+          shot 01-home 30 -qaSection home -qaSeedHistory qa-standard:1,qa-standard:2
+          shot 02-discover 25 -qaSection discover
+          shot 03-music 15 -qaSection music
+          shot 04-sources 20 -qaSection sites
+          shot 05-search 25 -qaSection search -qaPage search:测试
+          shot 06-favorites 12 -qaSection favorites
+          shot 07-history 25 -qaSection history -qaSeedHistory qa-standard:1,qa-standard:2
+          shot 08-settings 12 -qaSection settings
+          shot 08b-settings-bottom 14 -qaSection settings -qaScrollBottom 1
+          shot 02b-discover-reordered 25 -qaSection discover -discover.sectionOrder "genres,trending,people"
+          shot 02c-discover-edit-layout 25 -qaSection discover -discover.sectionOrder "genres,trending,people" -qaEditLayout 1
+          shot 09-detail-episodes-lines 30 -qaSection sites -qaPage detail:qa-standard:1
+          shot 10-source-site 25 -qaSection sites -qaPage site:qa-standard
+          shot 11a-playback 14 -qaSection home -qaPage play-source:qa-standard
+          shot 11b-playback 24 -qaSection home -qaPage play-source:qa-standard
+          shot 11c-playback 36 -qaSection home -qaPage play-source:qa-standard
+          ls -l ~/Library/Logs/DiagnosticReports > crash-list.txt 2>&1 || true
+          shot 12-more 12 -qaSection more
+          shot 13-home-after-play 30 -qaSection home
+          shot 14-home-scrolled 30 -qaSection home -qaSeedHistory qa-standard:1,qa-standard:2 -qaScroll continueWatching
+          # Python source through the embedded CPython (fixture spider served by qa-server).
+          PYSUB=http://127.0.0.1:8765/py-config.json
+          SUB_SAVE=$SUB; SUB=$PYSUB
+          shot 16-python-category 40 -qaSection sites -qaPage site:qa-py
+          shot 17-python-search 40 -qaSection search -qaPage search:测试
+          SUB=$SUB_SAVE
+          # Discover detail: inline sources under the episode row (public TMDB metadata, fixture sources).
+          shot 18a-discover-detail 40 -qaScrollEpisodes 1 -qaSection discover -qaDiscoverOpen tv:1396
+          shot 18b-episode-picked 55 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2 -qaScrollEpisodes 1
+          shot 18c-source-tapped 85 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2 -qaScrollEpisodes 1 -qaPickSource 4
+          shot 18d-discover-play-ready 45 -qaSection discover -qaDiscoverOpen tv:1396
+          shot 18e-discover-play-loading 8 -qaSection discover -qaDiscoverOpen tv:1396
+          shot 18f-discover-sources 80 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2 -qaScrollEpisodes 1
+          # Update prompts: the fork's own feed announces its own release; a stale upstream cache never does.
+          shot 19a-update-feed 25 -qaUpdateCheckNow 1 -qaReleaseFeed http://127.0.0.1:8765/qa-feed-new.json
+          shot 19b-update-stale-cache 30 -qaUpdateCheckNow 1 -qaStaleFeed 1
+          xcrun simctl spawn "$UDID" log show --last 3m --predicate 'subsystem CONTAINS "tvbox" OR process == "TVBox-iOS"' --style compact 2>/dev/null | grep -E 'python|play.timing' | sed -E 's#http[^ ]*#URL#g' | head -30 > shots/applog-python-timing.txt || true
+          # Music: the app's own search and play hooks against the live public music channels (upstream-dependent). Three captures to see progress.
+          shot 15a-music-play 40 -qaSection music -qaQuery 晴天 -qaMusicPlay 1
+          xcrun simctl terminate "$UDID" $B || true
+          ls -l shots
+      - name: Publish simulator shots to a branch
+        if: always()
+        run: |
+          rm -rf /tmp/pub && mkdir /tmp/pub
+          cp shots/0*.png shots/1*.png shots/applog-python-timing.txt /tmp/pub/ || true
+          cp qa-server.log crash-list.txt /tmp/pub/ || true
+          tail -300 sim-build.log > /tmp/pub/sim-build-tail.log || true
+          cd /tmp/pub
+          git init -q && git checkout -qb shots-evidence
+          git config user.name ci && git config user.email ci@users.noreply.github.com
+          git add -A && git commit -qm "simulator shots for ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" shots-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simulator-shots
+          path: |
+            shots
+            qa-server.log
+            sim-build.log
+          if-no-files-found: ignore
