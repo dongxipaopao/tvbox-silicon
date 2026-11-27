@@ -134,6 +134,17 @@ struct MusicView: View {
                 genre: UserDefaults.standard.string(forKey: "qaMusicGenre").flatMap(MusicGenre.init(rawValue:)),
                 language: UserDefaults.standard.string(forKey: "qaMusicLanguage").flatMap(MusicLanguage.init(rawValue:)))
             if !qaFilter.isEmpty { search.setFilter(qaFilter) }
+            // `-qaMusicExtension <address>` adds that music extension (the same download, start and check as Add from Address),
+            // then reloads the extension shelves, before any search below runs.
+            if let address = UserDefaults.standard.string(forKey: "qaMusicExtension"), let url = URL(string: address) {
+                do {
+                    let item = try await MusicExtensionLibrary.shared.add(script: MusicExtensionLibrary.download(url), origin: url)
+                    Diagnostics.shared.record(.info, "qa", "music extension \(item.name) functions=\(item.functions.joined(separator: ","))")
+                    await store.musicBrowse.reload(.ext)
+                } catch {
+                    Diagnostics.shared.record(.warning, "qa", "music extension not added: \(error.localizedDescription)")
+                }
+            }
             // `-qaSection music -qaQuery <text> [-qaMusicKind albums] [-qaMusicPlay 1]` searches, and plays the direct hit.
             if query.isEmpty, let text = UserDefaults.standard.string(forKey: "qaQuery") {
                 if UserDefaults.standard.bool(forKey: "qaMusicPlay") { autoPlayQuery = text }

@@ -96,6 +96,37 @@ class Spider(Spider):
                 return self.send({'list':[{'vod_id':q['ids'],'vod_name':'线路测试影片','vod_pic':base+'/poster.png',
                     'vod_play_from':'坏线路$$$好线路','vod_play_url':'第1集$dead-1$$$第1集$episode-1'}]})
             return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'fo1','vod_name':'线路测试影片','vod_pic':base+'/poster.png'}]})
+        # A Listenify-style music extension: one chart shelf, a search that echoes its text, and a song that plays the QA clip.
+        if path == '/music-ext.js':
+            return self.send("""/*!
+ * @name QA Fake FM
+ * @description QA fixture extension
+ * @version v1
+ * @author qa
+ */
+const appConfig = { ver: 1, name: 'qafm', tabLibrary: { name: '探索', groups: [
+  { name: '测试榜单', type: 'playlist', ui: 1, ext: { gid: 'charts' } } ] } }
+function song(id, name) { return { id: 's' + id, name: name, duration: 20, artist: { id: 'a', name: 'QA Singer' }, ext: { songmid: 'm' + id } } }
+async function getConfig() { return jsonify(appConfig) }
+async function getPlaylists(ext) {
+  const { gid } = argsify(ext)
+  if (gid !== 'charts') return jsonify({ list: [] })
+  return jsonify({ list: [{ id: 'c1', name: 'Chart One', artist: { name: 'qa' }, ext: { gid: 'chart-songs' } }] })
+}
+async function getAlbums(ext) { return jsonify({ list: [] }) }
+async function getArtists(ext) { return jsonify({ list: [] }) }
+async function getSongs(ext) {
+  const { gid, page } = argsify(ext)
+  if (gid === 'chart-songs' && (!page || page <= 1)) return jsonify({ list: [song(1, 'Chart Song One')] })
+  return jsonify({ list: [] })
+}
+async function search(ext) {
+  const { text, type } = argsify(ext)
+  if (type === 'song') return jsonify({ list: [song(7, text + ' hit')] })
+  return jsonify({ list: [] })
+}
+async function getSongInfo(ext) { return jsonify({ urls: ['BASE/clip.mp4'] }) }
+""".replace('BASE', base), mime='application/javascript')
         if path == '/empty-config.json': return self.send({'sites': [], 'lives': [{'name':'测试频道','url':base+'/live.m3u'}]})
         # A source whose video details never arrive, for Back while a page is still loading.
         # Also one whose details fail, and one whose video has no episodes, for Back once the page has given up.

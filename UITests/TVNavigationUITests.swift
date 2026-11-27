@@ -644,6 +644,48 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertTrue(retry.exists, "The error screen went away")
     }
 
+    private func serverCounts() -> [String: Int] {
+        var counts: [String: Int] = [:]
+        let semaphore = DispatchSemaphore(value: 0)
+        URLSession.shared.dataTask(with: URL(string: "http://127.0.0.1:8776/counts")!) { data, _, _ in
+            if let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Int] { counts = json }
+            semaphore.signal()
+        }.resume()
+        _ = semaphore.wait(timeout: .now() + 10)
+        return counts
+    }
+
+    /// A music extension added from an address (its download, start and check) shows its chart shelf on the Music page.
+    func testMusicExtensionShelfShowsOnMusicPage() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js"])
+        let remote = XCUIRemote.shared
+        let shelf = shown("测试榜单", in: app)
+        var presses = 0
+        _ = shelf.waitForExistence(timeout: 45)
+        while !shelf.exists && presses < 14 { remote.press(.down); presses += 1; sleep(1) }
+        snap(app, "music-extension-shelf")
+        note("extension script requests=\(serverCounts()["/music-ext.js"] ?? 0) shelf exists=\(shelf.exists) after \(presses) presses")
+        XCTAssertGreaterThan(serverCounts()["/music-ext.js"] ?? 0, 0, "The extension was never downloaded")
+        XCTAssertTrue(shelf.exists, "The extension's shelf is not on the Music page")
+    }
+
+    /// Searching Music finds the extension's song and playing it asks for the stream the extension gave.
+    func testMusicExtensionSearchPlaysItsSong() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js",
+                          "-qaQuery", "ext晴天", "-qaMusicPlay", "1"])
+        let hit = shown("ext晴天 hit", in: app)
+        _ = hit.waitForExistence(timeout: 60)
+        var waited = 0
+        while (serverCounts()["/clip.mp4"] ?? 0) == 0 && waited < 40 { sleep(1); waited += 1 }
+        snap(app, "music-extension-search-play")
+        let counts = serverCounts()
+        note("song title shown=\(hit.exists) clip requests=\(counts["/clip.mp4"] ?? 0) after \(waited)s")
+        XCTAssertTrue(hit.exists, "The extension's song is not shown")
+        XCTAssertGreaterThan(counts["/clip.mp4"] ?? 0, 0, "The extension's stream was never asked for: \(counts)")
+    }
+
     // MARK: Apple TV parity checks (T1 to T3). They record what is on screen and where focus is, as screenshots and
     // attachments, and report each mismatch without stopping at the first one.
 
