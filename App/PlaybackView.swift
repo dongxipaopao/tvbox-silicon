@@ -1065,20 +1065,24 @@ import IOKit.pwr_mgt
         guard checkingSegments != ObjectIdentifier(item), !Remux.isRemuxed(url), ["http", "https"].contains(url.scheme) else { return }
         checkingSegments = ObjectIdentifier(item)
         Task { [weak self] in
-            var pictureless = 0
+            var watch = SegmentedPictureWatch()
             for _ in 0..<120 {
                 try? await Task.sleep(for: .milliseconds(500))
                 guard let self, self.generation == active, self.item === item, item.status == .readyToPlay else { return }
                 let video = item.tracks.filter { $0.assetTrack?.mediaType == .video }
-                if video.contains(where: { $0.isEnabled && $0.currentVideoFrameRate > 0 }) { return }
+                let drawn = video.contains(where: { $0.isEnabled && $0.currentVideoFrameRate > 0 })
                 // The rate counts frames drawn, so it reads 0 too for a picture nothing draws (a hidden or minimized
                 // window). Only HEVC is listed without being shown; any other listed picture plays, as before #585.
-                if !video.isEmpty, await !Self.mayBeHEVC(video) { return }
+                var playsAsListed = false
+                if !drawn, !video.isEmpty { playsAsListed = await !Self.mayBeHEVC(video) }
                 guard self.generation == active, self.item === item else { return }
-                // The first frames land a beat after sound starts; four checks without any is no picture.
-                guard self.player.timeControlStatus == .playing else { pictureless = 0; continue }
-                pictureless += 1
-                guard pictureless >= 4 else { continue }
+                // The first frames of a 4K stream land seconds after its sound starts; only a long wait with sound
+                // and no frame is no picture (`SegmentedPictureWatch`).
+                switch watch.check(playing: self.player.timeControlStatus == .playing, frameDrawn: drawn, playsAsListed: playsAsListed) {
+                case .accepted: return
+                case .waiting: continue
+                case .repackage: break
+                }
                 // Only a playlist can be repackaged; a plain file mustn't be read whole to find that out.
                 let playback = item.accessLog()?.events.last?.playbackType ?? ""
                 guard ["VOD", "LIVE"].contains(playback) || url.absoluteString.lowercased().contains("m3u8") else { continue }
