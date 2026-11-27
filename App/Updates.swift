@@ -44,7 +44,11 @@ import TVCore
     /// and every later build on the same base is the next R, so "1.8.32 R1" names exactly one package build
     /// (project.yml's XI_BASE_BUILD records the base; bump it with MARKETING_VERSION).
     var revision: Int {
-        let base = (Bundle.main.object(forInfoDictionaryKey: "XiRevisionBaseBuild") as? String).flatMap(Int.init) ?? build
+        // Xcode's generated Info.plist only keeps Apple's whitelisted INFOPLIST_KEY_* entries, so the custom
+        // XiRevisionBaseBuild never lands and the plist read always misses. The bundled changelog's oldest
+        // entry on this marketing version is the same base, available offline.
+        let plist = (Bundle.main.object(forInfoDictionaryKey: "XiRevisionBaseBuild") as? String).flatMap(Int.init)
+        let base = plist ?? ReleaseFeed.bundled?.releases.filter { $0.version == current }.compactMap(\.build).min() ?? build
         return max(1, build - base + 1)
     }
     /// This build as people see it: "1.8.32 R1" for a sideloaded copy; TestFlight names builds "1.7.7 (30)".
