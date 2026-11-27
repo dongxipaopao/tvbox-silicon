@@ -2,6 +2,36 @@
   "releases": [
     {
       "version": "1.8.32",
+      "build": 74,
+      "date": "2026-11-27",
+      "links": {},
+      "features": [
+        {
+          "symbol": "display",
+          "title": {
+            "en": "Waits for the real first frame",
+            "zh-Hans": "等待真实首帧"
+          },
+          "detail": {
+            "en": "The player no longer drops the loading screen on a timer: it holds until video frames are actually drawing. A stream that plays sound with no picture (6s) or buffers without a picture (20s) now names the failure and tries the next line; audio-only playback is unaffected. Verified in simulator scenarios; playback issues with specific sources are still being investigated.",
+            "zh-Hans": "播放器不再按固定时间收起加载界面，而是等到视频真正开始绘制。遇有声无画（6 秒）或长时间缓冲无画面（20 秒）会明确提示并自动尝试下一条线路；纯音频播放不受影响。已通过模拟器场景验证；个别片源的播放问题仍在排查中。"
+          }
+        },
+        {
+          "symbol": "doc.text",
+          "title": {
+            "en": "What's New covers every revision",
+            "zh-Hans": "「版本新功能」覆盖每个修订"
+          },
+          "detail": {
+            "en": "Fixed: for a new revision the sheet could stay empty or never open when the package lacked the revision marker; it now falls back to the bundled notes.",
+            "zh-Hans": "修复：安装包缺少修订标记时，新修订的「版本新功能」可能空白或不弹出；现在回退到随包内置的说明。"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.8.32",
       "build": 73,
       "date": "2026-11-27",
       "links": {},

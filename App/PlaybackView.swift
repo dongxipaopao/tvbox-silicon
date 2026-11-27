@@ -1136,22 +1136,25 @@ import IOKit.pwr_mgt
         // Sound alone: the timed reveal owns it.
         guard item.tracks.contains(where: { $0.assetTrack?.mediaType == .video && $0.isEnabled }) else { return }
         Task { [weak self] in
-            var played = 0, stalled = 0
+            var budget = PictureWaitBudget()
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(250))
                 guard let self, self.generation == active, !self.showsPicture, self.error == nil, self.item === item else { return }
                 let state = self.player.timeControlStatus
-                if state == .playing { played += 1 } else if state == .waitingToPlayAtSpecifiedRate { stalled += 1 } else { continue }
                 let video = item.tracks.filter { $0.assetTrack?.mediaType == .video && $0.isEnabled }
-                if video.contains(where: { $0.currentVideoFrameRate > 0 }) { self.revealPicture(); return }
-                if played >= 24 {
-                    // Six seconds of sound, no drawn frame. HEVC can list without drawing on some devices (#585):
-                    // trust it, as the segmented check does, rather than fail a picture that is actually there.
-                    if await Self.mayBeHEVC(video) { self.revealPicture(); return }
+                let drawn = video.contains(where: { $0.currentVideoFrameRate > 0 })
+                // The HEVC check is async; answer it only when the play budget can trip this tick. HEVC can list
+                // without drawing on some devices (#585): trust it, as the segmented check does, rather than fail
+                // a picture that is actually there.
+                var trusted = false
+                if state == .playing, !drawn, budget.played + 1 >= PictureWaitBudget.playTicks { trusted = await Self.mayBeHEVC(video) }
+                switch budget.tick(playing: state == .playing, waiting: state == .waitingToPlayAtSpecifiedRate, frameDrawn: drawn, trustedWithoutFrames: trusted) {
+                case .waiting: continue
+                case .reveal: self.revealPicture(); return
+                case .failNoDrawnFrame:
                     self.noPicture(channel: channel, url: url, item: item, generation: active, why: "no drawn frame after 6s of playback")
                     return
-                }
-                if stalled >= 80 {
+                case .failStalled:
                     self.noPicture(channel: channel, url: url, item: item, generation: active, why: "no picture after 20s of buffering")
                     return
                 }
