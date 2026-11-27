@@ -120,6 +120,12 @@ struct DiscoverView: View {
         GeometryReader { proxy in
             let heroHeight = DiscoverLayout.heroHeight(proxy.size.width)
             ZStack(alignment: .top) {
+                #if DEBUG && !os(tvOS)
+                // Screenshot-only (-qaRexRow 1): pins the Rex row over the page, since the row sits far below the full-height hero.
+                if UserDefaults.standard.bool(forKey: "qaRexRow") {
+                    RexShelf().padding(.top, 140).background(.black.opacity(0.75)).zIndex(5)
+                }
+                #endif
                 if heroShown {
                     DiscoverHeroBackground(state: heroState, items: featured, width: proxy.size.width, height: heroHeight,
                                            active: onScreen && scenePhase == .active)
