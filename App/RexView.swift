@@ -187,6 +187,8 @@ struct RexModuleView: View {
     @State private var loading = false
     @State private var more = true
     @State private var failure: String?
+    @State private var request = 0
+    @State private var pending: Task<Void, Never>?
 
     var body: some View {
         ScrollView {
@@ -291,12 +293,14 @@ struct RexItemView: View {
         }
         .background { DiscoverCanvas(poster: item.poster) }
         .foregroundStyle(.white).preferredColorScheme(.dark)
+        .onDisappear { reset() }
     }
 
     @ViewBuilder private func playLines(_ stream: RexFunction) -> some View {
         VStack(spacing: 10) {
             Stepper(value: $episode, in: 1...999) { Text(L10n.text("Episode %lld", episode)) }
-            Button { Task { await load(stream) } } label: { Text(L10n.text("Show Play Lines")).frame(maxWidth: .infinity) }
+                .onChange(of: episode) { _, _ in reset() }
+            Button { start(stream) } label: { Text(L10n.text("Show Play Lines")).frame(maxWidth: .infinity) }
                 .buttonStyle(.borderedProminent).disabled(loading).accessibilityIdentifier("rex.showLines")
             if loading { ProgressView().accessibilityIdentifier("rex.lines.loading") }
             if let failure { Text(failure).font(.footnote).opacity(0.7).multilineTextAlignment(.center) }
@@ -315,16 +319,34 @@ struct RexItemView: View {
         }
     }
 
-    private func load(_ stream: RexFunction) async {
-        loading = true; failure = nil; defer { loading = false; asked = true }
+    /// A newer request, a changed episode or leaving the page drops the old answer: the generation number decides whether a
+    /// finished request may still write, so a late answer never replaces what is on screen. Only the previous request is
+    /// cancelled, never the one just started.
+    private func reset() {
+        request += 1
+        pending?.cancel(); pending = nil
+        lines = []; skipped = 0; failure = nil; asked = false; loading = false
+    }
+
+    private func start(_ stream: RexFunction) {
+        request += 1
+        let mine = request
+        pending?.cancel()
+        lines = []; skipped = 0; failure = nil; asked = false; loading = true
         var params = ["id": item.id, "link": item.id, "episode": String(episode)]
         if !item.kind.isEmpty { params["type"] = item.kind; params["mediaType"] = item.kind }
-        do {
-            let answer = try await RexRuntime.shared.lines(widget, function: stream, params: params)
-            lines = answer.lines; skipped = answer.invalid
-        } catch {
-            lines = []; skipped = 0
-            failure = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        pending = Task {
+            let result: Result<RexLines, Error>
+            do { result = .success(try await RexRuntime.shared.lines(widget, function: stream, params: params)) }
+            catch { result = .failure(error) }
+            guard mine == request else { return }
+            loading = false; asked = true
+            switch result {
+            case .success(let answer): lines = answer.lines; skipped = answer.invalid
+            case .failure(let error):
+                guard !(error is CancellationError) else { return }
+                failure = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            }
         }
     }
 
