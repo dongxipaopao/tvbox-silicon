@@ -137,16 +137,17 @@ struct DiscoverView: View {
                         if waiting {
                             ProgressView().frame(maxWidth: .infinity).frame(height: heroShown ? min(proxy.size.width * 1.5, 660) : 160)
                         }
+                        #if !os(tvOS)
+                        // Without Featured Titles the Rex row, with its import button, leads the page.
+                        if !heroShown { RexShelf().padding(.top, 8) }
+                        #endif
                         ForEach(orderedSections.filter(visible)) { section in
                             sectionView(section, width: proxy.size.width)
                             #if !os(tvOS)
-                            // Once something is imported the Rex row sits right under the featured titles.
-                            if section == .hero, !RexModel.shared.entries.isEmpty { RexShelf().padding(.top, 8) }
+                            // The Rex row sits right under the featured titles, empty or not, so its import button is near the top.
+                            if section == .hero { RexShelf().padding(.top, 8) }
                             #endif
                         }
-                        #if !os(tvOS)
-                        if RexModel.shared.entries.isEmpty { RexShelf().padding(.top, 8) }
-                        #endif
                         if !model.failures.isEmpty || model.collectionsFailed {
                             Button { Task { await model.load() } } label: {
                                 Label(L10n.text("Some lists couldn't load. Try again."), systemImage: "arrow.clockwise")

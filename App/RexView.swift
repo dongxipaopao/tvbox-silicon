@@ -84,7 +84,6 @@ import TVCore
 struct RexShelf: View {
     @State private var model = RexModel.shared
     @State private var importing = false
-    @State private var address = ""
     #if DEBUG
     @State private var qaOpen: RexCollection.Widget?
     #endif
@@ -123,7 +122,7 @@ struct RexShelf: View {
             }
             #endif
         }
-        .sheet(isPresented: $importing) { importSheet }
+        .sheet(isPresented: $importing) { RexImportPage { importing = false } }
         #if DEBUG
         .sheet(item: $qaOpen) { widget in NavigationStack { RexModuleView(widget: widget).toolbar { ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { qaOpen = nil } } } } }
         #endif
@@ -150,8 +149,14 @@ struct RexShelf: View {
         if let problem = entry.problem { if case .encrypted = problem { return L10n.text("Encrypted, not supported yet") }; return L10n.text("Can't open") }
         return entry.widget.version.isEmpty ? L10n.text("Ready") : "v" + entry.widget.version
     }
+}
 
-    private var importSheet: some View {
+/// The import page for Rex subscription addresses: a sheet from Discover's Rex row and from Settings.
+struct RexImportPage: View {
+    @State private var model = RexModel.shared
+    @State private var address = ""
+    let done: () -> Void
+    var body: some View {
         NavigationStack {
             Form {
                 Section { TextField("https://…/collection.rex", text: $address).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
@@ -166,9 +171,9 @@ struct RexShelf: View {
             }
             .navigationTitle(L10n.text("Import Rex Subscription")).navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(L10n.text("Done")) { importing = false } }
+                ToolbarItem(placement: .cancellationAction) { Button(L10n.text("Done")) { done() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.text("Import")) { let value = address; address = ""; importing = false; Task { await model.add(value) } }
+                    Button(L10n.text("Import")) { let value = address; address = ""; done(); Task { await model.add(value) } }
                         .disabled(address.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
