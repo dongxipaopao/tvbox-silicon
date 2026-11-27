@@ -2412,3 +2412,10 @@
 "This list is empty." = "This list is empty.";
 "This subscription has no modules." = "This subscription has no modules.";
 "This module needs %@, which this app does not support yet." = "This module needs %@, which this app does not support yet.";
+"Episode %lld" = "Episode %lld";
+"Show Play Lines" = "Show Play Lines";
+"Play Line" = "Play Line";
+"No play lines were returned." = "No play lines were returned.";
+"This line is not a web address, so it cannot play." = "This line is not a web address, so it cannot play.";
+"%lld lines had no address and were skipped." = "%lld lines had no address and were skipped.";
+"This module answered in a form this app does not understand yet." = "This module answered in a form this app does not understand yet.";

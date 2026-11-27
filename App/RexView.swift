@@ -210,7 +210,7 @@ struct RexModuleView: View {
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12, alignment: .top)], spacing: 14) {
                     ForEach(items) { item in
-                        RouteLink { RexItemView(item: item) } label: { RexTile(item: item) }
+                        RouteLink { RexItemView(widget: widget, stream: module?.functions.first(where: \.isStream), item: item) } label: { RexTile(item: item) }
                             .buttonStyle(.plain).accessibilityIdentifier("rex.item." + item.id)
                     }
                 }
@@ -267,7 +267,17 @@ private struct RexTile: View {
 
 /// A title from a Rex module: its cover and facts, and a way to search the user's own sources for it.
 struct RexItemView: View {
+    let widget: RexCollection.Widget
+    let stream: RexFunction?
     let item: RexItem
+    @Environment(Store.self) private var store
+    @State private var episode = 1
+    @State private var lines: [RexLine] = []
+    @State private var skipped = 0
+    @State private var loading = false
+    @State private var asked = false
+    @State private var failure: String?
+
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -275,11 +285,53 @@ struct RexItemView: View {
                 Text(item.title).font(.title2.weight(.semibold)).multilineTextAlignment(.center)
                 if !item.subtitle.isEmpty { Text(item.subtitle).font(.subheadline).opacity(0.7) }
                 if !item.overview.isEmpty { Text(item.overview).font(.footnote).opacity(0.7).multilineTextAlignment(.leading) }
+                if let stream { playLines(stream) }
                 DiscoverFindSourcesButton(title: item.title).padding(.top, 8).accessibilityIdentifier("rex.findSources")
             }.padding(40).frame(maxWidth: .infinity)
         }
         .background { DiscoverCanvas(poster: item.poster) }
         .foregroundStyle(.white).preferredColorScheme(.dark)
+    }
+
+    @ViewBuilder private func playLines(_ stream: RexFunction) -> some View {
+        VStack(spacing: 10) {
+            Stepper(value: $episode, in: 1...999) { Text(L10n.text("Episode %lld", episode)) }
+            Button { Task { await load(stream) } } label: { Text(L10n.text("Show Play Lines")).frame(maxWidth: .infinity) }
+                .buttonStyle(.borderedProminent).disabled(loading).accessibilityIdentifier("rex.showLines")
+            if loading { ProgressView().accessibilityIdentifier("rex.lines.loading") }
+            if let failure { Text(failure).font(.footnote).opacity(0.7).multilineTextAlignment(.center) }
+            else if asked, !loading, lines.isEmpty { Text(L10n.text("No play lines were returned.")).font(.footnote).opacity(0.7) }
+            ForEach(lines) { line in
+                Button { play(line) } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(line.name.isEmpty ? L10n.text("Play Line") : line.name).font(.subheadline.weight(.semibold))
+                        if !line.detail.isEmpty { Text(line.detail).font(.caption).opacity(0.7).lineLimit(2) }
+                        if line.playURL == nil { Text(L10n.text("This line is not a web address, so it cannot play.")).font(.caption).opacity(0.7) }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.bordered).disabled(line.playURL == nil)
+            }
+            if skipped > 0 { Text(L10n.text("%lld lines had no address and were skipped.", skipped)).font(.caption).opacity(0.7) }
+        }
+    }
+
+    private func load(_ stream: RexFunction) async {
+        loading = true; failure = nil; defer { loading = false; asked = true }
+        var params = ["id": item.id, "link": item.id, "episode": String(episode)]
+        if !item.kind.isEmpty { params["type"] = item.kind; params["mediaType"] = item.kind }
+        do {
+            let answer = try await RexRuntime.shared.lines(widget, function: stream, params: params)
+            lines = answer.lines; skipped = answer.invalid
+        } catch {
+            lines = []; skipped = 0
+            failure = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    private func play(_ line: RexLine) {
+        guard let url = line.playURL else { return }
+        let name = line.name.isEmpty ? item.title : item.title + " · " + line.name
+        store.playing = Channel(name: name, group: "Rex", url: url, headers: line.headers)
     }
 }
 #endif

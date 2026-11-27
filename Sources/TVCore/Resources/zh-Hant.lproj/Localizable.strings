@@ -2412,3 +2412,10 @@
 "This list is empty." = "這個列表是空的。";
 "This subscription has no modules." = "這個訂閱裡沒有模組。";
 "This module needs %@, which this app does not support yet." = "這個模組需要「%@」，本應用暫不支援。";
+"Episode %lld" = "第 %lld 集";
+"Show Play Lines" = "顯示播放線路";
+"Play Line" = "播放線路";
+"No play lines were returned." = "模組沒有回傳播放線路。";
+"This line is not a web address, so it cannot play." = "這條線路不是網頁位址，無法播放。";
+"%lld lines had no address and were skipped." = "有 %lld 條線路沒有位址，已跳過。";
+"This module answered in a form this app does not understand yet." = "這個模組回傳的格式，本應用暫時無法辨識。";

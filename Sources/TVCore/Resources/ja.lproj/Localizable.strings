@@ -2412,3 +2412,10 @@
 "This list is empty." = "このリストは空です。";
 "This subscription has no modules." = "このサブスクリプションにモジュールはありません。";
 "This module needs %@, which this app does not support yet." = "このモジュールには「%@」が必要ですが、このアプリはまだ対応していません。";
+"Episode %lld" = "第 %lld 話";
+"Show Play Lines" = "再生ラインを表示";
+"Play Line" = "再生ライン";
+"No play lines were returned." = "モジュールから再生ラインが返されませんでした。";
+"This line is not a web address, so it cannot play." = "このラインは Web アドレスではないため再生できません。";
+"%lld lines had no address and were skipped." = "%lld 件のラインはアドレスがなくスキップされました。";
+"This module answered in a form this app does not understand yet." = "このモジュールの応答形式にはまだ対応していません。";

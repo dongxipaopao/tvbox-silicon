@@ -59,6 +59,27 @@ public struct RexFunction: Hashable, Sendable, Identifiable {
     public let params: [RexParam]
     /// A "stream" module resolves a play address rather than listing titles.
     public let listsTitles: Bool
+    /// A function declared with type "stream": it answers with play lines (`RexRuntime.lines`).
+    public let isStream: Bool
+}
+
+/// One play line a stream module returned. Lines that are not web addresses are kept and shown as unplayable.
+public struct RexLine: Hashable, Sendable, Identifiable {
+    public let name: String
+    public let detail: String
+    public let url: String
+    public let headers: [String: String]
+    public var id: String { name + "|" + url }
+    public var playURL: URL? {
+        guard let url = URL(string: url), let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme) else { return nil }
+        return url
+    }
+}
+
+public struct RexLines: Sendable {
+    public let lines: [RexLine]
+    /// Entries the module returned that were not objects or had no address text, counted, never silently lost.
+    public let invalid: Int
 }
 
 public struct RexModule: Hashable, Sendable {
@@ -76,6 +97,8 @@ public struct RexItem: Hashable, Sendable, Identifiable {
     public let overview: String
     public let rating: Double?
     public let year: Int?
+    /// The item's own `mediaType` (movie or tv) when the module gives one, else empty.
+    public let kind: String
 }
 
 public actor RexRuntime {
@@ -148,6 +171,32 @@ public actor RexRuntime {
         return (value["items"]?.array ?? []).compactMap(Self.item)
     }
 
+    /// A stream function's play lines for one title and episode. `params` replace the module's defaults.
+    public func lines(_ widget: RexCollection.Widget, function: RexFunction, params: [String: String]) async throws -> RexLines {
+        let entry = try await load(widget)
+        var all = entry.module.globals
+        for (key, value) in params { all[key] = value }
+        let json = String(decoding: try JSONSerialization.data(withJSONObject: all), as: UTF8.self)
+        let literal = String(decoding: try JSONSerialization.data(withJSONObject: [function.functionName], options: []), as: UTF8.self).dropFirst().dropLast()
+        let envelope = await entry.session.evaluate("__rex.resources(\(literal), \(json))", within: 60)
+        guard let value = envelope["value"]?.object else {
+            throw RexError.failed(Self.explain(String((envelope["error"]?.string ?? "The module did not answer").prefix(200))))
+        }
+        if let message = value["error"]?.string {
+            if message == "REX_SHAPE" { throw RexError.failed(L10n.text("This module answered in a form this app does not understand yet.")) }
+            throw RexError.failed(Self.explain(message))
+        }
+        let lines: [RexLine] = (value["lines"]?.array ?? []).compactMap { entry in
+            guard let object = entry.object, let url = object["url"]?.string else { return nil }
+            var headers: [String: String] = [:]
+            for (key, header) in object["headers"]?.object ?? [:] { if let text = header.string { headers[key] = text } }
+            return RexLine(name: object["name"]?.string ?? "", detail: object["description"]?.string ?? "", url: url, headers: headers)
+        }
+        var invalid = 0
+        if case .number(let count)? = value["invalid"] { invalid = Int(count) }
+        return RexLines(lines: lines, invalid: invalid)
+    }
+
     private func load(_ widget: RexCollection.Widget) async throws -> Loaded {
         if let existing = loaded[widget.url] {
             recent.removeAll { $0 == widget.url }; recent.append(widget.url)
@@ -189,7 +238,7 @@ public actor RexRuntime {
             guard let object = value.object, let name = object["functionName"]?.string else { return nil }
             let type = object["type"]?.string ?? ""
             return RexFunction(id: object["id"]?.string ?? name, title: object["title"]?.string ?? name, functionName: name,
-                               params: params(object["params"]?.array), listsTitles: type.isEmpty || type == "list")
+                               params: params(object["params"]?.array), listsTitles: type.isEmpty || type == "list", isStream: type == "stream")
         }
         return RexModule(widget: widget, title: meta["title"]?.string ?? widget.title, functions: functions, globals: globals)
     }
@@ -203,7 +252,7 @@ public actor RexRuntime {
         if case .number(let score)? = object["rating"], score > 0 { rating = score }
         return RexItem(id: object["id"]?.string ?? title, title: title, subtitle: object["subtitle"]?.string ?? object["genreTitle"]?.string ?? "",
                        poster: poster.isEmpty ? nil : URL(string: poster.replacingOccurrences(of: "http://", with: "https://")),
-                       overview: object["description"]?.string ?? "", rating: rating, year: Int(date.prefix(4)))
+                       overview: object["description"]?.string ?? "", rating: rating, year: Int(date.prefix(4)), kind: object["mediaType"]?.string ?? "")
     }
 }
 

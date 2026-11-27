@@ -89,6 +89,31 @@ globalThis.__rex = {
         if (!meta || typeof meta !== 'object') throw new Error('The module has no WidgetMetadata');
         return JSON.parse(JSON.stringify(meta));
     },
+    // A "stream" function (loadResource) answers with an array of play lines, {name, description, url}, as the user's
+    // 看剧AI module does. Anything else is reported as an unknown answer form rather than guessed at. Lines are never
+    // dropped without a count: `invalid` is how many entries had no usable address text or were not objects.
+    // `headers` is kept when a line carries it (string values only).
+    async resources(name, params) {
+        try {
+            const fn = globalThis.__rexLookup(String(name));
+            if (typeof fn !== 'function') throw new Error('The module has no function ' + name);
+            const result = await fn(params || {});
+            if (!Array.isArray(result)) return { error: 'REX_SHAPE' };
+            const lines = [];
+            let invalid = 0;
+            for (const entry of result) {
+                if (!entry || typeof entry !== 'object' || typeof entry.url !== 'string' || !entry.url.trim()) { invalid += 1; continue; }
+                const headers = {};
+                if (entry.headers && typeof entry.headers === 'object' && !Array.isArray(entry.headers)) {
+                    for (const key of Object.keys(entry.headers)) if (typeof entry.headers[key] === 'string') headers[key] = entry.headers[key];
+                }
+                lines.push({ name: String(entry.name == null ? '' : entry.name), description: String(entry.description == null ? '' : entry.description), url: entry.url.trim(), headers });
+            }
+            return { lines, invalid };
+        } catch (error) {
+            return { error: String(error && error.message || error).slice(0, 300) };
+        }
+    },
     async call(name, params) {
         try {
             const fn = globalThis.__rexLookup(String(name));

@@ -2412,3 +2412,10 @@
 "This list is empty." = "这个列表是空的。";
 "This subscription has no modules." = "这个订阅里没有模块。";
 "This module needs %@, which this app does not support yet." = "这个模块需要“%@”，本应用暂不支持。";
+"Episode %lld" = "第 %lld 集";
+"Show Play Lines" = "显示播放线路";
+"Play Line" = "播放线路";
+"No play lines were returned." = "模块没有返回播放线路。";
+"This line is not a web address, so it cannot play." = "这条线路不是网页地址，无法播放。";
+"%lld lines had no address and were skipped." = "有 %lld 条线路没有地址，已跳过。";
+"This module answered in a form this app does not understand yet." = "这个模块返回的格式，本应用暂时无法识别。";
