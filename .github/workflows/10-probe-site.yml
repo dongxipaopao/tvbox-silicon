@@ -49,11 +49,11 @@ jobs:
           SUB: ${{ secrets.TIMING_SUB_A }}
         run: |
           [ -n "$SUB" ] || { echo "TIMING_SUB_A not set"; exit 0; }
-          .build/release/TVBoxProbe --sub-play "$SUB" "${{ inputs.query }}" "A" "${{ inputs.site }}" 2>&1 | grep '^subplay\[' || true
+          .build/release/TVBoxProbe --sub-play "$SUB" "${{ inputs.query }}" "A" "${{ inputs.site }}" 2>&1 || true
       - name: Site play, source B
         continue-on-error: true
         env:
           SUB: ${{ secrets.TIMING_SUB_B }}
         run: |
           [ -n "$SUB" ] || { echo "TIMING_SUB_B not set"; exit 0; }
-          .build/release/TVBoxProbe --sub-play "$SUB" "${{ inputs.query }}" "B" "${{ inputs.site }}" 2>&1 | grep '^subplay\[' || true
+          .build/release/TVBoxProbe --sub-play "$SUB" "${{ inputs.query }}" "B" "${{ inputs.site }}" 2>&1 || true
