@@ -160,8 +160,8 @@ jobs:
           shot 18b-episode-picked 55 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2 -qaScrollEpisodes 1
           shot 18c-source-tapped 85 -qaSection discover -qaDiscoverOpen tv:1396 -qaPickEpisode 2 -qaScrollEpisodes 1 -qaPickSource 4
           # Update prompts: the fork's own feed announces its own release; a stale upstream cache never does.
-          shot 19a-update-feed 25 -qaReleaseFeed http://127.0.0.1:8765/qa-feed-new.json
-          shot 19b-update-stale-cache 30 -qaStaleFeed 1
+          shot 19a-update-feed 25 -qaUpdateCheckNow 1 -qaReleaseFeed http://127.0.0.1:8765/qa-feed-new.json
+          shot 19b-update-stale-cache 30 -qaUpdateCheckNow 1 -qaStaleFeed 1
           xcrun simctl spawn "$UDID" log show --last 3m --predicate 'subsystem CONTAINS "tvbox" OR process == "TVBox-iOS"' --style compact 2>/dev/null | grep -E 'python|play.timing' | sed -E 's#http[^ ]*#URL#g' | head -30 > shots/applog-python-timing.txt || true
           # Music: the app's own search and play hooks against the live public music channels (upstream-dependent). Three captures to see progress.
           shot 15a-music-play 40 -qaSection music -qaQuery 晴天 -qaMusicPlay 1
