@@ -1,0 +1,15 @@
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index 4bb257f5..573c5d30 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -682,6 +682,10 @@ final class TVNavigationUITests: XCTestCase {
+         note("Music initial focus: \(focusInfo(app)); keyboards=\(app.keyboards.count)")
+         snap(app, "music-initial")
+         XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening the Music page")
++        // Focus opens in the sidebar, as on every page: into the content as a user does, with Right.
++        note("Music focus before Right: \(focusInfo(app)) frame=\(focusFrame(app))")
++        XCUIRemote.shared.press(.right); sleep(2)
++        snap(app, "music-after-right")
+         let focus = focusInfo(app)
+         let frame = focusFrame(app)
+         let settings = app.buttons["music.settings"]
