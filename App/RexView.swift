@@ -292,6 +292,8 @@ struct RexItemView: View {
     @State private var loading = false
     @State private var asked = false
     @State private var failure: String?
+    @State private var request = 0
+    @State private var pending: Task<Void, Never>?
 
     var body: some View {
         ScrollView {
