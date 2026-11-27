@@ -363,6 +363,11 @@ struct DiscoverView: View {
         if let page = defaults.string(forKey: "qaDiscoverOpen"), !DiscoverQA.pageOpened {
             DiscoverQA.pageOpened = true
             if page == "following" { openRoute?(Route { AnyView(DiscoverFollowingView()) }) }
+            else if page.hasPrefix("douban:") {
+                // `douban:<title>` opens that title as a Douban list does: matched to TMDB while its own card shows.
+                let item = DoubanCatalog.Item(id: "qa-" + page, title: String(page.dropFirst(7)), year: nil, rating: nil, cover: nil, mediaType: .tv)
+                openRoute?(Route { AnyView(DoubanTitleView(item: item)) })
+            }
             else if page.hasPrefix("tv:"), let id = Int(page.dropFirst(3)) {
                 let item = TMDBCatalog.Item(id: id, mediaType: .tv, name: "", originalName: "", year: nil, overview: "", poster: nil, backdrop: nil, rating: nil, genreIDs: [])
                 openRoute?(Route { AnyView(DiscoverDetailView(item: item)) })
@@ -1863,18 +1868,27 @@ private struct DoubanTitleView: View {
     let item: DoubanCatalog.Item
     @State private var match: TMDBCatalog.Item?
     @State private var looked = false
+    init(item: DoubanCatalog.Item) {
+        self.item = item
+        // A title looked up before opens at once; the cover, name and facts Douban already gave show while a new one is matched.
+        let cached = DoubanMatchCache.items[item.id]
+        _match = State(initialValue: cached)
+        _looked = State(initialValue: cached != nil)
+    }
     var body: some View {
         Group {
             if let match { DiscoverDetailView(item: match) }
-            else if looked { card }
-            else { ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity) }
+            else { card }
         }
         .task(id: item.id) {
             guard !looked else { return }
+            let started = ContinuousClock.now
             let results = (try? await TMDBMatch.search(DoubanCatalog.searchTitle(item))) ?? []
             guard !Task.isCancelled else { return }
             match = DoubanCatalog.match(item, in: results)?.catalogItem
+            if let match { DoubanMatchCache.items[item.id] = match }
             looked = true
+            Diagnostics.shared.record(.info, "perf", "douban title matched in \(ContinuousClock.now - started), found=\(match != nil)")
         }
     }
 
@@ -1885,10 +1899,17 @@ private struct DoubanTitleView: View {
                 Text(item.title).font(.title2.weight(.semibold)).multilineTextAlignment(.center)
                 if !item.caption.isEmpty { Text(item.caption).font(.headline).opacity(0.7) }
                 if !item.subtitle.isEmpty { Text(item.subtitle).font(.subheadline).opacity(0.6).multilineTextAlignment(.center) }
-                DiscoverFindSourcesButton(title: item.title).padding(.top, 8).accessibilityIdentifier("discover.douban.findSources")
+                if looked {
+                    DiscoverFindSourcesButton(title: item.title).padding(.top, 8).accessibilityIdentifier("discover.douban.findSources")
+                } else {
+                    ProgressView().padding(.top, 8).accessibilityIdentifier("discover.douban.matching")
+                }
             }.padding(40).frame(maxWidth: .infinity)
         }
         .background { DiscoverCanvas(poster: item.cover) }
         .foregroundStyle(.white).preferredColorScheme(.dark)
     }
 }
+
+/// Douban titles already matched to TMDB this session, so opening one again skips the lookup.
+@MainActor enum DoubanMatchCache { static var items: [String: TMDBCatalog.Item] = [:] }

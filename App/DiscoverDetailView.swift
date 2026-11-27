@@ -649,7 +649,14 @@ struct DiscoverDetailView: View {
         loading = true; failed = false
         defer { loading = false }
         do {
-            let value = try await TMDBMatch.details(item.mediaType, id: item.id, season: nil)
+            let started = ContinuousClock.now
+            let value: TMDBMatch.Details
+            if let cached = DiscoverDetailCache.values[item.key] { value = cached }
+            else {
+                value = try await TMDBMatch.details(item.mediaType, id: item.id, season: nil)
+                DiscoverDetailCache.values[item.key] = value
+                Diagnostics.shared.record(.info, "perf", "discover details loaded in \(ContinuousClock.now - started)")
+            }
             guard !Task.isCancelled else { return }
             details = value
             if let poster = value.heroPoster ?? item.poster { paint = await DiscoverPainter.shared.paint(poster) }
@@ -1646,3 +1653,6 @@ struct DiscoverTVActionStyle: ButtonStyle {
     }
 }
 #endif
+
+/// Details already fetched this session, so a title opened again shows at once.
+@MainActor enum DiscoverDetailCache { static var values: [String: TMDBMatch.Details] = [:] }
