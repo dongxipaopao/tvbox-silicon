@@ -10,7 +10,7 @@ public enum BuiltInMusic {
     /// Where relative addresses inside the bundled listing and script resolve.
     public static let origin = URL(string: "https://bright-harbor.pages.dev/v1/")!
 
-    private static var cached: CloudMusic.Listing??
+    nonisolated(unsafe) private static var cached: CloudMusic.Listing??
     private static let lock = NSLock()
 
     /// The bundled `yingxiaMusic` listing.
