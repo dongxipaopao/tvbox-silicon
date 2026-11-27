@@ -72,5 +72,25 @@ jobs:
         run: |
           [ -n "$SPY_555_PY_B64" ] || { echo "SPY_555_PY_B64 not set"; exit 0; }
           echo "$SPY_555_PY_B64" | base64 -D > /tmp/spy-source.py
-          .build/release/TVBoxProbe --spy-play /tmp/spy-source.py "${{ inputs.query }}" "A" 2>&1 || true
+          .build/release/TVBoxProbe --spy-play /tmp/spy-source.py "${{ inputs.query }}" "A" 2>&1 | awk '
+          NR==FNR {
+            line=$0; gsub(/^[ \t]+|[ \t]+$/,"",line)
+            if (length(line)>6) src[line]=1
+            next
+          }
+          {
+            t=$0; gsub(/^[ \t]+|[ \t]+$/,"",t)
+            if (length(t)>6 && (t in src)) { print "[redacted: spider source line]"; next }
+            res=""; rest=$0
+            while (match(rest,/https?:\/\/[^]"<> )]+/)) {
+              u=substr(rest,RSTART,RLENGTH)
+              res=res substr(rest,1,RSTART-1)
+              h=u; sub(/^https?:\/\//,"",h); sub(/[:\/?#].*$/,"",h)
+              if (h=="127.0.0.1" || h=="localhost" || h ~ /(^|\.)github\.com$/ || h ~ /(^|\.)githubusercontent\.com$/ || h ~ /(^|\.)apple\.com$/) res=res u
+              else res=res "[redacted-url]"
+              rest=substr(rest,RSTART+RLENGTH)
+            }
+            print res rest
+          }
+          ' /tmp/spy-source.py - || true
           rm -f /tmp/spy-source.py
