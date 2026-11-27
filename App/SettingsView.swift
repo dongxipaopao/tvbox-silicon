@@ -917,6 +917,18 @@ struct FormSettingsView: View {
                 .disabled(updates.checking)
                 .settingsAnchor(.softwareUpdate)
                 }
+                if !updates.currentNotes.isEmpty {
+                    Button(action: updates.showCurrentNotes) {
+                        HStack(spacing: 8) {
+                            FormLabel(symbol: "sparkles", tint: .purple, title: L10n.text("What's New in Version %@", updates.displayVersion))
+                                .foregroundStyle(.primary).lineLimit(1)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.forward").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                        }
+                    }
+                    .tint(.primary)
+                    .settingsAnchor(.releaseNotes)
+                }
                 FormLink(symbol: "doc.plaintext.fill", tint: .gray, title: L10n.text("Open Source Licenses")) { LicensesView() }
                     .id("settings.end")
             } header: {
@@ -956,6 +968,13 @@ struct FormSettingsView: View {
                     .settingsAnchor(.autoInstallUpdates)
                 }
                 #endif
+                if !updates.currentNotes.isEmpty {
+                    Button(action: updates.showCurrentNotes) {
+                        FormLabel(symbol: "sparkles", tint: .purple, title: L10n.text("What's New in Version %@", updates.displayVersion))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }.formRowButton()
+                    .settingsAnchor(.releaseNotes)
+                }
                 FormLink(symbol: "doc.plaintext.fill", tint: .gray, title: L10n.text("Open Source Licenses")) { LicensesView() }
                     .id("settings.end")
             } header: {
@@ -1158,6 +1177,7 @@ private enum SettingsSearchTarget: Hashable, Sendable {
     case tmdbLookup
     case softwareUpdate
     case autoInstallUpdates
+    case releaseNotes
     case licenses
 
     /// The id of its row on the page, which a search result scrolls to. Each setting is drawn once, on the page;
@@ -1390,6 +1410,10 @@ private extension FormSettingsView {
                     keywords: ["auto", "update", "install", "自动更新", "自动安装"])
             }
             #endif
+        }
+        if !updates.currentNotes.isEmpty {
+            add(.releaseNotes, title: L10n.text("What's New in Version %@", updates.displayVersion), section: secAbout,
+                keywords: ["release", "notes", "changelog", "what's new", "更新日志"])
         }
         add(.licenses, title: L10n.text("Open Source Licenses"), section: secAbout,
             keywords: ["license", "open source", "third party", "开源", "协议", "许可"])
@@ -2466,6 +2490,11 @@ struct TVSettingsView: View {
                                  value: updates.checking ? L10n.text("Checking…") : updates.lastChecked.map { L10n.text("Last checked %@", $0.formatted(date: .abbreviated, time: .shortened)) },
                                  busy: updates.checking) { Task { await updates.check(manual: true) } }
                     .disabled(updates.checking)
+            }
+            if !updates.currentNotes.isEmpty {
+                Button(action: updates.showCurrentNotes) {
+                    TVSettingsRowLabel(title: L10n.text("What's New in Version %@", updates.displayVersion), chevron: true)
+                }.glassRow()
             }
         }
     }
