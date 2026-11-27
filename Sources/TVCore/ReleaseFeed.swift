@@ -125,6 +125,13 @@ public struct ReleaseFeed: Codable, Sendable, Equatable {
                            testflight: newer.testflight ?? testflight)
     }
 
+    /// A cached feed counts only when it came from the address this build reads: a fork that moves the
+    /// feed never replays releases the previous source announced.
+    public static func cached(_ data: Data?, from cachedAddress: String?, address: URL) -> ReleaseFeed? {
+        guard cachedAddress == address.absoluteString, let data else { return nil }
+        return try? JSONDecoder().decode(ReleaseFeed.self, from: data)
+    }
+
     private var newestFirst: [Release] { releases.sorted { AppVersion($0.version) > AppVersion($1.version) } }
 
     public static func fetch(_ url: URL = address, session: URLSession = .shared) async throws -> ReleaseFeed {

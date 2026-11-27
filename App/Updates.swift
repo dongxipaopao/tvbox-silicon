@@ -3,7 +3,7 @@ import CoreImage.CIFilterBuiltins
 import TVCore
 
 /// Tells people when a new version is out and, after they update, what it brings.
-/// Reads the release feed the website publishes; the bundled copy covers offline launches.
+/// Reads the XiPlayer fork's own release feed (repo-root xiplayer-releases.json); the bundled copy covers offline launches.
 @MainActor @Observable final class Updates {
     enum Sheet: Identifiable {
         /// Newer releases to install, newest first.
@@ -106,13 +106,12 @@ import TVCore
         self.current = current
         self.build = build
         self.address = address
-        let bundled = bundle.url(forResource: "releases", withExtension: "json")
+        let bundled = bundle.url(forResource: "xiplayer-releases", withExtension: "json")
             .flatMap { try? JSONDecoder().decode(ReleaseFeed.self, from: Data(contentsOf: $0)) } ?? ReleaseFeed(releases: [])
         // A cached feed counts only when it came from the address this build reads: a fork that moves the
         // feed never replays releases the previous source announced.
-        let cached = defaults.string(forKey: Keys.feedAddress) == address.absoluteString
-            ? defaults.data(forKey: Keys.feed).flatMap { try? JSONDecoder().decode(ReleaseFeed.self, from: $0) }
-            : nil
+        let cached = ReleaseFeed.cached(defaults.data(forKey: Keys.feed),
+                                        from: defaults.string(forKey: Keys.feedAddress), address: address)
         feed = cached.map(bundled.merged(with:)) ?? bundled
         lastChecked = defaults.object(forKey: Keys.checked) as? Date
         #if os(macOS)

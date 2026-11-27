@@ -96,30 +96,75 @@ private func release(_ version: String, build: Int? = nil, platforms: [String] =
     }
 }
 
-/// The feed the website publishes and the apps bundle.
-@Test func publishedFeedIsValidAndTranslated() throws {
-    let file = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../website/public/releases.json")
+/// The feed the XiPlayer fork publishes itself (repo-root xiplayer-releases.json): the apps fetch it for
+/// update checks and bundle a copy for offline What's New. An empty feed is valid before the first release.
+@Test func xiplayerFeedIsValidAndTranslated() throws {
+    let file = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../xiplayer-releases.json")
     let feed = try JSONDecoder().decode(ReleaseFeed.self, from: Data(contentsOf: file))
-    #expect(!feed.releases.isEmpty)
-    #expect(Set(feed.releases.map { AppVersion($0.version) }).count == feed.releases.count)
-    // TestFlight builds find their release by build number, so every release has one, newer releases higher.
-    let builds = feed.releases.sorted { AppVersion($0.version) > AppVersion($1.version) }.map { $0.build ?? 0 }
-    #expect(!builds.contains(0), "a release has no build")
-    #expect(builds == builds.sorted(by: >) && Set(builds).count == builds.count, "builds don't rise with versions")
+    checkXiPlayerFeed(feed)
+    // Entries never announce a build this project has not made.
     let project = try String(contentsOf: URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../project.yml"), encoding: .utf8)
     let projectBuild = project.firstMatch(of: /CURRENT_PROJECT_VERSION: '(\d+)'/).flatMap { Int($0.1) }
-    #expect(builds.first == projectBuild, "the newest release's build is not CURRENT_PROJECT_VERSION in project.yml")
+    for entry in feed.releases {
+        #expect((entry.build ?? 0) <= projectBuild ?? 0, "\(entry.version) is ahead of CURRENT_PROJECT_VERSION in project.yml")
+    }
+}
+
+/// The checks bite on a real-shape XiPlayer entry too; empty is not the only acceptable state.
+@Test func xiplayerFeedAcceptsAValidReleaseEntry() {
+    let entry = ReleaseFeed.Release(
+        version: "1.8.32", build: 71, date: "2026-11-27",
+        links: ["ios": URL(string: "https://github.com/dongxipaopao/tvbox-ipa-backup/releases/tag/ipa-example-ios")!,
+                "tvos": URL(string: "https://github.com/dongxipaopao/tvbox-ipa-backup/releases/tag/ipa-example-tvos")!],
+        features: [ReleaseFeed.Feature(
+            symbol: "sparkles",
+            title: ["en": "Update checks follow XiPlayer's own feed", "zh-Hans": "更新检查走 XiPlayer 自己的发布源",
+                    "zh-Hant": "更新檢查走 XiPlayer 自己的發佈源", "ja": "アップデート確認は XiPlayer 独自のフィードを見ます"],
+            detail: ["en": "Releases are announced from the fork's own feed, never from upstream.",
+                     "zh-Hans": "版本公告来自本分叉自己的发布源，不再来自上游。",
+                     "zh-Hant": "版本公告來自本分叉自己的發佈源，不再來自上游。",
+                     "ja": "リリース案内はフォーク独自のフィードから行い、上流のものは使いません。"])])
+    checkXiPlayerFeed(ReleaseFeed(releases: [entry]))
+}
+
+/// The validation is not vacuous: malformed JSON fails to decode, duplicate versions break the version
+/// invariant, and a release without a build number fails the build check.
+@Test func xiplayerFeedValidationRejectsBadContent() {
+    #expect(throws: (any Error).self) { try JSONDecoder().decode(ReleaseFeed.self, from: Data(#"{"releases": <broken>"#.utf8)) }
+    let duplicates = ReleaseFeed(releases: [release("1.0", build: 1), release("1.0.0", build: 2)])
+    #expect(Set(duplicates.releases.map { AppVersion($0.version) }).count != duplicates.releases.count,
+            "the duplicate-version invariant no longer distinguishes 1.0 from 1.0.0")
+    let noBuild = ReleaseFeed(releases: [release("1.1")])
+    #expect(noBuild.releases.map { $0.build ?? 0 }.contains(0), "a release without a build must fail the build check")
+}
+
+/// A cached feed counts only when it came from the address this build reads.
+@Test func cachedFeedCountsOnlyFromItsOwnAddress() throws {
+    let data = try JSONEncoder().encode(ReleaseFeed(releases: [release("1.0", build: 1)]))
+    let address = ReleaseFeed.address
+    #expect(ReleaseFeed.cached(data, from: address.absoluteString, address: address)?.releases.count == 1)
+    #expect(ReleaseFeed.cached(data, from: "https://example.com/elsewhere.json", address: address) == nil)
+    #expect(ReleaseFeed.cached(nil, from: address.absoluteString, address: address) == nil)
+    #expect(ReleaseFeed.cached(Data("junk".utf8), from: address.absoluteString, address: address) == nil)
+}
+
+private func checkXiPlayerFeed(_ feed: ReleaseFeed, sourceLocation: Testing.SourceLocation = #_sourceLocation) {
+    #expect(Set(feed.releases.map { AppVersion($0.version) }).count == feed.releases.count, "duplicate versions", sourceLocation: sourceLocation)
+    // TestFlight builds find their release by build number, so every release has one, newer releases higher.
+    let builds = feed.releases.sorted { AppVersion($0.version) > AppVersion($1.version) }.map { $0.build ?? 0 }
+    #expect(!builds.contains(0), "a release has no build", sourceLocation: sourceLocation)
+    #expect(builds == builds.sorted(by: >) && Set(builds).count == builds.count, "builds don't rise with versions", sourceLocation: sourceLocation)
     for (platform, testflight) in feed.testflight ?? [:] {
-        #expect(["ios", "tvos"].contains(platform) && testflight.link != nil, "testflight.\(platform)")
-        #expect(testflight.build <= builds.first ?? 0, "testflight.\(platform) is ahead of the newest release")
+        #expect(["ios", "tvos"].contains(platform) && testflight.link != nil, "testflight.\(platform)", sourceLocation: sourceLocation)
+        #expect(testflight.build <= builds.first ?? 0, "testflight.\(platform) is ahead of the newest release", sourceLocation: sourceLocation)
     }
     for entry in feed.releases {
-        #expect(!entry.links.isEmpty, "\(entry.version) has no links")
-        #expect(Set(entry.links.keys).isSubset(of: ["macos", ReleaseFeed.intelMacKey, "ios", "tvos"]), "\(entry.version) has an unknown platform")
+        #expect(!entry.links.isEmpty, "\(entry.version) has no links", sourceLocation: sourceLocation)
+        #expect(Set(entry.links.keys).isSubset(of: ["macos", ReleaseFeed.intelMacKey, "ios", "tvos"]), "\(entry.version) has an unknown platform", sourceLocation: sourceLocation)
         for feature in entry.features {
             for language in L10n.supportedLanguages {
-                #expect(!(feature.title.values[language] ?? "").isEmpty, "\(entry.version) \(feature.symbol): no \(language) title")
-                #expect(!(feature.detail.values[language] ?? "").isEmpty, "\(entry.version) \(feature.symbol): no \(language) detail")
+                #expect(!(feature.title.values[language] ?? "").isEmpty, "\(entry.version) \(feature.symbol): no \(language) title", sourceLocation: sourceLocation)
+                #expect(!(feature.detail.values[language] ?? "").isEmpty, "\(entry.version) \(feature.symbol): no \(language) detail", sourceLocation: sourceLocation)
             }
         }
     }
