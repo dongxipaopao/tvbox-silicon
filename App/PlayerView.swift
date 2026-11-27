@@ -955,7 +955,6 @@ private struct NativePlayerView: UIViewControllerRepresentable {
                               state: info.wrappedValue ? .on : .off) { _ in info.wrappedValue.toggle() })
         controller.transportBarCustomMenuItems = items
     }
-    static func dismantleUIViewController(_ controller: AVPlayerViewController, coordinator: Coordinator) { coordinator.criteria?.reset() }
 
     /// Off and the files, then the chosen one's timing, frame rate and encoding. A file comes from the source (a drive's
     /// folder), a subtitle source, or an address typed with the remote or an iPhone's keyboard; there is no file panel here.
