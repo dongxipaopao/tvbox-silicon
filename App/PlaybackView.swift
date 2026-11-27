@@ -1116,35 +1116,53 @@ import IOKit.pwr_mgt
         return false
     }
 
-    /// The artwork comes down for a frame that was really drawn, not for the clock: a stream that says it is
-    /// playing but draws nothing keeps its wait screen, then fails by name and tries the next line instead of
-    /// sitting on a black player. An item with no picture at all (music, radio) keeps the short timed reveal:
-    /// there is nothing to wait for, so it can never hang on a frame check.
+    /// Sound alone has no frame to wait for: keep the short timed reveal, so music and radio never hang on a
+    /// picture check. An item with a picture is watched from `readyToPlay` by `watchPicture` instead.
     @MainActor private func revealPictureAfterFirstFrame(generation active: UUID) async {
         let enabledVideo = item?.tracks.filter { $0.assetTrack?.mediaType == .video && $0.isEnabled } ?? []
-        guard !enabledVideo.isEmpty else {
-            try? await Task.sleep(for: .milliseconds(350))
-            guard generation == active, player.timeControlStatus == .playing, !showsPicture else { return }
-            revealPicture(); return
+        guard enabledVideo.isEmpty else { return }
+        try? await Task.sleep(for: .milliseconds(350))
+        guard generation == active, player.timeControlStatus == .playing, !showsPicture else { return }
+        revealPicture()
+    }
+
+    /// Watches a ready item until its picture shows. The artwork comes down for a frame that is really being
+    /// drawn (the play-time frame rate, the same signal the segmented check uses), not for the clock. Six seconds
+    /// of sound with no drawn frame (a listed-but-undrawn HEVC track excepted, #585) or twenty seconds of
+    /// buffering without a picture fail by name and try the next line, so neither a black player nor an endless
+    /// buffer waits forever. A viewer's pause spends neither budget. A new episode, line or repackage ends the
+    /// watch through the generation check.
+    private func watchPicture(_ item: AVPlayerItem, channel: Channel, url: URL, generation active: UUID) {
+        // Sound alone: the timed reveal owns it.
+        guard item.tracks.contains(where: { $0.assetTrack?.mediaType == .video && $0.isEnabled }) else { return }
+        Task { [weak self] in
+            var played = 0, stalled = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard let self, self.generation == active, !self.showsPicture, self.error == nil, self.item === item else { return }
+                let state = self.player.timeControlStatus
+                if state == .playing { played += 1 } else if state == .waitingToPlayAtSpecifiedRate { stalled += 1 } else { continue }
+                let video = item.tracks.filter { $0.assetTrack?.mediaType == .video && $0.isEnabled }
+                if video.contains(where: { $0.currentVideoFrameRate > 0 }) { self.revealPicture(); return }
+                if played >= 24 {
+                    // Six seconds of sound, no drawn frame. HEVC can list without drawing on some devices (#585):
+                    // trust it, as the segmented check does, rather than fail a picture that is actually there.
+                    if await Self.mayBeHEVC(video) { self.revealPicture(); return }
+                    self.noPicture(channel: channel, url: url, item: item, generation: active, why: "no drawn frame after 6s of playback")
+                    return
+                }
+                if stalled >= 80 {
+                    self.noPicture(channel: channel, url: url, item: item, generation: active, why: "no picture after 20s of buffering")
+                    return
+                }
+            }
         }
-        // A picture is expected: wait for a drawn frame. Pauses and stalls spend none of the six seconds, and a
-        // new episode, line or repackage ends this task through the generation check, so nothing here waits forever.
-        var played = 0
-        for _ in 0..<240 {
-            try? await Task.sleep(for: .milliseconds(250))
-            guard generation == active, !showsPicture, let current = item else { return }
-            guard player.timeControlStatus == .playing else { continue }
-            played += 1
-            if current.tracks.contains(where: { $0.assetTrack?.mediaType == .video && $0.isEnabled && $0.currentVideoFrameRate > 0 }) { revealPicture(); return }
-            if played >= 24 { break }
-        }
-        guard generation == active, !showsPicture, played >= 24 else { return }
-        // Six seconds of sound with no drawn frame. HEVC can list without drawing on some devices (#585): trust it,
-        // as the segmented check does, rather than fail a picture that is actually there.
-        if let current = item, await Self.mayBeHEVC(current.tracks.filter { $0.assetTrack?.mediaType == .video && $0.isEnabled }) { revealPicture(); return }
-        // Playlists that draw nothing are already repackaged by `checkSegmentedPicture`; what is left here really
-        // plays sound with no picture. Name it and move to the next line or source.
-        Diagnostics.shared.record(.error, "player", "no drawn frame after 6s of playback host=\(transfer.host ?? "-")")
+    }
+
+    /// A picture never came: say so in the log and in the error, and give the channel's next line a chance first.
+    private func noPicture(channel: Channel, url: URL, item: AVPlayerItem, generation active: UUID, why: String) {
+        guard generation == active, !showsPicture, error == nil else { return }
+        Diagnostics.shared.record(.error, "player", "\(why) host=\(transfer.host ?? "-") \(failureContext(channel, url: url, item: item))")
         if tryNextLine(after: nil) { return }
         loading = false
         errorSymbol = "play.slash.fill"
@@ -1203,6 +1221,7 @@ import IOKit.pwr_mgt
                 if status == .readyToPlay {
                     if self.isLive { self.liveReadyAt = .now }
                     self.lineReadyAt = .now; self.lineWatch?.cancel(); self.lineWatch = nil
+                    self.watchPicture(item, channel: channel, url: url, generation: activeGeneration)
                     if UngroupedAudio.playOne(item) { Diagnostics.shared.record(.info, "player", "ungrouped audio tracks; playing the first") }
                     Task { [weak self] in
                         let choices = await UngroupedAudio.choices(item)

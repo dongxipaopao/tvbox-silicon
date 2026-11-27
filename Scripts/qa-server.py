@@ -109,8 +109,24 @@ class Spider(Spider):
             return self.send('\n'.join(lines),mime='audio/x-mpegurl')
         if path == '/poster.png':
             return self.send((root/'Design/yingxia-icon.png').read_bytes(),mime='image/png')
-        if path in ['/clip.mp4','/slow.mp4','/portrait.mp4']:
-            media = args.media.with_name('portrait.mp4') if path == '/portrait.mp4' else args.media
+        if path == '/frozen.mp4':
+            # The headers and the moov box arrive, then the media data never does: AVPlayer goes readyToPlay and
+            # waits for a buffer that never fills, so the player's no-picture timeout can be seen for real.
+            media = args.media
+            if not media.exists(): return self.send('Generate clip with Scripts/test-player.sh first',404,'text/plain')
+            size = media.stat().st_size
+            self.send_response(200)
+            self.send_header('Content-Type','video/mp4'); self.send_header('Accept-Ranges','bytes')
+            self.send_header('Content-Length',str(size))
+            self.end_headers()
+            try:
+                with media.open('rb') as stream:
+                    self.wfile.write(stream.read(65536)); self.wfile.flush()
+                time.sleep(600)
+            except (BrokenPipeError,ConnectionResetError): pass
+            return
+        if path in ['/clip.mp4','/slow.mp4','/portrait.mp4','/tone.mp4']:
+            media = args.media if path in ['/clip.mp4','/slow.mp4'] else args.media.with_name(path.lstrip('/'))
             if not media.exists(): return self.send('Generate clip with Scripts/test-player.sh first',404,'text/plain')
             size=media.stat().st_size
             match=re.match(r'bytes=(\d+)-(\d*)',self.headers.get('Range',''))
@@ -151,8 +167,13 @@ class Spider(Spider):
             # qa-stream-stall: episodes whose stream never answers, so the player opens with episode buttons and no picture.
             if 'play' in q:
                 if q['play'] == 'qa-portrait': return self.send({'parse':0,'url':base+'/portrait.mp4'})
+                if q['play'] == 'episode-frozen': return self.send({'parse':0,'url':base+'/frozen.mp4'})
+                if q['play'] == 'episode-tone': return self.send({'parse':0,'url':base+'/tone.mp4'})
                 if q.get('stream')=='download':return self.send({'parse':0,'url':base+('/clip.mp4' if q['play'] in ['episode-1','episode-2'] else '/slow.mp4')})
                 return self.send({'parse':0,'url':base+('/stall.m3u8' if q.get('stream')=='stall' else '/clip.mp4')})
+            if q.get('ids') == 'qa-playerfix':
+                return self.send({'list':[{'vod_id':'qa-playerfix','vod_name':'Player fixtures','vod_pic':base+'/poster.png',
+                    'vod_play_from':'Main','vod_play_url':'Frozen$episode-frozen#Tone$episode-tone'}]})
             if q.get('ids', '').startswith('qa-cache-ui-'):
                 return self.send({'list':[{'vod_id':q['ids'],'vod_name':'Cached episode fixture',
                     'vod_play_from':'Main','vod_play_url':'Wide$episode-1#Portrait$qa-portrait#Third$episode-3#Fourth$episode-4'}]})
@@ -170,6 +191,8 @@ class Spider(Spider):
             title=q.get('wd') or ('剧集' if q.get('t')=='series' else '测试影片')
             # Searching "few" finds two videos per source and one page: Global Search's results fit in one row.
             few=q.get('wd','').startswith('few')
+            if q.get('wd') == 'qa-playerfix':
+                return self.send({'class':categories,'list':[{'vod_id':'qa-playerfix','vod_name':'Player fixtures','vod_pic':base+'/poster.png'}],'pagecount':1})
             if q.get('wd') == 'Breaking Bad':
                 # Exact-title fixtures, with the quality notes real sources put after a title.
                 return self.send({'list':[{'vod_id':'bb%d'%i,'vod_name':n,'vod_pic':base+'/poster.png','vod_remarks':r} for i,(n,r) in enumerate([('Breaking Bad【4K】','4K HDR'),('Breaking Bad','1080P'),('Breaking Bad [国语]','HD'),('Breaking Bad','更新至 62 集')])]})
