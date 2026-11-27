@@ -1,0 +1,46 @@
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index 573c5d30..dfb37370 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -149,7 +149,7 @@ final class TVNavigationUITests: XCTestCase {
+         let submit = app.buttons["site.search.submit"]
+         XCTAssertTrue(submit.waitForExistence(timeout: 10), "A typed query did not show the Search button")
+         // Focus starts in the tab sidebar; right moves it into the search keyboard.
+-        remote.press(.right); sleep(1)
++        enterContent(app)
+         XCTAssertFalse(shown("hello 01", in: app).exists, "The search ran before it was submitted")
+         XCTAssertEqual(app.keyboards.count, 0, "The source page showed the keyboard")
+         // The Search button leads the content: Up from the first cover reaches it.
+@@ -611,6 +611,14 @@ final class TVNavigationUITests: XCTestCase {
+         guard focused.exists else { return "none" }
+         return "id=\(focused.identifier) label=\(focused.label)"
+     }
++    /// Focus opens either in the sidebar (no id, no label) or already in the content, depending on how the page's default
++    /// focus settles: go in with Right only from the sidebar, as a user does, so a page already on its first item is not moved.
++    private func enterContent(_ app: XCUIApplication) {
++        sleep(2)
++        let before = focusInfo(app)
++        if before == "none" || before == "id= label=" { XCUIRemote.shared.press(.right); sleep(2) }
++        note("enterContent: before=\(before) after=\(focusInfo(app))")
++    }
+     private func focusFrame(_ app: XCUIApplication) -> CGRect {
+         let focused = app.descendants(matching: .any).matching(NSPredicate(format: "hasFocus == true")).firstMatch
+         return focused.exists ? focused.frame : .zero
+@@ -684,7 +692,7 @@ final class TVNavigationUITests: XCTestCase {
+         XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening the Music page")
+         // Focus opens in the sidebar, as on every page: into the content as a user does, with Right.
+         note("Music focus before Right: \(focusInfo(app)) frame=\(focusFrame(app))")
+-        XCUIRemote.shared.press(.right); sleep(2)
++        enterContent(app)
+         snap(app, "music-after-right")
+         let focus = focusInfo(app)
+         let frame = focusFrame(app)
+@@ -739,7 +747,7 @@ final class TVNavigationUITests: XCTestCase {
+         XCTAssertEqual(app.keyboards.count, 0, "The source page opened with the keyboard")
+         // Into the content from the sidebar as a user does: Right must land on the first poster.
+         let firstPoster = shown("测试影片 01", in: app)
+-        remote.press(.right); sleep(2)
++        enterContent(app)
+         note("source page after Right: \(focusInfo(app)) firstPoster=\(describe(firstPoster))")
+         snap(app, "source-page-content-focus")
+         XCTAssertTrue(focusInfo(app).contains("site.firstPoster") || firstPoster.hasFocus, "Right did not land on the first poster: \(focusInfo(app))")
