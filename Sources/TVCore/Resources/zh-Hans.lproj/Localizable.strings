@@ -2044,26 +2044,11 @@
 /* Settings › App Icon */
 "App Icon" = "应用图标";
 "Pocket" = "口袋";
-"Gray Pocket" = "灰口袋";
-"Layers" = "层叠";
-"Glass Play" = "玻璃播放";
 "Seal" = "海豹";
 "Shiba" = "柴犬";
-"Cat" = "猫咪";
-"Friends" = "小伙伴";
-"Panda" = "熊猫";
-"Arc" = "Arc";
 "Aurora" = "极光";
 "Classic" = "经典";
-"Porcelain" = "白瓷";
-"Obsidian" = "黑曜石";
-"Azure" = "蔚蓝";
-"Daybreak" = "破晓";
-"Iris" = "鸢尾";
 "Lagoon" = "泻湖";
-"Rose Quartz" = "玫瑰石英";
-"Citrus" = "柑橘";
-"Cosmic" = "宇宙";
 "Couldn't change the app icon: %@" = "无法更换应用图标：%@";
 "Couldn't open that picture." = "无法打开这张图片。";
 "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is." = "方形图片效果最好。四角透明的图片（例如为 Mac 制作的图标）会按原样显示。";

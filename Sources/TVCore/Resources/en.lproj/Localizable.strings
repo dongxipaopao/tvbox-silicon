@@ -2044,26 +2044,11 @@
 /* Settings › App Icon */
 "App Icon" = "App Icon";
 "Pocket" = "Pocket";
-"Gray Pocket" = "Gray Pocket";
-"Layers" = "Layers";
-"Glass Play" = "Glass Play";
 "Seal" = "Seal";
 "Shiba" = "Shiba";
-"Cat" = "Cat";
-"Friends" = "Friends";
-"Panda" = "Panda";
-"Arc" = "Arc";
 "Aurora" = "Aurora";
 "Classic" = "Classic";
-"Porcelain" = "Porcelain";
-"Obsidian" = "Obsidian";
-"Azure" = "Azure";
-"Daybreak" = "Daybreak";
-"Iris" = "Iris";
 "Lagoon" = "Lagoon";
-"Rose Quartz" = "Rose Quartz";
-"Citrus" = "Citrus";
-"Cosmic" = "Cosmic";
 "Couldn't change the app icon: %@" = "Couldn't change the app icon: %@";
 "Couldn't open that picture." = "Couldn't open that picture.";
 "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is." = "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is.";

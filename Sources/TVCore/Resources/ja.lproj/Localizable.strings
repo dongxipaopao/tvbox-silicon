@@ -2044,26 +2044,11 @@
 /* Settings › App Icon */
 "App Icon" = "アプリアイコン";
 "Pocket" = "ポケット";
-"Gray Pocket" = "グレーポケット";
-"Layers" = "レイヤー";
-"Glass Play" = "ガラスの再生";
 "Seal" = "アザラシ";
 "Shiba" = "柴犬";
-"Cat" = "ネコ";
-"Friends" = "なかま";
-"Panda" = "パンダ";
-"Arc" = "Arc";
 "Aurora" = "オーロラ";
 "Classic" = "クラシック";
-"Porcelain" = "ポーセリン";
-"Obsidian" = "オブシディアン";
-"Azure" = "アズール";
-"Daybreak" = "夜明け";
-"Iris" = "アイリス";
 "Lagoon" = "ラグーン";
-"Rose Quartz" = "ローズクォーツ";
-"Citrus" = "シトラス";
-"Cosmic" = "コズミック";
 "Couldn't change the app icon: %@" = "アプリアイコンを変更できませんでした：%@";
 "Couldn't open that picture." = "その画像を開けませんでした。";
 "A square picture works best. One with see-through corners, such as an icon made for the Mac, shows as it is." = "正方形の画像がおすすめです。Mac 用アイコンのように四隅が透明な画像は、そのまま表示されます。";
