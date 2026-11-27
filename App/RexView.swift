@@ -219,6 +219,8 @@ struct RexModuleView: View {
                 }
             }.padding()
         }
+        .background { DiscoverCanvas(poster: nil) }
+        .foregroundStyle(.white).preferredColorScheme(.dark)
         .navigationTitle(module?.title ?? widget.title)
         .task {
             do {
