@@ -62,7 +62,6 @@ jobs:
           from bs4 import BeautifulSoup
           from pyquery import PyQuery
           from lxml import etree
-          import cryptography
 
           class Spider(Spider):
               def init(self, extend=''):
@@ -73,7 +72,7 @@ jobs:
                       'python': sys.version.split()[0], 'platform': sys.platform, 'ssl': ssl.OPENSSL_VERSION,
                       'requests': requests.__version__, 'urllib3': urllib3.__version__, 'bs4': BeautifulSoup('<a>1</a>', 'html.parser').a.text,
                       'pyquery': PyQuery('<b>t</b>')('b').text(), 'lxml': etree.fromstring('<x>y</x>').text,
-                      'aes_block': str(AES.block_size), 'cryptography': cryptography.__version__, 'hmac': sig,
+                      'aes_block': str(AES.block_size), 'hmac': sig,
                   }
                   return {'class': [{'type_id': k, 'type_name': v} for k, v in facts.items()], 'list': []}
           PY
