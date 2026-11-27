@@ -854,7 +854,7 @@ private struct DiscoverMacSeasonButton: View {
     }
 
     /// The best match shows once nothing can beat it (the title itself, from its year), once every source answered, or
-    /// two seconds after the first match, so a slow source doesn't hold the page up. Then it stays: a better match
+    /// four seconds after the first match, so a slow source doesn't hold the page up. Then it stays: a better match
     /// that comes later goes under Change Source rather than swapping the episodes under the viewer.
     private func settle() {
         let done = pending == 0 && !search.suspended && search.completed >= search.total
@@ -863,7 +863,7 @@ private struct DiscoverMacSeasonButton: View {
         if done || best.decisive { choose(best); return }
         guard grace == nil else { return }
         grace = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(2))
+            try? await Task.sleep(for: .seconds(4))
             guard !Task.isCancelled, let self, self.chosen == nil, let best = self.matches.first else { return }
             self.choose(best)
         }
