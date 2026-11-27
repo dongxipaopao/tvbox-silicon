@@ -1,0 +1,74 @@
+name: test-only
+on:
+  workflow_dispatch:
+jobs:
+  tests:
+    runs-on: xcode-27
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      # Same runtime tarball build-ios reuses (run 45819094996); some tests need the script runtime present.
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime
+          run-id: 45819094996
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: mkdir -p build && tar -C build -xf runtime.tar
+      - name: Select newest Xcode
+        run: |
+          best=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$best/Contents/Developer"
+          xcodebuild -version
+          swift --version
+      - name: Tools
+        run: brew install xcodegen meson ninja 2>&1 | tail -2 || true
+      - name: Restore FFmpeg cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/tvbox-ffmpeg
+            ~/Library/Caches/tvbox-libass
+          key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
+      - name: FFmpeg and libass
+        run: |
+          Scripts/build-apple-ffmpeg.sh
+          Scripts/build-apple-libass.sh
+      - name: Logic tests (SourceFailover)
+        run: |
+          set -o pipefail
+          swift test --filter SourceFailoverTests 2>&1 | tee tests.log | tail -40
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-log
+          path: tests.log
+          if-no-files-found: ignore
+      - name: Full TVCore tests
+        if: always()
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee tests-full.log | tail -60
+      - name: Retry failed tests one by one
+        if: always()
+        continue-on-error: true
+        run: |
+          grep -oE "✘ Test [A-Za-z0-9_]+\(\) failed" tests-full.log | awk '{print $3}' | sed 's/()//' | sort -u > failed-names.txt || true
+          cat failed-names.txt
+          : > tests-retry.log
+          while read -r n; do
+            [ -z "$n" ] && continue
+            echo "=== $n" | tee -a tests-retry.log
+            swift test --filter "$n" 2>&1 | grep -E "Test run with|✘|✔ Test $n|Caught error|Expectation failed" | tee -a tests-retry.log
+          done < failed-names.txt
+      - name: Test summary
+        if: always()
+        run: grep -E "Test run with|Executed [0-9]+ tests|✘|Suite .* (passed|failed)|^===" tests.log tests-full.log tests-retry.log | tail -120 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-full-log
+          path: |
+            tests-full.log
+            tests-retry.log
+          if-no-files-found: ignore
