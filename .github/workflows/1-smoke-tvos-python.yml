@@ -76,8 +76,8 @@ jobs:
                   }
                   return {'class': [{'type_id': k, 'type_name': v} for k, v in facts.items()], 'list': []}
           PY
-          mk() { python3 -c "import json,sys; print(json.dumps(dict(session='s', script=sys.argv[1], cache='$J/s', profile='$J/s/profile', api='https://fixture.invalid/spider.py', key='s', ext='e', params={})))" "$1"; }
-          xcrun simctl spawn "$UDID" "$R/smoke" "$R" "$(mk $J/fixture.py)" "$(mk $J/missing.py)" 2>&1 | tee build/smoke/out.txt
+          mk() { python3 -c "import json,sys; print(json.dumps(dict(session=sys.argv[2], script=sys.argv[1], cache='$J/'+sys.argv[2], profile='$J/'+sys.argv[2]+'/profile', api='https://fixture.invalid/spider.py', key=sys.argv[2], ext='e', params={})))" "$1" "$2"; }
+          xcrun simctl spawn "$UDID" "$R/smoke" "$R" "$(mk $J/fixture.py s1)" "$(mk $J/missing.py s2)" 2>&1 | tee build/smoke/out.txt
           echo '--- facts'
           grep -c '^RESPONSE 1 ' build/smoke/out.txt
           python3 - <<'PY'
@@ -88,7 +88,8 @@ jobs:
           home=json.loads(a['result']); print({c['type_id']:c['type_name'] for c in home['class']})
           b=json.loads(r2.group(1)); print('missing script ->',b.get('errorCode'))
           assert home['class'] and b.get('errorCode')=='script_error'
-          print('SMOKE OK (tvOS simulator slice, no network)')
+          print('missing-script response:', b)
+          print('SMOKE OK (tvOS simulator slice, no network, error path exercised with its own session)')
           PY
       - uses: actions/upload-artifact@v4
         if: always()
