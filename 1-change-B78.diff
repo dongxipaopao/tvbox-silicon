@@ -1,0 +1,356 @@
+diff --git a/Runtime/NodeHost/main.mjs b/Runtime/NodeHost/main.mjs
+index 67957cc8..60d499f9 100644
+--- a/Runtime/NodeHost/main.mjs
++++ b/Runtime/NodeHost/main.mjs
+@@ -44,14 +44,6 @@ async function answerMessage(req, res) {
+     let message = {};
+     try { message = JSON.parse(Buffer.concat(chunks).toString('utf8')) || {}; } catch { }
+     const page = String(message.opt?.url || '');
+-    if (message.action === 'getPlayInfo') {
+-        catPlaying.asked = Date.now();
+-        const { title, episodeName, flag } = catPlaying;
+-        res.writeHead(200, { 'content-type': 'application/json' });
+-        res.end(JSON.stringify({ title, episodeName, flag }));
+-        return;
+-    }
+-    if (message.action === 'danmuPush' && loopbackPage(page)) catPushed = { url: page.replace('//localhost:', '//127.0.0.1:'), at: Date.now() };
+     if (['openInternalWebview', 'openWeb'].includes(message.action) && /^http:\/\/(127\.0\.0\.1|localhost|\d+\.\d+\.\d+\.\d+):\d+(\/|$)/.test(page)) {
+         for (const watch of pageWatchers) watch(page);
+     }
+@@ -63,48 +55,6 @@ async function answerMessage(req, res) {
+ const loopbackPage = page => page && /^http:\/\/(127\.0\.0\.1|localhost):\d+(\/|$)/.test(page) ? page : undefined;
+ const isMessage = req => req.method === 'POST' && req.url === '/msg';
+ 
+-// CatPawOpen bundles find danmaku for what plays, as the CatVod Open apps take it (#506): a moment after a play the
+-// 9280.kstore.vip bundle asks the app what plays ("getPlayInfo": {title, episodeName, flag}), matches that in its own
+-// danmu_api and sends the comments' address back ("danmuPush": http://127.0.0.1:<port>/danmu/auto?name=…&episode=…).
+-// The host names each play from the detail answers it passed on; the app asks for the address with `catDanmaku` and
+-// fetches the comments itself. A bundle that never asks gets no answer it didn't get before. Keep in step with host.mjs.
+-const catTitles = new Map(); // play id -> {title, episodeName, flag}, from the latest detail answers
+-let catPlaying = { title: '', episodeName: '', flag: '', at: 0, asked: 0 }, catPushed = { url: '', at: 0 };
+-function rememberTitles(text) {
+-    let list;
+-    try { list = JSON.parse(text)?.list; } catch { return; }
+-    for (const video of Array.isArray(list) ? list : []) {
+-        const title = String(video?.vod_name ?? '').trim();
+-        if (!title) continue;
+-        const flags = String(video.vod_play_from ?? '').split('$$$');
+-        String(video.vod_play_url ?? '').split('$$$').forEach((line, index) => {
+-            for (const item of line.split('#')) {
+-                const cut = item.indexOf('$');
+-                const episodeName = cut < 0 ? '' : item.slice(0, cut).trim(), id = cut < 0 ? item : item.slice(cut + 1);
+-                if (!id.trim()) continue;
+-                catTitles.delete(id);
+-                catTitles.set(id, { title, episodeName, flag: flags[index] || '' });
+-            }
+-        });
+-    }
+-    while (catTitles.size > 3000) catTitles.delete(catTitles.keys().next().value);
+-}
+-function startedPlaying(flag, id) {
+-    const known = catTitles.get(id);
+-    catPlaying = { title: known?.title || '', episodeName: known?.episodeName || '', flag: flag || known?.flag || '', at: Date.now(), asked: 0 };
+-}
+-// The comments' address for an episode: the one the bundle sent for this play, or else its /danmu/auto for the name
+-// the app asks with (a bundle without it answers 404). `pending` while the bundle may still send one: it asks what
+-// plays 800 ms after the play and sends the address straight after the answer.
+-function danmakuAddress(port, params) {
+-    const now = Date.now(), name = String(params.name || ''), episode = String(params.episode || '');
+-    const current = catPlaying.title === name && catPlaying.episodeName === episode;
+-    const pushed = current && catPushed.at >= catPlaying.at && catPushed.url.startsWith(`http://127.0.0.1:${port}/`) ? catPushed.url : '';
+-    const pending = current && !pushed && now - catPlaying.at < 3000 && !(catPlaying.asked && now - catPlaying.asked > 500);
+-    const query = new URLSearchParams({ name });
+-    if (episode) query.set('episode', episode);
+-    return { result: JSON.stringify({ url: pushed || `http://127.0.0.1:${port}/danmu/auto?${query}`, pushed: !!pushed, pending }) };
+-}
+ // Messages go to a server of the host's own: a bundle that finds its own port behind catDartServerPort() skips the call
+ // as a call to itself (BRIDGE_SELF_CALL in the 豆儿 and Lmentor bundles), so pages they ask for never arrived (#385).
+ const messages = http.createServer((req, res) => {
+@@ -317,7 +267,6 @@ async function call(instance, params) {
+         if (!['start', 'poll', 'cancel'].includes(params.catLogin)) throw new Error('Invalid CatPawOpen sign-in');
+         return { result: await send(`/website/api/login/${params.catLogin}`, { provider: params.provider || '', taskId: params.taskId || '' }) };
+     }
+-    if (params.catDanmaku) return danmakuAddress(instance.port, params);
+     const api = String(params.catPawOpen || '');
+     if (!/^\/spider\/[^?#]+$/.test(api)) throw new Error('Invalid CatPawOpen source');
+     // A site without an init route is ready as it is: the xiaosage.361123.xyz bundle's drive sites (玩偶, 花卷, 原盘…)
+@@ -327,7 +276,7 @@ async function call(instance, params) {
+         instance.started.add(api);
+     }
+     let route, body;
+-    if ('play' in params) { route = '/play'; body = { flag: params.flag || '', id: params.play }; startedPlaying(body.flag, body.id); }
++    if ('play' in params) { route = '/play'; body = { flag: params.flag || '', id: params.play }; }
+     else if ('ids' in params) { route = '/detail'; body = { id: params.ids }; }
+     else if ('wd' in params) { route = '/search'; body = { wd: params.wd, page: Number(params.pg || 1), quick: params.quick === 'true' }; }
+     else if ('t' in params) { route = '/category'; body = { id: params.t, page: Number(params.pg || 1), filter: true, filters: params.filters ? JSON.parse(params.filters) : {} }; }
+@@ -338,7 +287,6 @@ async function call(instance, params) {
+     const { text, page } = await watchingPages(route, () => sendFresh(send, api + route, body)
+         .then(text => route === '/search' && !text.trim() ? '{"list":[]}' : text)
+         .catch(error => { if (route === '/search' && error.status === 404) return '{"list":[]}'; throw error; }));
+-    if (route === '/detail') rememberTitles(text);
+     // Sources address the bundle's own proxy by the device's network address, or by a port from before a relisten,
+     // but the server is on loopback.
+     const ports = instance.ports.join('|');
+diff --git a/Runtime/ScriptHost/host.mjs b/Runtime/ScriptHost/host.mjs
+index 43545980..57f8b44d 100644
+--- a/Runtime/ScriptHost/host.mjs
++++ b/Runtime/ScriptHost/host.mjs
+@@ -354,14 +354,6 @@ async function answerMessage(req, res) {
+     let message = {};
+     try { message = JSON.parse(Buffer.concat(chunks).toString('utf8')) || {}; } catch { }
+     const page = String(message.opt?.url || '');
+-    if (message.action === 'getPlayInfo') {
+-        catPlaying.asked = Date.now();
+-        const { title, episodeName, flag } = catPlaying;
+-        res.writeHead(200, { 'content-type': 'application/json' });
+-        res.end(JSON.stringify({ title, episodeName, flag }));
+-        return;
+-    }
+-    if (message.action === 'danmuPush' && loopbackPage(page)) catPushed = { url: page.replace('//localhost:', '//127.0.0.1:'), at: Date.now() };
+     if (['openInternalWebview', 'openWeb'].includes(message.action) && /^http:\/\/(127\.0\.0\.1|localhost|\d+\.\d+\.\d+\.\d+):\d+(\/|$)/.test(page)) {
+         for (const watch of pageWatchers) watch(page);
+     }
+@@ -373,48 +365,6 @@ async function answerMessage(req, res) {
+ const loopbackPage = page => page && /^http:\/\/(127\.0\.0\.1|localhost):\d+(\/|$)/.test(page) ? page : undefined;
+ const isMessage = req => req.method === 'POST' && req.url === '/msg';
+ 
+-// CatPawOpen bundles find danmaku for what plays, as the CatVod Open apps take it (#506): a moment after a play the
+-// 9280.kstore.vip bundle asks the app what plays ("getPlayInfo": {title, episodeName, flag}), matches that in its own
+-// danmu_api and sends the comments' address back ("danmuPush": http://127.0.0.1:<port>/danmu/auto?name=…&episode=…).
+-// The host names each play from the detail answers it passed on; the app asks for the address with `catDanmaku` and
+-// fetches the comments itself. A bundle that never asks gets no answer it didn't get before. Keep in step with NodeHost/main.mjs.
+-const catTitles = new Map(); // play id -> {title, episodeName, flag}, from the latest detail answers
+-let catPlaying = { title: '', episodeName: '', flag: '', at: 0, asked: 0 }, catPushed = { url: '', at: 0 };
+-function rememberTitles(text) {
+-    let list;
+-    try { list = JSON.parse(text)?.list; } catch { return; }
+-    for (const video of Array.isArray(list) ? list : []) {
+-        const title = String(video?.vod_name ?? '').trim();
+-        if (!title) continue;
+-        const flags = String(video.vod_play_from ?? '').split('$$$');
+-        String(video.vod_play_url ?? '').split('$$$').forEach((line, index) => {
+-            for (const item of line.split('#')) {
+-                const cut = item.indexOf('$');
+-                const episodeName = cut < 0 ? '' : item.slice(0, cut).trim(), id = cut < 0 ? item : item.slice(cut + 1);
+-                if (!id.trim()) continue;
+-                catTitles.delete(id);
+-                catTitles.set(id, { title, episodeName, flag: flags[index] || '' });
+-            }
+-        });
+-    }
+-    while (catTitles.size > 3000) catTitles.delete(catTitles.keys().next().value);
+-}
+-function startedPlaying(flag, id) {
+-    const known = catTitles.get(id);
+-    catPlaying = { title: known?.title || '', episodeName: known?.episodeName || '', flag: flag || known?.flag || '', at: Date.now(), asked: 0 };
+-}
+-// The comments' address for an episode: the one the bundle sent for this play, or else its /danmu/auto for the name
+-// the app asks with (a bundle without it answers 404). `pending` while the bundle may still send one: it asks what
+-// plays 800 ms after the play and sends the address straight after the answer.
+-function danmakuAddress(port, params) {
+-    const now = Date.now(), name = String(params.name || ''), episode = String(params.episode || '');
+-    const current = catPlaying.title === name && catPlaying.episodeName === episode;
+-    const pushed = current && catPushed.at >= catPlaying.at && catPushed.url.startsWith(`http://127.0.0.1:${port}/`) ? catPushed.url : '';
+-    const pending = current && !pushed && now - catPlaying.at < 3000 && !(catPlaying.asked && now - catPlaying.asked > 500);
+-    const query = new URLSearchParams({ name });
+-    if (episode) query.set('episode', episode);
+-    return { result: JSON.stringify({ url: pushed || `http://127.0.0.1:${port}/danmu/auto?${query}`, pushed: !!pushed, pending }) };
+-}
+ // Messages go to a server of the host's own: a bundle that finds its own port behind catDartServerPort() skips the call
+ // as a call to itself (BRIDGE_SELF_CALL in the 豆儿 and Lmentor bundles), so pages they ask for never arrived (#385).
+ const messages = http.createServer((req, res) => {
+@@ -593,7 +543,6 @@ async function callCatPaw(params) {
+         if (!['start', 'poll', 'cancel'].includes(params.catLogin)) throw new Error('Invalid CatPawOpen sign-in');
+         return { result: await send(`/website/api/login/${params.catLogin}`, { provider: params.provider || '', taskId: params.taskId || '' }) };
+     }
+-    if (params.catDanmaku) return danmakuAddress(port, params);
+     const api = String(params.catPawOpen || '');
+     if (!/^\/spider\/[^?#]+$/.test(api)) throw new Error('Invalid CatPawOpen source');
+     // A site without an init route is ready as it is: the xiaosage.361123.xyz bundle's drive sites (玩偶, 花卷, 原盘…)
+@@ -603,7 +552,7 @@ async function callCatPaw(params) {
+         catStarted.add(api);
+     }
+     let route, body;
+-    if ('play' in params) { route = '/play'; body = { flag: params.flag || '', id: params.play }; startedPlaying(body.flag, body.id); }
++    if ('play' in params) { route = '/play'; body = { flag: params.flag || '', id: params.play }; }
+     else if ('ids' in params) { route = '/detail'; body = { id: params.ids }; }
+     else if ('wd' in params) { route = '/search'; body = { wd: params.wd, page: Number(params.pg || 1), quick: params.quick === 'true' }; }
+     else if ('t' in params) { route = '/category'; body = { id: params.t, page: Number(params.pg || 1), filter: true, filters: params.filters ? JSON.parse(params.filters) : {} }; }
+@@ -614,7 +563,6 @@ async function callCatPaw(params) {
+     const { text, page } = await watchingPages(route, () => sendFresh(send, api + route, body)
+         .then(text => route === '/search' && !text.trim() ? '{"list":[]}' : text)
+         .catch(error => { if (route === '/search' && error.status === 404) return '{"list":[]}'; throw error; }));
+-    if (route === '/detail') rememberTitles(text);
+     // Sources address the bundle's own proxy by the Mac's network address, but the server is on loopback.
+     const local = address => address.replace(new RegExp(`http://\\d+\\.\\d+\\.\\d+\\.\\d+:${port}/`, 'g'), `http://127.0.0.1:${port}/`);
+     const result = local(text), shown = loopbackPage(page && local(page));
+diff --git a/Scripts/qa-scenes-extra.sh b/Scripts/qa-scenes-extra.sh
+index 1015cfff..5dfcb8b0 100644
+--- a/Scripts/qa-scenes-extra.sh
++++ b/Scripts/qa-scenes-extra.sh
+@@ -16,5 +16,10 @@ case "${SCENES:-}" in
+     shot 26e-stream-shape-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-shape -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     shot 26f-stream-episode-cleared-zh 40 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -qaRexEpisodeAfter 2 -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     shot 26g-stream-tap-player 40 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.stream -qaRexLines 1 -qaRexItem fx-ok -qaRexTap 1
++    # The removal of Danmaku, Sharper Picture and Smooth Motion, and the three kept app icons (B76/B77).
++    shot 27a-settings-root-zh 20 -qaSection settings -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
++    shot 27b-settings-playback-zh 20 -qaSection settings -qaPage playback -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
++    shot 27c-settings-app-icon-zh 20 -qaSection settings -qaPage app-icon -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
++    shot 27d-settings-cache-zh 20 -qaSection settings -qaPage cache -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     ;;
+ esac
+diff --git a/Scripts/test-script-host.py b/Scripts/test-script-host.py
+index 75ef9afd..c891a5da 100644
+--- a/Scripts/test-script-host.py
++++ b/Scripts/test-script-host.py
+@@ -76,20 +76,9 @@ exports.start = async () => {
+       if (req.url === '/spider/noinit/3/home') return reply(200, {class: [{type_id: '1', type_name: 'Films'}], list: []});
+       if (req.url.endsWith('/init')) return reply(200, {});
+       if (req.url === '/spider/site/3/home') return reply(500, {message: 'home broke'});
+-      // Danmaku as the 9280.kstore.vip bundle finds it (#506): after a play it asks the app what plays, then sends the
+-      // address of the comments.
+-      if (req.url === '/spider/site/3/detail') return reply(200, {list: [{vod_id: 'v', vod_name: 'Show', vod_play_from: 'line$$$other',
+-        vod_play_url: '第1集$ep1#第2集$ep2$$$第1集$o1'}]});
+-      if (req.url === '/spider/site/3/play') {
+-        setTimeout(async () => {
+-          const ask = async message => (await fetch(`http://127.0.0.1:${globalThis.catDartServerPort()}/msg`, {method: 'POST',
+-            headers: {'content-type': 'application/json'}, body: JSON.stringify(message)})).json();
+-          globalThis.info = await ask({action: 'getPlayInfo', opt: {}});
+-          await ask({action: 'danmuPush', opt: {url: `http://127.0.0.1:${server.address().port}/danmu/auto?name=Show&episode=2`}});
+-        }, 300);
+-        return reply(200, {parse: 0, url: 'https://example.com/ep2.m3u8'});
+-      }
+-      if (req.url === '/spider/site/3/category') return reply(200, {list: [], info: globalThis.info});
++      if (req.url === '/spider/site/3/play') return reply(200, {parse: 0, url: 'https://example.com/ep2.m3u8'});
++      if (req.url === '/spider/site/3/detail') return reply(200, {list: [{vod_id: 'v', vod_name: 'Show'}]});
++      if (req.url === '/spider/site/3/category') return reply(200, {list: []});
+       // A source whose search returns nothing answers 200 with an empty body.
+       if (req.url === '/spider/blank/3/search') { res.writeHead(200); return res.end(); }
+       // A site connection the far end dropped fails at once ("socket hang up"); the next try works.
+@@ -126,22 +115,13 @@ exports.start = async () => {
+             assert 'socket hang up' in answer('dead', {'catPawOpen': '/spider/dead/3', 'wd': 'x'})['error']
+             assert json.loads(answer('deadhome', {'catPawOpen': '/spider/dead/3'})['result'])['asked'] == 1
+             assert json.loads(answer('noinit', {'catPawOpen': '/spider/noinit/3'})['result'])['class'] == [{'type_id': '1', 'type_name': 'Films'}]
+-            # Danmaku (#506): the host names the play from the detail, answers what plays, keeps the address sent back,
+-            # and says while one may still come; for an episode not playing, the bundle's /danmu/auto at once.
+-            answer('detail', {'catPawOpen': '/spider/site/3', 'ids': 'v'})
+-            answer('play', {'catPawOpen': '/spider/site/3', 'play': 'ep2', 'flag': 'line'})
+-            danmaku = lambda ident, episode: json.loads(answer(ident, {'catDanmaku': '1', 'name': 'Show', 'episode': episode})['result'])
+-            assert danmaku('danmaku1', '第2集')['pending'] is True
+-            time.sleep(0.8)
+-            pushed = danmaku('danmaku2', '第2集')
+-            assert pushed['pushed'] is True and pushed['pending'] is False and pushed['url'].endswith('/danmu/auto?name=Show&episode=2'), pushed
+-            other = danmaku('danmaku3', '第1集')
+-            assert other['pushed'] is False and other['pending'] is False and other['url'].endswith('/danmu/auto?name=Show&episode=%E7%AC%AC1%E9%9B%86'), other
+-            assert json.loads(answer('info', {'catPawOpen': '/spider/site/3', 't': '1'})['result'])['info'] == {'title': 'Show', 'episodeName': '第2集', 'flag': 'line'}
++            assert json.loads(answer('detail', {'catPawOpen': '/spider/site/3', 'ids': 'v'})['result'])['list'][0]['vod_name'] == 'Show'
++            assert json.loads(answer('play', {'catPawOpen': '/spider/site/3', 'play': 'ep2', 'flag': 'line'})['result'])['url'].endswith('ep2.m3u8')
++            assert json.loads(answer('category', {'catPawOpen': '/spider/site/3', 't': '1'})['result'])['list'] == []
+             home = answer('home', {'catPawOpen': '/spider/site/3'})
+             assert 'home broke' in json.dumps(home, ensure_ascii=False), home
+             process.stdin.close()
+             assert process.wait(timeout=5) == 0
+         finally:
+             if process.poll() is None: process.kill(); process.wait()
+-print('Script host checks passed: modules, HTML parsing, persistent state, restart preferences, response protocol, CatPawOpen searches, sites without init and danmaku.')
++print('Script host checks passed: modules, HTML parsing, persistent state, restart preferences, response protocol, CatPawOpen searches, sites without init, detail, play and category.')
+diff --git a/Sources/TVCore/EmbeddedJarHost.swift b/Sources/TVCore/EmbeddedJarHost.swift
+index 584b6172..3dd8f4cc 100644
+--- a/Sources/TVCore/EmbeddedJarHost.swift
++++ b/Sources/TVCore/EmbeddedJarHost.swift
+@@ -258,7 +258,7 @@ public actor EmbeddedJarHost {
+     }
+ 
+     static func kind(_ params: [String: String]) -> String {
+-        params["spiderAction"] != nil ? "action" : params["spiderUI"] != nil ? "window" : params["catLogin"] != nil ? "sign-in" : params["catDanmaku"] != nil ? "danmaku" : params["play"] != nil ? "play" : params["ids"] != nil ? "detail" : params["wd"] != nil ? "search" : params["t"] != nil ? "category" : "home"
++        params["spiderAction"] != nil ? "action" : params["spiderUI"] != nil ? "window" : params["catLogin"] != nil ? "sign-in" : params["play"] != nil ? "play" : params["ids"] != nil ? "detail" : params["wd"] != nil ? "search" : params["t"] != nil ? "category" : "home"
+     }
+ 
+     /// Seconds a spider may work on a request. Generous: drive sources list many shares for a
+diff --git a/Sources/TVCore/MediaCache.swift b/Sources/TVCore/MediaCache.swift
+index 1a47ad6a..e1fbef84 100644
+--- a/Sources/TVCore/MediaCache.swift
++++ b/Sources/TVCore/MediaCache.swift
+@@ -5,12 +5,12 @@ import CryptoKit
+ /// A ticket prevents a download started before deletion from recreating deleted data.
+ public final class MediaCache: @unchecked Sendable {
+     public static let shared = MediaCache()
+-    public enum Kind: String, Codable, Sendable { case artwork, danmaku, lookup, catalog }
++    /// `legacyDanmaku` only names entries an older version wrote, so they can be found and deleted. Nothing writes or reads it.
++    public enum Kind: String, Codable, Sendable { case artwork, legacyDanmaku = "danmaku", lookup, catalog }
+     public struct Ticket: Sendable { fileprivate let generation: UInt64 }
+     public struct Summary: Sendable {
+         public let bytes: Int
+         public let artwork: Int
+-        public let danmaku: Int
+         public let lookups: Int
+         public let catalogs: Int
+     }
+@@ -98,13 +98,13 @@ public final class MediaCache: @unchecked Sendable {
+         lock.withLock {
+             prune(now: now); persist()
+             return Summary(bytes: entries.values.reduce(0) { $0 + $1.bytes }, artwork: entries.values.filter { $0.kind == .artwork }.count,
+-                           danmaku: entries.values.filter { $0.kind == .danmaku }.count, lookups: entries.values.filter { $0.kind == .lookup }.count,
++                           lookups: entries.values.filter { $0.kind == .lookup }.count,
+                            catalogs: entries.values.filter { $0.kind == .catalog }.count)
+         }
+     }
+     private func erase(_ key: String) { entries[key] = nil; try? FileManager.default.removeItem(at: root.appending(path: key)) }
+     private func prune(now: Date) {
+-        for key in entries.keys.filter({ entries[$0]!.expires <= now }) { erase(key) }
++        for key in entries.keys.filter({ entries[$0]!.expires <= now || entries[$0]!.kind == .legacyDanmaku }) { erase(key) }
+         // Lookup scope is a work, not an episode. Retain only the last 20 successful work mappings.
+         let lookups = entries.filter { $0.value.kind == .lookup }.sorted { $0.value.used > $1.value.used }
+         for (key, _) in lookups.dropFirst(20) { erase(key) }
+diff --git a/Tests/TVCoreTests/MediaCacheTests.swift b/Tests/TVCoreTests/MediaCacheTests.swift
+index ad065d14..f682cc6c 100644
+--- a/Tests/TVCoreTests/MediaCacheTests.swift
++++ b/Tests/TVCoreTests/MediaCacheTests.swift
+@@ -8,11 +8,11 @@ import Testing
+     let cache = MediaCache(root: root, budget: 100)
+     let now = Date()
+     let old = cache.ticket()
+-    #expect(cache.store(Data([1,2,3]), for: "episode1", kind: .danmaku, scope: "series", ttl: 60, ticket: old, now: now))
+-    #expect(MediaCache(root: root, budget: 100).data(for: "episode1", kind: .danmaku, scope: "series", now: now) == Data([1,2,3]))
++    #expect(cache.store(Data([1,2,3]), for: "episode1", kind: .catalog, scope: "series", ttl: 60, ticket: old, now: now))
++    #expect(MediaCache(root: root, budget: 100).data(for: "episode1", kind: .catalog, scope: "series", now: now) == Data([1,2,3]))
+     cache.remove(scope: "series")
+-    #expect(cache.data(for: "episode1", kind: .danmaku, scope: "series") == nil)
+-    #expect(!cache.store(Data([4]), for: "late", kind: .danmaku, scope: "series", ttl: 60, ticket: old))
++    #expect(cache.data(for: "episode1", kind: .catalog, scope: "series") == nil)
++    #expect(!cache.store(Data([4]), for: "late", kind: .catalog, scope: "series", ttl: 60, ticket: old))
+     cache.store(Data([5]), for: "short", kind: .artwork, ttl: 1, ticket: cache.ticket(), now: now)
+     #expect(cache.data(for: "short", kind: .artwork, now: now.addingTimeInterval(2)) == nil)
+     let beforeClear = cache.ticket()
+@@ -33,9 +33,9 @@ import Testing
+     #expect(cache.data(for: "0", kind: .lookup, now: now) == nil)
+     #expect(cache.data(for: "21", kind: .lookup, now: now) != nil)
+     cache.clear(); cache.prioritize(["history"])
+-    cache.store(Data(repeating: 1, count: 60), for: "saved", kind: .danmaku, scope: "history", ttl: 100, ticket: cache.ticket(), now: now)
++    cache.store(Data(repeating: 1, count: 60), for: "saved", kind: .catalog, scope: "history", ttl: 100, ticket: cache.ticket(), now: now)
+     cache.store(Data(repeating: 2, count: 60), for: "browsing", kind: .artwork, ttl: 100, ticket: cache.ticket(), now: now.addingTimeInterval(1))
+-    #expect(cache.data(for: "saved", kind: .danmaku, scope: "history", now: now) != nil)
++    #expect(cache.data(for: "saved", kind: .catalog, scope: "history", now: now) != nil)
+     #expect(cache.data(for: "browsing", kind: .artwork, now: now) == nil)
+     #expect(cache.summary(now: now).bytes == 60)
+ }
+@@ -52,17 +52,16 @@ import Testing
+     history.record(context, position: 10, duration: 2000)
+     EpisodeSkipSettings(enabled: true, introEnd: 90).save(scope: context.id, defaults: defaults)
+     let ticket = cache.ticket()
+-    for kind in [MediaCache.Kind.danmaku, .catalog] { cache.store(Data([1]), for: "content", kind: kind, scope: context.id, ttl: 100, ticket: ticket) }
++    for kind in [MediaCache.Kind.catalog] { cache.store(Data([1]), for: "content", kind: kind, scope: context.id, ttl: 100, ticket: ticket) }
+     cache.store(Data([2]), for: "cover", kind: .artwork, scope: PosterResource.artworkScope(context.poster!), ttl: 100, ticket: ticket)
+     cache.store(Data([3]), for: "address", kind: .lookup, ttl: 100, ticket: ticket)
+     history.remove([context.id])
+     #expect(history.entries.isEmpty)
+-    #expect(cache.summary().danmaku == 0)
+     #expect(cache.summary().catalogs == 0)
+     #expect(cache.summary().artwork == 0)
+     #expect(cache.summary().lookups == 1)
+     #expect(EpisodeSkipSettings.load(scope: context.id, defaults: defaults).introEnd == 0)
+-    #expect(!cache.store(Data([4]), for: "late", kind: .danmaku, scope: context.id, ttl: 100, ticket: ticket))
++    #expect(!cache.store(Data([4]), for: "late", kind: .catalog, scope: context.id, ttl: 100, ticket: ticket))
+     history.record(context, position: 12, duration: 2000)
+     EpisodeSkipSettings(enabled: true, introEnd: 45).save(scope: context.id, defaults: defaults)
+     cache.clear()
