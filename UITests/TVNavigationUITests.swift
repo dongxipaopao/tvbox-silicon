@@ -624,7 +624,7 @@ final class TVNavigationUITests: XCTestCase {
     private func trace(_ app: XCUIApplication, _ target: XCUIElement, _ label: String) {
         let remote = XCUIRemote.shared
         var lines = ["\(label) target: \(describe(target))", "start: \(focusInfo(app))"]
-        for (name, key) in [("up", XCUIRemote.Button.up), ("up", .up), ("right", .right), ("up", .up), ("left", .left), ("up", .up), ("up", .up), ("up", .up), ("up", .up), ("up", .up)] {
+        for (name, key) in [("up", XCUIRemote.Button.up), ("up", .up), ("up", .up), ("up", .up), ("up", .up), ("up", .up), ("up", .up), ("up", .up)] {
             remote.press(key); sleep(1)
             lines.append("\(name): \(focusInfo(app)) | target focus=\(target.hasFocus)")
             if target.hasFocus { break }
@@ -688,6 +688,7 @@ final class TVNavigationUITests: XCTestCase {
         note("Music initial focus frame=\(frame) settings=\(describe(settings))")
         XCTAssertFalse(focus.contains("Music Settings"), "Music opened with focus on Music Settings, not the first playlist: \(focus)")
         XCTAssertFalse(focus.hasPrefix("none"), "Music opened with nothing focused")
+        XCTAssertFalse(focus.contains("See All") || focus.contains("watchnow.more"), "Music opened on a shelf's See All, not its first playlist cover: \(focus)")
         // Positive: the focused item is a cover in the content (right of the sidebar, below the magnifier row, above the
         // Music Settings button that now follows the shelves), at the left end of the first shelf.
         XCTAssertTrue(frame.minX > 100 && frame.minX < 700 && frame.minY > 150 && (!settings.exists || frame.minY < settings.frame.minY),

@@ -100,6 +100,10 @@ struct MusicCollectionTile: View {
     var size: CGFloat?
     /// Apple TV: the focus scope this cover is the preferred first focus of, if any.
     var firstFocusIn: Namespace.ID?
+    #if os(tvOS)
+    /// Apple TV: the page's explicit focus, set to the first cover once the shelves are up (See All sits left of it).
+    var pageFocus: FocusState<String?>.Binding? = nil
+    #endif
     @State private var hovering = false
 
     var body: some View {
@@ -111,7 +115,10 @@ struct MusicCollectionTile: View {
         }
         .cardButton()
         .contextMenu { MusicCollectionLikeButton(collection: collection) }
-        if let firstFocusIn { card.prefersDefaultFocus(true, in: firstFocusIn) } else { card }
+        if let firstFocusIn {
+            if let pageFocus { card.prefersDefaultFocus(true, in: firstFocusIn).focused(pageFocus, equals: "music.firstCover") }
+            else { card.prefersDefaultFocus(true, in: firstFocusIn) }
+        } else { card }
         #else
         let link = RouteLink { MusicCollectionView(collection: collection) } label: {
             VStack(alignment: .leading, spacing: 7) {
@@ -150,6 +157,7 @@ struct MusicBrowseShelves: View {
     var focusScope: Namespace.ID?
     #if os(tvOS)
     @Environment(\.resetFocus) private var resetFocus
+    @FocusState private var pageFocus: String?
     #endif
 
     var body: some View {
@@ -161,7 +169,8 @@ struct MusicBrowseShelves: View {
                 WatchNowTVRail(title: section.title, seeAll: WatchNowTVSeeAll(height: WatchNowTVCover.width, route: all),
                                gutter: MusicBrowseMetrics.inset) {
                     ForEach(Array(section.collections.enumerated()), id: \.element.id) { index, collection in
-                        MusicCollectionTile(collection: collection, firstFocusIn: shelf == 0 && index == 0 ? focusScope : nil)
+                        MusicCollectionTile(collection: collection, firstFocusIn: shelf == 0 && index == 0 ? focusScope : nil,
+                                            pageFocus: shelf == 0 && index == 0 ? $pageFocus : nil)
                     }
                 }
             }
@@ -170,6 +179,11 @@ struct MusicBrowseShelves: View {
         // The shelves load after the page opens, by which time the Music Settings button above has taken focus:
         // ask the page's scope again so the first cover of the first shelf (its default) gets it.
         .onAppear { if let focusScope { resetFocus(in: focusScope) } }
+        // The first cover itself, not See All: set explicitly once the rail has laid out.
+        .task {
+            try? await Task.sleep(for: .milliseconds(400))
+            if pageFocus == nil { pageFocus = "music.firstCover" }
+        }
         #else
         VStack(alignment: .leading, spacing: MusicBrowseMetrics.sectionSpacing) {
             ForEach(sections) { section in
