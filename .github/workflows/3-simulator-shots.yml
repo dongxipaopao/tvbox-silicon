@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       scenes:
-        description: full (default) or targeted (zh-Hans settings, zh-Hans whatsnew, music without subscriptions)
+        description: full (default), targeted (zh-Hans settings, zh-Hans whatsnew, music without subscriptions), or playerfix (no-picture timeout, endless buffer, audio-only reveal)
         default: full
 permissions:
   contents: write
@@ -144,6 +144,16 @@ jobs:
             }
             shotns 21a-music-nosubs-a 15 -qaSection music
             shotns 21b-music-nosubs-b 15 -qaSection music
+            ls -l shots
+            exit 0
+          fi
+          if [ "${{ inputs.scenes }}" = "playerfix" ]; then
+            # Audio-only fixture: the tone mp4 has no video track, so the timed reveal must still apply.
+            ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'sine=frequency=440' -t 300 -c:a aac -movflags +faststart build/LibraryUI/tone.mp4
+            # frozen.mp4: moov arrives, media data never does. 10s: wait screen holds. 40s: the 20s buffering budget has named the failure.
+            shot 22a-frozen-wait 10 -qaSection home -qaPage play-source:qa-standard -qaVideoQuery qa-playerfix -qaEpisodeName Frozen
+            shot 22b-frozen-timeout 40 -qaSection home -qaPage play-source:qa-standard -qaVideoQuery qa-playerfix -qaEpisodeName Frozen
+            shot 22c-tone-reveal 12 -qaSection home -qaPage play-source:qa-standard -qaVideoQuery qa-playerfix -qaEpisodeName Tone
             ls -l shots
             exit 0
           fi
