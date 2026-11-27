@@ -1,0 +1,11 @@
+diff --git a/.github/workflows/8-share.yml b/.github/workflows/8-share.yml
+index 8cd1b1e..8810bcc 100644
+--- a/.github/workflows/8-share.yml
++++ b/.github/workflows/8-share.yml
+@@ -25,3 +25,6 @@ jobs:
+           # gofile
+           GF=$(curl -s --max-time 900 -F "file=@$IPA" https://upload.gofile.io/uploadfile || true)
+           echo "gofile: $(echo "$GF" | python3 -c "import json,sys;d=json.load(sys.stdin)[\"data\"];print(d[\"downloadPage\"],d[\"id\"],d[\"name\"],d[\"md5\"],d[\"guestToken\"])")" >> "$GITHUB_STEP_SUMMARY"
++          # litterbox (24h, anonymous, free)
++          LB=$(curl -s --max-time 900 -F "reqtype=fileupload" -F "time=24h" -F "fileToUpload=@$IPA" https://litterbox.catbox.moe/resources/internals/api.php || true)
++          echo "litterbox: $LB" >> "$GITHUB_STEP_SUMMARY"
