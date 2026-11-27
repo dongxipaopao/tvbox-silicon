@@ -2398,3 +2398,17 @@
 "Delete %lld episodes" = "%lld 話を削除";
 "Search settings" = "設定を検索";
 "Switch Source" = "ソースを切り替え";
+"Can't open" = "開けません";
+"Encrypted Rex modules are not supported yet." = "暗号化された Rex モジュールにはまだ対応していません。";
+"Encrypted, not supported yet" = "暗号化済み・未対応";
+"Import Rex Subscription" = "Rex サブスクリプションを読み込む";
+"Import a Rex subscription to browse its list modules here." = "Rex サブスクリプションを読み込むと、リスト型モジュールをここで閲覧できます。";
+"Import" = "読み込む";
+"Only list modules that are not encrypted run for now. The address is kept on this device." = "現在は暗号化されていないリスト型モジュールのみ動作します。アドレスはこの端末にのみ保存されます。";
+"Ready" = "利用可能";
+"Rex Modules" = "Rex モジュール";
+"This is not a Rex subscription." = "Rex サブスクリプションではありません。";
+"This is not a web address." = "Web アドレスではありません。";
+"This list is empty." = "このリストは空です。";
+"This subscription has no modules." = "このサブスクリプションにモジュールはありません。";
+"This module needs %@, which this app does not support yet." = "このモジュールには「%@」が必要ですが、このアプリはまだ対応していません。";

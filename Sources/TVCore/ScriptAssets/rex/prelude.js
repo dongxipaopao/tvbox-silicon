@@ -48,7 +48,7 @@ function send(method, url, body, options) {
     });
 }
 
-const unsupported = what => () => { throw new Error(what + ' is not supported in this build'); };
+const unsupported = what => () => { throw new Error('REX_UNSUPPORTED:' + what); };
 globalThis.Widget = {
     http: {
         get: (url, options) => send('GET', url, null, options),

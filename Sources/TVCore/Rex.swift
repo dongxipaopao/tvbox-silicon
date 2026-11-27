@@ -89,6 +89,7 @@ public actor RexRuntime {
     static func source(_ address: String) async throws -> String {
         if address.hasPrefix("assets://") {
             guard let text = ScriptAssets.bundled(address) else { throw RexError.failed("Missing bundled module") }
+            if text.hasPrefix("REXENC") { throw RexError.encrypted }
             return text
         }
         guard let url = URL(string: address), ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { throw RexError.failed(L10n.text("This is not a web address.")) }
@@ -99,6 +100,13 @@ public actor RexRuntime {
         let text = String(decoding: data, as: UTF8.self)
         if text.hasPrefix("REXENC") { throw RexError.encrypted }
         return text
+    }
+
+    /// A module's own error text, with the host's "not supported" marker turned into a sentence the user can read.
+    static func explain(_ message: String) -> String {
+        guard let range = message.range(of: "REX_UNSUPPORTED:") else { return message }
+        let what = message[range.upperBound...].prefix { !$0.isWhitespace && $0 != "\n" }
+        return L10n.text("This module needs %@, which this app does not support yet.", String(what))
     }
 
     public static func fetchCollection(_ address: String) async throws -> RexCollection {
@@ -134,9 +142,9 @@ public actor RexRuntime {
         let literal = String(decoding: try JSONSerialization.data(withJSONObject: [function.functionName], options: []), as: UTF8.self).dropFirst().dropLast()
         let envelope = await entry.session.evaluate("__rex.call(\(literal), \(json))", within: 40)
         guard let value = envelope["value"]?.object else {
-            throw RexError.failed(String((envelope["error"]?.string ?? "The module did not answer").prefix(200)))
+            throw RexError.failed(Self.explain(String((envelope["error"]?.string ?? "The module did not answer").prefix(200))))
         }
-        if let message = value["error"]?.string { throw RexError.failed(message) }
+        if let message = value["error"]?.string { throw RexError.failed(Self.explain(message)) }
         return (value["items"]?.array ?? []).compactMap(Self.item)
     }
 

@@ -115,15 +115,17 @@ struct RexShelf: View {
             await model.start()
             #if DEBUG
             // `-qaRexOpen 1` opens the first module that runs, for screenshots.
-            if UserDefaults.standard.bool(forKey: "qaRexOpen") {
-                for _ in 0..<40 where !model.entries.contains(where: { $0.checked && $0.problem == nil }) { try? await Task.sleep(for: .milliseconds(500)) }
-                qaOpen = model.entries.first { $0.checked && $0.problem == nil }?.widget
+            // The value is a module id (`-qaRexOpen fixture.html`) or 1 for the first module that runs.
+            if let want = UserDefaults.standard.string(forKey: "qaRexOpen") {
+                for _ in 0..<40 where !model.entries.allSatisfy(\.checked) || model.entries.isEmpty { try? await Task.sleep(for: .milliseconds(500)) }
+                qaOpen = want == "1" ? model.entries.first { $0.checked && $0.problem == nil }?.widget
+                    : model.entries.first { $0.widget.id == want && $0.problem == nil }?.widget
             }
             #endif
         }
         .sheet(isPresented: $importing) { importSheet }
         #if DEBUG
-        .sheet(item: $qaOpen) { widget in NavigationStack { RexModuleView(widget: widget) } }
+        .sheet(item: $qaOpen) { widget in NavigationStack { RexModuleView(widget: widget).toolbar { ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { qaOpen = nil } } } } }
         #endif
     }
 

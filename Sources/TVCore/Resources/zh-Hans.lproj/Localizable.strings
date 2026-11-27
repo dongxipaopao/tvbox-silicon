@@ -2398,3 +2398,17 @@
 "Delete %lld episodes" = "删除 %lld 集";
 "Search settings" = "搜索设置";
 "Switch Source" = "切换源";
+"Can't open" = "无法打开";
+"Encrypted Rex modules are not supported yet." = "暂不支持加密的 Rex 模块。";
+"Encrypted, not supported yet" = "已加密，暂不支持";
+"Import Rex Subscription" = "导入 Rex 订阅";
+"Import a Rex subscription to browse its list modules here." = "导入 Rex 订阅后，可在这里浏览其中的列表模块。";
+"Import" = "导入";
+"Only list modules that are not encrypted run for now. The address is kept on this device." = "目前只运行未加密的列表模块。地址仅保存在本机。";
+"Ready" = "可用";
+"Rex Modules" = "Rex 模块";
+"This is not a Rex subscription." = "这不是 Rex 订阅。";
+"This is not a web address." = "这不是网页地址。";
+"This list is empty." = "这个列表是空的。";
+"This subscription has no modules." = "这个订阅里没有模块。";
+"This module needs %@, which this app does not support yet." = "这个模块需要“%@”，本应用暂不支持。";
