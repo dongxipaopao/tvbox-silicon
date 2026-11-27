@@ -154,6 +154,11 @@ jobs:
             shot 23c-switcher-group1 30 -qaSection sites -qaPage site:qa-standard -qaSwitchSheet 1 -qaSwitchGroup 1 $X
             shot 23d-switcher-group2 30 -qaSection sites -qaPage site:qa-standard -qaSwitchSheet 1 -qaSwitchGroup 2 $X
             shot 23e-switched-mid 60 -qaSection sites -qaPage site:qa-standard -qaSwitchSheet 1 -qaSwitchGroup 1 -qaSwitchPick qa-py $X
+            shot 24a-douban-open-3s 3 -qaSection discover -qaDiscoverOpen douban:天才谋杀法 $X
+            shot 24b-douban-open-8s 8 -qaSection discover -qaDiscoverOpen douban:天才谋杀法 $X
+            shot 24c-douban-open-30s 30 -qaSection discover -qaDiscoverOpen douban:天才谋杀法 $X
+            shot 18d-discover-play-ready 45 -qaSection discover -qaDiscoverOpen tv:1396 $X
+            xcrun simctl spawn "$UDID" log show --last 3m --predicate 'subsystem CONTAINS "tvbox" OR process == "TVBox-iOS"' --style compact 2>/dev/null | grep -E 'perf|search' | sed -E 's#http[^ ]*#URL#g' | head -40 > shots/applog-perf.txt || true
             ls -l shots
             exit 0
           fi
