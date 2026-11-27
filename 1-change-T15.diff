@@ -1,0 +1,57 @@
+diff --git a/Scripts/qa-server.py b/Scripts/qa-server.py
+index be379b51..96915b53 100644
+--- a/Scripts/qa-server.py
++++ b/Scripts/qa-server.py
+@@ -80,6 +80,14 @@ class Spider(Spider):
+     def playerContent(self, flag, id, vipFlags):
+         return {'parse': 0, 'url': id}
+ """,mime='text/x-python')
++        # Same-source line failover: line one's only episode points at a dead address, line two's plays.
++        if path == '/fo-config.json': return self.send({'sites': [{'key':'qa-fo','name':'线路切换 / Lines','type':4,'api':base+'/fo'}], 'lives': []})
++        if path == '/fo':
++            if 'play' in q: return self.send({'parse':0,'url':base+('/missing.mp4' if q['play'] == 'dead-1' else '/clip.mp4')})
++            if 'ids' in q:
++                return self.send({'list':[{'vod_id':q['ids'],'vod_name':'线路测试影片','vod_pic':base+'/poster.png',
++                    'vod_play_from':'坏线路$$$好线路','vod_play_url':'第1集$dead-1$$$第1集$episode-1'}]})
++            return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'fo1','vod_name':'线路测试影片','vod_pic':base+'/poster.png'}]})
+         if path == '/empty-config.json': return self.send({'sites': [], 'lives': [{'name':'测试频道','url':base+'/live.m3u'}]})
+         # A source whose video details never arrive, for Back while a page is still loading.
+         # Also one whose details fail, and one whose video has no episodes, for Back once the page has given up.
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index dfb37370..52adb6cf 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -592,6 +592,33 @@ final class TVNavigationUITests: XCTestCase {
+         XCTAssertFalse(panel.exists, "The Episodes tab stayed open after choosing an episode")
+     }
+ 
++    /// A dead first line falls through to the second line of the same source on its own: the fixture's first line
++    /// points at a 404, so the server must see that address asked for and then the working clip, and a picture must show.
++    func testDeadFirstLineSwitchesToSecondLine() throws {
++        let app = XCUIApplication()
++        app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-fo", "-qaIsolatedData", "1",
++                               "-qaSubscription", "http://127.0.0.1:8776/fo-config.json", "-autoPlayNextEpisode", "NO",
++                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
++        app.launch()
++        let waiting = app.descendants(matching: .any)["player.waiting"]
++        _ = waiting.waitForExistence(timeout: 15)
++        var seconds = 0
++        for _ in 0..<60 where waiting.exists || seconds == 0 { sleep(1); seconds += 1 }
++        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "after dead line"; shot.lifetime = .keepAlways; add(shot)
++        var counts: [String: Int] = [:]
++        let semaphore = DispatchSemaphore(value: 0)
++        URLSession.shared.dataTask(with: URL(string: "http://127.0.0.1:8776/counts")!) { data, _, _ in
++            if let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Int] { counts = json }
++            semaphore.signal()
++        }.resume()
++        _ = semaphore.wait(timeout: .now() + 10)
++        add(XCTAttachment(string: "waited \(seconds)s; counts missing=\(counts["/missing.mp4"] ?? 0) clip=\(counts["/clip.mp4"] ?? 0) fo-plays=\(counts["/fo"] ?? 0)"))
++        XCTAssertGreaterThan(counts["/missing.mp4"] ?? 0, 0, "The dead first line was never tried: \(counts)")
++        XCTAssertGreaterThan(counts["/clip.mp4"] ?? 0, 0, "The second line was never asked for: \(counts)")
++        XCTAssertFalse(waiting.exists, "The wait screen is still up after \(seconds)s: no picture on the second line")
++        XCTAssertEqual(app.state, .runningForeground)
++    }
++
+     // MARK: Apple TV parity checks (T1 to T3). They record what is on screen and where focus is, as screenshots and
+     // attachments, and report each mismatch without stopping at the first one.
+ 
