@@ -1,2 +1,0 @@
-6-change-B39.diff
-7-change-B39.txt
