@@ -58,6 +58,7 @@ extension Probe {
             picked.append(candidate)
             if picked.count == 3 { break }
         }
+        print("\(tag) site-filter=\(siteFilter?.isEmpty == false ? siteFilter! : "<none>") candidates=\(candidates.count)")
         print("\(tag) matched-sites=\(picked.map { $0.site.key }.joined(separator: ","))")
         for (index, candidate) in picked.enumerated() {
             let t = "\(tag) play#\(index + 1) site=\(candidate.site.key)"
