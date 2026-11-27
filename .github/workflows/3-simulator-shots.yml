@@ -154,6 +154,8 @@ jobs:
             shot 22a-frozen-wait 10 -qaSection home -qaPage play-source:qa-standard -qaVideoQuery qa-playerfix -qaEpisodeName Frozen
             shot 22b-frozen-timeout 40 -qaSection home -qaPage play-source:qa-standard -qaVideoQuery qa-playerfix -qaEpisodeName Frozen
             shot 22c-tone-reveal 12 -qaSection home -qaPage play-source:qa-standard -qaVideoQuery qa-playerfix -qaEpisodeName Tone
+            # Regression: an ordinary fixture video must still reveal its picture under the new watcher.
+            shot 11b-playback 24 -qaSection home -qaPage play-source:qa-standard
             ls -l shots
             exit 0
           fi
