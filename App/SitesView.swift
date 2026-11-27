@@ -3860,7 +3860,11 @@ extension VideoDetailView {
         let list = activeEpisodes
         guard !list.isEmpty else { return }
         request.wrappedValue = nil
-        await play(list[min(max(asked.number, 1), list.count) - 1])
+        // Not awaited here: clearing the request (and `busy` flipping inside play) changes this task's id, which makes
+        // SwiftUI cancel it, and play's Task.checkCancellation then dropped the tap silently (the top Play did
+        // nothing while an episode tap, which runs in requestTask, worked). requestTask is not tied to the id.
+        let target = list[min(max(asked.number, 1), list.count) - 1]
+        startRequest { await play(target) }
     }
 
     /// The top Play is enabled only once the first episode's playable address actually exists: the source's play
