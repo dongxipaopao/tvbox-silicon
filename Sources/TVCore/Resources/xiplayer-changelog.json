@@ -2,6 +2,58 @@
   "releases": [
     {
       "version": "1.8.32",
+      "build": 81,
+      "date": "2026-11-28",
+      "links": {},
+      "features": [
+        {
+          "symbol": "magnifyingglass",
+          "title": {
+            "en": "Apple TV: Music and Sources open on content",
+            "zh-Hans": "Apple TV：音乐和点播源直接显示内容"
+          },
+          "detail": {
+            "en": "Music and Sources no longer open on the search keyboard. Music starts on its first playlist cover and Sources on the first source. A magnifier at the top right opens the search, and only then does the keyboard appear.",
+            "zh-Hans": "音乐和点播源打开后不再直接弹出搜索键盘。音乐默认停在第一个歌单封面，点播源默认停在第一个源。右上角的放大镜按下后才进入搜索输入。"
+          }
+        },
+        {
+          "symbol": "trash",
+          "title": {
+            "en": "Apple TV Settings: Account, Send Feedback and Telegram Group removed",
+            "zh-Hans": "Apple TV 设置：已移除账号、反馈问题和 Telegram 群组"
+          },
+          "detail": {
+            "en": "The three rows are gone from Settings on Apple TV. Cloud Drive Accounts stays.",
+            "zh-Hans": "Apple TV 设置里的这三项已移除。网盘账号保留。"
+          }
+        },
+        {
+          "symbol": "play.fill",
+          "title": {
+            "en": "Apple TV: Play button and sources on the title page",
+            "zh-Hans": "Apple TV：详情页播放按钮和页内片源"
+          },
+          "detail": {
+            "en": "The title page now has Play like iPhone. Choosing an episode lists the sources that have it, and picking one plays it.",
+            "zh-Hans": "详情页的“搜索片源”改成和 iPhone 一致的“播放”。点选集会列出有这一集的片源，点一个就播放。"
+          }
+        },
+        {
+          "symbol": "chevron.down",
+          "title": {
+            "en": "Apple TV: switch source from its page",
+            "zh-Hans": "Apple TV：源页面下拉换源"
+          },
+          "detail": {
+            "en": "On a source's page, select its name to open a list: subscriptions on top, that subscription's sources below. Select one to switch.",
+            "zh-Hans": "在某个源的页面，选中源名字打开列表：上面是订阅分组，下面是该订阅的源，选一个直接换源。"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.8.32",
       "build": 80,
       "date": "2026-11-28",
       "links": {},
