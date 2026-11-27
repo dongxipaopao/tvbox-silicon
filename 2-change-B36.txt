@@ -1,0 +1,14 @@
+B36: top Play button follows real resource readiness (user request 2026-11-27 08:23).
+
+Discover's title page top Play now has explicit states instead of tapping into a silent pending request:
+- loading: disabled, spinner + "Loading" text, while the source search or the first episode's resolve runs.
+- ready: enabled "Play", only after the first episode's address actually resolved (source play call + address
+  resolution run ahead of the tap in VideoDetailView.prefetchTopPlay, result cached; the tap reuses the cache and
+  starts without resolving again).
+- exhausted/failed: search finished with no source, or the resolve threw: the area explains "No playable source"
+  and offers "Try Again" (restarts the source search via DiscoverSources.restart, or re-runs the prefetch /
+  reloads the details). Never spins forever; never falls back to the old global source search from here.
+
+Top Play still plays episode 1 (existing behavior kept). Prefetch never marks sources failed and never switches
+sources: actual playback still decides that through the existing failover chain. Downloaded first episodes report
+ready without network. New localization key "No playable source" in en/zh-Hans/zh-Hant/ja.
