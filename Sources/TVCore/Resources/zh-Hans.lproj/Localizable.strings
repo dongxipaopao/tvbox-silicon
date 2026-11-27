@@ -95,6 +95,7 @@
 "Resolving playback URL…" = "正在解析播放地址…";
 "Video Details" = "影片详情";
 "This media cannot be played. Try another channel or source." = "媒体无法播放，请尝试其他频道或线路。";
+"This video played no picture. Try another line or source." = "视频没有画面，请尝试其他线路或来源。";
 "Playback was interrupted." = "播放中断。";
 "The connection dropped. Reconnecting" = "连接已中断，正在重新连接";
 "Close" = "关闭";

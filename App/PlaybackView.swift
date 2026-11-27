@@ -1116,6 +1116,50 @@ import IOKit.pwr_mgt
         return false
     }
 
+    /// The artwork comes down for a frame that was really drawn, not for the clock: a stream that says it is
+    /// playing but draws nothing keeps its wait screen, then fails by name and tries the next line instead of
+    /// sitting on a black player. An item with no picture at all (music, radio) keeps the short timed reveal:
+    /// there is nothing to wait for, so it can never hang on a frame check.
+    @MainActor private func revealPictureAfterFirstFrame(generation active: UUID) async {
+        let enabledVideo = item?.tracks.filter { $0.assetTrack?.mediaType == .video && $0.isEnabled } ?? []
+        guard !enabledVideo.isEmpty else {
+            try? await Task.sleep(for: .milliseconds(350))
+            guard generation == active, player.timeControlStatus == .playing, !showsPicture else { return }
+            revealPicture(); return
+        }
+        // A picture is expected: wait for a drawn frame. Pauses and stalls spend none of the six seconds, and a
+        // new episode, line or repackage ends this task through the generation check, so nothing here waits forever.
+        var played = 0
+        for _ in 0..<240 {
+            try? await Task.sleep(for: .milliseconds(250))
+            guard generation == active, !showsPicture, let current = item else { return }
+            guard player.timeControlStatus == .playing else { continue }
+            played += 1
+            if current.tracks.contains(where: { $0.assetTrack?.mediaType == .video && $0.isEnabled && $0.currentVideoFrameRate > 0 }) { revealPicture(); return }
+            if played >= 24 { break }
+        }
+        guard generation == active, !showsPicture, played >= 24 else { return }
+        // Six seconds of sound with no drawn frame. HEVC can list without drawing on some devices (#585): trust it,
+        // as the segmented check does, rather than fail a picture that is actually there.
+        if let current = item, await Self.mayBeHEVC(current.tracks.filter { $0.assetTrack?.mediaType == .video && $0.isEnabled }) { revealPicture(); return }
+        // Playlists that draw nothing are already repackaged by `checkSegmentedPicture`; what is left here really
+        // plays sound with no picture. Name it and move to the next line or source.
+        Diagnostics.shared.record(.error, "player", "no drawn frame after 6s of playback host=\(transfer.host ?? "-")")
+        if tryNextLine(after: nil) { return }
+        loading = false
+        errorSymbol = "play.slash.fill"
+        error = L10n.text("This video played no picture. Try another line or source.")
+    }
+
+    /// The wait is over: the picture (or a sound-only player) takes the screen.
+    private func revealPicture() {
+        guard !showsPicture else { return }
+        showsPicture = true
+        // How long the viewer waited, and from where it plays: a slow resume shows up in a report (#1455).
+        let seconds = player.currentTime().seconds
+        Diagnostics.shared.record(.info, "player", "picture after=\(String(format: "%.2f", Date().timeIntervalSince(openedAt)))s at=\(seconds.isFinite ? Int(seconds) : -1)s")
+    }
+
     private func repackageSegments(_ item: AVPlayerItem, channel: Channel, url: URL, generation active: UUID) {
         Diagnostics.shared.record(.warning, "player", "hls plays no picture; repackaging host=\(url.host() ?? "-")")
         note(L10n.text("Repackaging the video for this device"))
@@ -1257,12 +1301,7 @@ import IOKit.pwr_mgt
                 // The first frame lands a beat after playback starts; keep the artwork until then, so no black flashes between.
                 if playing, !self.showsPicture {
                     Task { @MainActor [weak self] in
-                        try? await Task.sleep(for: .milliseconds(350))
-                        guard let self, self.generation == activeGeneration, self.player.timeControlStatus == .playing, !self.showsPicture else { return }
-                        self.showsPicture = true
-                        // How long the viewer waited, and from where it plays: a slow resume shows up in a report (#1455).
-                        let seconds = self.player.currentTime().seconds
-                        Diagnostics.shared.record(.info, "player", "picture after=\(String(format: "%.2f", Date().timeIntervalSince(self.openedAt) - 0.35))s at=\(seconds.isFinite ? Int(seconds) : -1)s")
+                        await self?.revealPictureAfterFirstFrame(generation: activeGeneration)
                     }
                 }
             }
