@@ -1,0 +1,309 @@
+diff --git a/App/DiscoverDetailView.swift b/App/DiscoverDetailView.swift
+index f440e0b5..aa861c17 100644
+--- a/App/DiscoverDetailView.swift
++++ b/App/DiscoverDetailView.swift
+@@ -22,6 +22,11 @@ struct DiscoverDetailView: View {
+     @State private var episode: DiscoverEpisode?
+     /// Episode (1-based) the source page should play as soon as it has its list: Play, or a source picked for an episode.
+     @State private var playEpisode: EpisodePlayRequest?
++    /// The top Play's state (B36): the first episode's address resolving (disabled spinner), resolved (tappable),
++    /// or failed/exhausted (explanation plus retry). Reported by the episode section's VideoDetailView.
++    @State private var topPlayReadiness: TopPlayReadiness = .loading
++    /// The top Play area's retry counter; the episode section re-runs the prefetch when it changes.
++    @State private var topPlayRetryTick = 0
+     /// The episode whose sources show under the episode row (iOS and Mac); changing the season clears it.
+     @State private var pickedEpisode: Int?
+     /// The latest season's air dates while it airs (#1186).
+@@ -51,6 +56,7 @@ struct DiscoverDetailView: View {
+         // A video playing over the page (the player covers it without the page going away) pauses the search for the
+         // title's other sources until it closes: their plugins ran flat out under the video and warmed the phone (#1428).
+         .onChange(of: store.playing == nil) { _, idle in if idle { startSources() } else { stopSources() } }
++        .onChange(of: sources?.chosen?.id) { _, _ in topPlayReadiness = .loading }
+         .task(id: catalogSeason) { await loadSeason() }
+         .task(id: details?.id) { await loadAiring() }
+         #if DEBUG
+@@ -249,19 +255,69 @@ struct DiscoverDetailView: View {
+         return values.filter { !$0.isEmpty }.joined(separator: " · ")
+     }
+ 
+-    /// Play: the title's first episode on its best source, as soon as one is found; when none of the sources has it,
+-    /// the old source search.
+-    private var playButton: some View {
++    /// Play: the title's first episode on its best source. Enabled only once that episode's playable address is
++    /// actually resolved and cached (the tap starts without resolving again, B36); before that it is disabled with
++    /// a spinner, and when the source search or the resolve ran out it explains and offers a retry instead of
++    /// spinning forever. The retry restarts the source search or the resolve; changing sources stays in the
++    /// episodes section.
++    @ViewBuilder private var playButton: some View {
++        if store.subscription == nil {
++            Button {
++                episode = nil
++                store.section = .settings
++            } label: {
++                Label(L10n.text("Add Subscription"), systemImage: "plus")
++                    .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 54)
++                    .foregroundStyle(dark ? Color.black : Color.white)
++                    .background(dark ? Color.white : Color.black, in: Capsule())
++            }.buttonStyle(.plain).accessibilityIdentifier("discover.play")
++        } else if let sources, sources.finished, sources.chosen == nil {
++            topPlayRetry {
++                sources.restart(store)
++            }
++        } else {
++            switch topPlayReadiness {
++            case .ready:
++                Button {
++                    episode = nil
++                    playEpisode = EpisodePlayRequest(number: 1)
++                } label: {
++                    Label(L10n.text("Play"), systemImage: "play.fill")
++                        .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 54)
++                        .foregroundStyle(dark ? Color.black : Color.white)
++                        .background(dark ? Color.white : Color.black, in: Capsule())
++                }.buttonStyle(.plain).accessibilityIdentifier("discover.play")
++            case .loading:
++                Button {} label: {
++                    HStack(spacing: 8) {
++                        ProgressView().controlSize(.small).tint(dark ? Color.black : Color.white)
++                        Text(L10n.text("Loading")).font(.system(size: 15, weight: .semibold))
++                    }
++                    .frame(maxWidth: .infinity).frame(height: 54)
++                    .foregroundStyle((dark ? Color.black : Color.white).opacity(0.6))
++                    .background((dark ? Color.white : Color.black).opacity(0.45), in: Capsule())
++                }.buttonStyle(.plain).disabled(true).accessibilityIdentifier("discover.play")
++            case .failed:
++                topPlayRetry {
++                    topPlayRetryTick += 1
++                }
++            }
++        }
++    }
++
++    /// The top Play area once nothing playable came out: what happened, and a retry (B36). Never a dead spinner.
++    private func topPlayRetry(action: @escaping () -> Void) -> some View {
+         Button {
+-            episode = nil
+-            if store.subscription == nil { store.section = .settings }
+-            else if let sources, sources.finished, sources.matches.isEmpty { store.searchVideos(item.name) }
+-            else { playEpisode = EpisodePlayRequest(number: 1) }
++            topPlayReadiness = .loading
++            action()
+         } label: {
+-            Label(L10n.text(store.subscription == nil ? "Add Subscription" : "Play"), systemImage: store.subscription == nil ? "plus" : "play.fill")
+-                .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 54)
+-                .foregroundStyle(dark ? Color.black : Color.white)
+-                .background(dark ? Color.white : Color.black, in: Capsule())
++            VStack(spacing: 2) {
++                Text(L10n.text("No playable source")).font(.system(size: 11)).opacity(0.75)
++                Label(L10n.text("Try Again"), systemImage: "arrow.clockwise").font(.system(size: 15, weight: .semibold))
++            }
++            .frame(maxWidth: .infinity).frame(height: 54)
++            .foregroundStyle(dark ? Color.black : Color.white)
++            .background((dark ? Color.white : Color.black).opacity(0.55), in: Capsule())
+         }.buttonStyle(.plain).accessibilityIdentifier("discover.play")
+     }
+ 
+@@ -320,6 +376,7 @@ struct DiscoverDetailView: View {
+         #endif
+         if let sources {
+             DiscoverSourceEpisodes(sources: sources, item: followItem, appColorScheme: appColorScheme, selectedSeason: $seasonNumber, playEpisode: $playEpisode,
++                                   topPlayReadiness: $topPlayReadiness, topPlayRetryTick: $topPlayRetryTick,
+                                    seasonControl: { number in seasons.isEmpty ? nil : AnyView(catalogSeasonMenu(number)) }) { number in
+                 if number == nil || number == catalogSeason {
+                     catalogEpisodes(showsSeasonControl: number == nil)
+@@ -718,6 +775,12 @@ private struct DiscoverMacSeasonButton: View {
+         grace?.cancel(); grace = nil
+     }
+ 
++    /// The viewer asked to look for the title's sources again (the top Play's retry after the search ran out, B36).
++    func restart(_ store: Store) {
++        subscription = nil
++        start(store)
++    }
++
+     func choose(_ candidate: SourceTitleMatch.Candidate) {
+         grace?.cancel(); grace = nil
+         // Picking a source by hand, or the player landing on one that plays, trusts it again: a later automatic
+@@ -801,6 +864,9 @@ private struct DiscoverSourceEpisodes<CatalogEpisodes: View>: View {
+     let appColorScheme: ColorScheme
+     @Binding var selectedSeason: Int?
+     @Binding var playEpisode: EpisodePlayRequest?
++    /// The header's top Play state and its retry counter (B36), reported through DetailEmbed.
++    @Binding var topPlayReadiness: TopPlayReadiness
++    @Binding var topPlayRetryTick: Int
+     let seasonControl: (Int) -> AnyView?
+     @ViewBuilder let catalogEpisodes: (Int?) -> CatalogEpisodes
+     @State private var changing = false
+@@ -834,7 +900,9 @@ private struct DiscoverSourceEpisodes<CatalogEpisodes: View>: View {
+                                                    resetFailed: { sources.resetFailed() },
+                                                    markFailed: { sources.markFailed(id: $0) },
+                                                    adopt: { sources.adopt(id: $0) },
+-                                                   playEpisode: $playEpisode))
++                                                   playEpisode: $playEpisode,
++                                                   topPlayReadiness: { topPlayReadiness = $0 },
++                                                   topPlayRetry: $topPlayRetryTick))
+                     .id(chosen.id)
+             } else {
+                 VStack(alignment: .leading, spacing: 12) {
+diff --git a/App/SitesView.swift b/App/SitesView.swift
+index a3046ffb..5be97b39 100644
+--- a/App/SitesView.swift
++++ b/App/SitesView.swift
+@@ -2223,6 +2223,10 @@ struct VideoDetailView: View {
+     @State private var loadedBackdrop: URL?
+     /// The episode whose playback is being prepared; its row and the Play button show progress.
+     @State private var loadingEpisode: Episode.ID?
++    /// The first episode's resolved playback, prepared before the page's top Play is tapped (`DetailEmbed.topPlayReadiness`).
++    @State private var topPlayCache: (episodeID: Episode.ID, plan: PlaybackPlan, choice: PlaybackChoice, channel: Channel)?
++    /// The top Play retry tick already acted on.
++    @State private var topPlayRetried = 0
+     /// A failed or blocked playback attempt, shown as an inline banner beside the artwork.
+     @State private var playbackIssue: PlaybackIssue?
+     /// A drive sign-in the source's CatPawOpen bundle runs itself, with its own code (`CatPawSignIn`).
+@@ -3113,6 +3117,21 @@ struct VideoDetailView: View {
+         }
+         // A drive line goes to the plugin even without an app sign-in: the plugin asks for its account itself, with
+         // its own code, which the app shows (PluginSignIn, or the bundle's sign-in below).
++        // The top Play's prefetch resolved this episode already: the tap starts from the cached result.
++        if let cache = topPlayCache, cache.episodeID == episode.id {
++            topPlayCache = nil
++            store.failoverToken = UUID()
++            withAnimation(.smooth(duration: 0.2)) { playbackIssue = nil }
++            if cache.plan.choices.count > 1 {
++                pendingPlan = cache.plan; pendingEpisode = episode; choosingQuality = true
++                return
++            }
++            busy = true; loadingEpisode = episode.id
++            defer { busy = false; loadingEpisode = nil }
++            store.playing = store.catalogChannel(cache.channel, video: currentVideo(), episode: episode,
++                                                 client: store.subscription.map { client.applying($0) } ?? client, resumePosition: resume)
++            return
++        }
+         busy = true; loadingEpisode = episode.id
+         store.failoverToken = UUID()
+         withAnimation(.smooth(duration: 0.2)) { playbackIssue = nil }
+@@ -3844,6 +3863,48 @@ extension VideoDetailView {
+         await play(list[min(max(asked.number, 1), list.count) - 1])
+     }
+ 
++    /// The top Play is enabled only once the first episode's playable address actually exists: the source's play
++    /// call and the address resolution run ahead of the tap, and the tap reuses the cached result. A failure is
++    /// reported, never spun on forever; the area's retry (topPlayRetry) re-runs this, reloading the details first
++    /// when they are what failed. Nothing here marks a source failed or switches it: playing still decides that.
++    private func prefetchTopPlay(_ embed: DetailEmbed) async {
++        guard let report = embed.topPlayReadiness else { return }
++        let tick = embed.topPlayRetry?.wrappedValue ?? 0
++        guard !busy else { return }
++        guard detail != nil else {
++            if error != nil {
++                report(.failed)
++                if tick != topPlayRetried {
++                    topPlayRetried = tick
++                    startRequest { await loadDetail() }
++                }
++            } else {
++                report(.loading)
++            }
++            return
++        }
++        // The details are in but this line has no episodes at all: never a spinner without end.
++        guard let first = activeEpisodes.first else { report(.failed); return }
++        if download(first)?.status == .completed { report(.ready); return }
++        if topPlayCache?.episodeID == first.id { report(.ready); return }
++        report(.loading)
++        do {
++            let plan = try await client.preparePlayback(first)
++            try Task.checkCancellation()
++            guard let choice = plan.choices.first else { throw TVError.unsupported(L10n.text("The API did not return a single playback URL.")) }
++            let playback = store.subscription.map { client.applying($0) } ?? client
++            let resolved = try await playback.resolvePlayback(plan, choice: choice)
++            try Task.checkCancellation()
++            topPlayCache = (first.id, plan, choice, resolved)
++            report(.ready)
++        } catch {
++            guard !Task.isCancelled, !(error is CancellationError) else { return }
++            topPlayCache = nil
++            topPlayRetried = tick
++            report(.failed)
++        }
++    }
++
+     @ViewBuilder func embedded(_ embed: DetailEmbed) -> some View {
+         VStack(alignment: .leading, spacing: 12) {
+             #if os(tvOS)
+@@ -3889,6 +3950,8 @@ extension VideoDetailView {
+         .task(id: detail?.id) { await embeddedTMDB(embed) }
+         // The episode count re-runs an early request that found no list yet; the request id makes every tap one.
+         .task(id: "\(detail?.id ?? "")|\(embed.playEpisode?.wrappedValue?.id.uuidString ?? "-")|\(busy)|\(activeEpisodes.count)") { await playRequested(embed) }
++        // The top Play's readiness follows the details, the list, the busy flag and the area's retry.
++        .task(id: "\(detail?.id ?? "")|\(busy)|\(activeEpisodes.count)|\(embed.topPlayRetry?.wrappedValue ?? 0)|\(error == nil)") { await prefetchTopPlay(embed) }
+         .onDisappear { requestTask?.cancel() }
+         #if os(tvOS)
+         .fullScreenCover(item: $bundleSignIn) { pending in
+@@ -4010,8 +4073,18 @@ struct DetailEmbed {
+     var adopt: ((String) -> Void)? = nil
+     /// Episode to play as soon as the page has its list; cleared once started.
+     var playEpisode: Binding<EpisodePlayRequest?>? = nil
++    /// The page's top Play reflects the first episode's resolve state (`TopPlayReadiness`); reported as the
++    /// prefetch finishes, fails, or has to wait.
++    var topPlayReadiness: ((TopPlayReadiness) -> Void)? = nil
++    /// The viewer tapped the top Play area's retry: re-run the prefetch. Increment-only, never decremented.
++    var topPlayRetry: Binding<Int>? = nil
+ }
+ 
++/// How close the page's top Play is to playing. An episode's entry in a list is only a claim until the source's
++/// own play call answers and the address resolution succeeds, so `ready` means that resolve ran and its result is
++/// cached for the tap; `failed` means it threw (the area offers a retry); `loading` is everything before that.
++enum TopPlayReadiness: Equatable { case loading, ready, failed }
++
+ /// One tap's ask to play an episode. Every tap is a new request, even for the episode already asked for: an early
+ /// Play (before the episode list was in) used to leave the same number sitting there, and a later tap changed
+ /// nothing, so Play stayed dead until a source switch rebuilt the page.
+diff --git a/Sources/TVCore/Resources/en.lproj/Localizable.strings b/Sources/TVCore/Resources/en.lproj/Localizable.strings
+index 72031ec8..6f38b174 100644
+--- a/Sources/TVCore/Resources/en.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/en.lproj/Localizable.strings
+@@ -90,6 +90,7 @@
+ "Previous" = "Previous";
+ "Next" = "Next";
+ "No playable sources were found for this video." = "No playable sources were found for this video.";
++"No playable source" = "No playable source";
+ "Loading details…" = "Loading details…";
+ "Resolving playback URL…" = "Resolving playback URL…";
+ "Video Details" = "Video Details";
+diff --git a/Sources/TVCore/Resources/ja.lproj/Localizable.strings b/Sources/TVCore/Resources/ja.lproj/Localizable.strings
+index d665a423..d879d713 100644
+--- a/Sources/TVCore/Resources/ja.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/ja.lproj/Localizable.strings
+@@ -90,6 +90,7 @@
+ "Previous" = "前へ";
+ "Next" = "次へ";
+ "No playable sources were found for this video." = "この動画の再生可能なソースが見つかりませんでした。";
++"No playable source" = "再生できるソースがありません";
+ "Loading details…" = "詳細を読み込み中…";
+ "Resolving playback URL…" = "再生 URL を取得中…";
+ "Video Details" = "動画の詳細";
+diff --git a/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings b/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
+index c1df71ab..55de7d99 100644
+--- a/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
+@@ -90,6 +90,7 @@
+ "Previous" = "上一页";
+ "Next" = "下一页";
+ "No playable sources were found for this video." = "此影片没有可识别的播放线路。";
++"No playable source" = "暂无可用资源";
+ "Loading details…" = "正在获取详情…";
+ "Resolving playback URL…" = "正在解析播放地址…";
+ "Video Details" = "影片详情";
+diff --git a/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings b/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
+index 5f83f38a..40c2b8f1 100644
+--- a/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
+@@ -90,6 +90,7 @@
+ "Previous" = "上一頁";
+ "Next" = "下一頁";
+ "No playable sources were found for this video." = "此影片沒有可識別的播放來源。";
++"No playable source" = "暫無可用資源";
+ "Loading details…" = "正在取得詳細資訊…";
+ "Resolving playback URL…" = "正在解析播放網址…";
+ "Video Details" = "影片詳細資訊";
