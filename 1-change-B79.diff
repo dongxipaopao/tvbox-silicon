@@ -1,0 +1,110 @@
+diff --git a/App/DiscoverView.swift b/App/DiscoverView.swift
+index 8a5f025e..3a0ba694 100644
+--- a/App/DiscoverView.swift
++++ b/App/DiscoverView.swift
+@@ -137,16 +137,17 @@ struct DiscoverView: View {
+                         if waiting {
+                             ProgressView().frame(maxWidth: .infinity).frame(height: heroShown ? min(proxy.size.width * 1.5, 660) : 160)
+                         }
++                        #if !os(tvOS)
++                        // Without Featured Titles the Rex row, with its import button, leads the page.
++                        if !heroShown { RexShelf().padding(.top, 8) }
++                        #endif
+                         ForEach(orderedSections.filter(visible)) { section in
+                             sectionView(section, width: proxy.size.width)
+                             #if !os(tvOS)
+-                            // Once something is imported the Rex row sits right under the featured titles.
+-                            if section == .hero, !RexModel.shared.entries.isEmpty { RexShelf().padding(.top, 8) }
++                            // The Rex row sits right under the featured titles, empty or not, so its import button is near the top.
++                            if section == .hero { RexShelf().padding(.top, 8) }
+                             #endif
+                         }
+-                        #if !os(tvOS)
+-                        if RexModel.shared.entries.isEmpty { RexShelf().padding(.top, 8) }
+-                        #endif
+                         if !model.failures.isEmpty || model.collectionsFailed {
+                             Button { Task { await model.load() } } label: {
+                                 Label(L10n.text("Some lists couldn't load. Try again."), systemImage: "arrow.clockwise")
+diff --git a/App/RexView.swift b/App/RexView.swift
+index 0af778d0..c3e81218 100644
+--- a/App/RexView.swift
++++ b/App/RexView.swift
+@@ -84,7 +84,6 @@ import TVCore
+ struct RexShelf: View {
+     @State private var model = RexModel.shared
+     @State private var importing = false
+-    @State private var address = ""
+     #if DEBUG
+     @State private var qaOpen: RexCollection.Widget?
+     #endif
+@@ -123,7 +122,7 @@ struct RexShelf: View {
+             }
+             #endif
+         }
+-        .sheet(isPresented: $importing) { importSheet }
++        .sheet(isPresented: $importing) { RexImportPage { importing = false } }
+         #if DEBUG
+         .sheet(item: $qaOpen) { widget in NavigationStack { RexModuleView(widget: widget).toolbar { ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { qaOpen = nil } } } } }
+         #endif
+@@ -150,8 +149,14 @@ struct RexShelf: View {
+         if let problem = entry.problem { if case .encrypted = problem { return L10n.text("Encrypted, not supported yet") }; return L10n.text("Can't open") }
+         return entry.widget.version.isEmpty ? L10n.text("Ready") : "v" + entry.widget.version
+     }
++}
+ 
+-    private var importSheet: some View {
++/// The import page for Rex subscription addresses: a sheet from Discover's Rex row and from Settings.
++struct RexImportPage: View {
++    @State private var model = RexModel.shared
++    @State private var address = ""
++    let done: () -> Void
++    var body: some View {
+         NavigationStack {
+             Form {
+                 Section { TextField("https://…/collection.rex", text: $address).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
+@@ -166,9 +171,9 @@ struct RexShelf: View {
+             }
+             .navigationTitle(L10n.text("Import Rex Subscription")).navigationBarTitleDisplayMode(.inline)
+             .toolbar {
+-                ToolbarItem(placement: .cancellationAction) { Button(L10n.text("Done")) { importing = false } }
++                ToolbarItem(placement: .cancellationAction) { Button(L10n.text("Done")) { done() } }
+                 ToolbarItem(placement: .confirmationAction) {
+-                    Button(L10n.text("Import")) { let value = address; address = ""; importing = false; Task { await model.add(value) } }
++                    Button(L10n.text("Import")) { let value = address; address = ""; done(); Task { await model.add(value) } }
+                         .disabled(address.trimmingCharacters(in: .whitespaces).isEmpty)
+                 }
+             }
+diff --git a/App/SettingsView.swift b/App/SettingsView.swift
+index aa8e57a7..40358f87 100644
+--- a/App/SettingsView.swift
++++ b/App/SettingsView.swift
+@@ -526,6 +526,7 @@ struct FormSettingsView: View {
+     #if os(iOS)
+     @State private var addingSubscription = false
+     @State private var showsFeedback = false
++    @State private var showsRexImport = false
+     @Environment(\.openURL) private var openURL
+     @AppStorage(PhoneTabs.labelsKey) private var showsTabLabels = true
+     @AppStorage(PhoneTabs.collapsesKey) private var collapsesTabBar = true
+@@ -697,6 +698,9 @@ struct FormSettingsView: View {
+                 }
+                 FormLink(symbol: "externaldrive.fill.badge.person.crop", tint: .brown, title: L10n.text("Cloud Drive Accounts"), value: cloudSummary) { CloudDriveView() }
+                     .settingsAnchor(.cloudDrive)
++                SettingsActionRow(title: L10n.text("Import Rex Subscription")) { showsRexImport = true }
++                    .accessibilityIdentifier("settings.rexImport")
++                    .sheet(isPresented: $showsRexImport) { RexImportPage { showsRexImport = false } }
+             }
+ 
+             Section {
+diff --git a/Scripts/qa-scenes-extra.sh b/Scripts/qa-scenes-extra.sh
+index 5dfcb8b0..ad940814 100644
+--- a/Scripts/qa-scenes-extra.sh
++++ b/Scripts/qa-scenes-extra.sh
+@@ -21,5 +21,7 @@ case "${SCENES:-}" in
+     shot 27b-settings-playback-zh 20 -qaSection settings -qaPage playback -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     shot 27c-settings-app-icon-zh 20 -qaSection settings -qaPage app-icon -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     shot 27d-settings-cache-zh 20 -qaSection settings -qaPage cache -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
++    # Discover with no Rex module imported (no fixture, no pin): where the Rex row and its import button sit by themselves (B79).
++    shot 27e-discover-no-rex-zh 35 -qaSection discover -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     ;;
+ esac
