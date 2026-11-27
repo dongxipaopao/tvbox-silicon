@@ -1327,7 +1327,20 @@ struct SiteBrowseView: View {
                         #if os(tvOS)
                         // The source's name sits with its categories instead of in a bar pinned over the search field.
                         if folder == nil, !isBilibiliSpace {
-                            Text(site.name).font(.system(size: 30, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
+                            if switcher != nil, !showsBilibiliTVSpace {
+                                Button { switching = true } label: {
+                                    HStack(spacing: 10) {
+                                        Text(site.name).lineLimit(1)
+                                        Image(systemName: "chevron.down").font(.system(size: 22, weight: .semibold))
+                                    }.font(.system(size: 30, weight: .semibold))
+                                }
+                                .glassPill()
+                                .accessibilityLabel(L10n.text("Switch Source"))
+                                .accessibilityValue(site.name)
+                                .accessibilityIdentifier("site.switcher")
+                            } else {
+                                Text(site.name).font(.system(size: 30, weight: .semibold)).foregroundStyle(.secondary).lineLimit(1)
+                            }
                         }
                         #endif
                         if !browser.categories.isEmpty { categoryBar } else if initialLoading && folder == nil { ChipSkeletonRow() }
@@ -1432,6 +1445,10 @@ struct SiteBrowseView: View {
         #if !os(tvOS)
         .sheet(isPresented: $switching) {
             if let switcher { SourceSwitchSheet(current: site, choose: switcher).environment(store) }
+        }
+        #else
+        .fullScreenCover(isPresented: $switching) {
+            if let switcher { TVSourceSwitchScreen(current: site, choose: switcher).environment(store) }
         }
         #endif
         .onAppear {
@@ -5379,6 +5396,73 @@ struct SourceSwitchSheet: View {
             }
         }
         #endif
+    }
+}
+#endif
+
+#if os(tvOS)
+/// The remote's version of the source switch: a row of subscription chips on top, that subscription's sources below.
+/// Selecting a source switches to it at once; Menu closes. Focus starts on the current source.
+struct TVSourceSwitchScreen: View {
+    @Environment(Store.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    let current: Site
+    let choose: (Site) -> Void
+    @State private var group: String?
+    @FocusState private var focusedSite: String?
+
+    private func selected(_ groups: [SourceGroup]) -> String {
+        if let group, groups.contains(where: { $0.id == group }) { return group }
+        if let holding = groups.first(where: { $0.kind != .pinned && $0.sites.contains { $0.key == current.key } }) { return holding.id }
+        return groups.first?.id ?? ""
+    }
+
+    var body: some View {
+        let groups = store.sourceGroups(includeHidden: false)
+        let id = selected(groups)
+        let sites = groups.first { $0.id == id }?.sites ?? []
+        VStack(alignment: .leading, spacing: 28) {
+            Text(L10n.text("Switch Source")).font(.system(size: 44, weight: .bold))
+            ChipRow {
+                HStack(spacing: 16) {
+                    ForEach(groups) { value in
+                        Button { group = value.id } label: {
+                            Text("\(L10n.text(value.title)) \(value.sites.count)").lineLimit(1)
+                        }
+                        .glassPill(selected: value.id == id)
+                        .accessibilityIdentifier("site.switch.group." + value.id)
+                    }
+                }
+            }
+            .focusSection()
+            .accessibilityIdentifier("site.switch.groups")
+            ScrollView {
+                LazyVStack(spacing: 14) {
+                    ForEach(sites) { site in
+                        Button { choose(site); dismiss() } label: {
+                            HStack {
+                                Text(site.name).lineLimit(1)
+                                Spacer(minLength: 8)
+                                if site.key == current.key { Image(systemName: "checkmark") }
+                            }
+                            .font(.system(size: 30, weight: .medium))
+                            .padding(.horizontal, 28).padding(.vertical, 18)
+                        }
+                        .glassRow()
+                        .focused($focusedSite, equals: site.key)
+                        .accessibilityAddTraits(site.key == current.key ? .isSelected : [])
+                        .accessibilityIdentifier("site.switch.row." + site.key)
+                    }
+                }.padding(.horizontal, 40).padding(.vertical, 24)
+            }
+            .scrollClipDisabled()
+            .focusSection()
+        }
+        .padding(.horizontal, 96).padding(.vertical, 60)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(.black.opacity(0.92).ignoresSafeArea())
+        .defaultFocus($focusedSite, sites.contains { $0.key == current.key } ? current.key : sites.first?.key)
+        .onExitCommand { dismiss() }
     }
 }
 #endif

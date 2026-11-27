@@ -1358,12 +1358,7 @@ extension DiscoverDetailView {
             }.shadow(color: .black.opacity(0.4), radius: 12)
             HStack(alignment: .top, spacing: 56) {
                 VStack(alignment: .leading, spacing: 14) {
-                    Button { tvFindSources() } label: {
-                        Label(L10n.text(store.subscription == nil ? "Add Subscription" : "Search Sources"), systemImage: "magnifyingglass")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(DiscoverTVActionStyle(height: 82, font: 30))
-                    .accessibilityIdentifier("discover.findSources")
+                    tvPlayButton
                     HStack(spacing: 7) {
                         if details?.trailer != nil {
                             tvIconButton("play.rectangle", "Trailer", "discover.detail.playTrailer") { trailerShown = true }
@@ -1428,6 +1423,107 @@ extension DiscoverDetailView {
         .ignoresSafeArea().foregroundStyle(.white).preferredColorScheme(.dark)
     }
 
+    /// The hero's Play, as on the iPhone: the first episode on its best source once that address is resolved; a
+    /// disabled "Loading" before; an explanation with Try Again when no source had it. No subscription: Add Subscription.
+    @ViewBuilder private var tvPlayButton: some View {
+        if store.subscription == nil {
+            Button { tvFindSources() } label: {
+                Label(L10n.text("Add Subscription"), systemImage: "plus").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DiscoverTVActionStyle(height: 82, font: 30))
+            .accessibilityIdentifier("discover.play")
+        } else if let sources, sources.finished, sources.chosen == nil {
+            tvPlayRetry { sources.restart(store) }
+        } else {
+            switch topPlayReadiness {
+            case .ready:
+                Button {
+                    episode = nil
+                    playEpisode = EpisodePlayRequest(number: 1)
+                } label: {
+                    Label(L10n.text("Play"), systemImage: "play.fill").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DiscoverTVActionStyle(height: 82, font: 30))
+                .accessibilityIdentifier("discover.play")
+            case .loading:
+                Button {} label: {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(L10n.text("Loading"))
+                    }.frame(maxWidth: .infinity).opacity(0.7)
+                }
+                .buttonStyle(DiscoverTVActionStyle(height: 82, font: 30))
+                .accessibilityIdentifier("discover.play")
+            case .failed:
+                tvPlayRetry { topPlayRetryTick += 1 }
+            }
+        }
+    }
+
+    private func tvPlayRetry(action: @escaping () -> Void) -> some View {
+        Button {
+            topPlayReadiness = .loading
+            action()
+        } label: {
+            VStack(spacing: 2) {
+                Text(L10n.text("No playable source")).font(.system(size: 20)).opacity(0.75)
+                Label(L10n.text("Try Again"), systemImage: "arrow.clockwise")
+            }.frame(maxWidth: .infinity)
+        }
+        .buttonStyle(DiscoverTVActionStyle(height: 96, font: 28))
+        .accessibilityIdentifier("discover.play")
+    }
+
+    /// Under an episode: the sources that have it, as each answers; choosing one plays the episode on it.
+    @ViewBuilder private func tvEpisodeSources(_ value: TMDBMatch.EpisodeInfo) -> some View {
+        if store.subscription == nil {
+            Button { tvFindSources() } label: {
+                Label(L10n.text("Add Subscription"), systemImage: "plus").frame(width: 380)
+            }
+            .buttonStyle(DiscoverTVActionStyle(height: 86, font: 30))
+            .accessibilityIdentifier("discover.episode.findSources")
+        } else if let sources {
+            let season = seasons.isEmpty ? nil : catalogSeason
+            let matches = season == nil ? sources.matches
+                : sources.matches.filter { (SeasonTitles.parse($0.video.name).season ?? 1) == season }
+            VStack(alignment: .leading, spacing: 14) {
+                Text(L10n.text("Sources")).font(.system(size: 30, weight: .semibold))
+                if !matches.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 20) {
+                            ForEach(matches) { match in
+                                Button {
+                                    sources.choose(match)
+                                    if !seasons.isEmpty { seasonNumber = SeasonTitles.parse(match.video.name).season ?? 1 }
+                                    playEpisode = EpisodePlayRequest(number: value.number)
+                                    episode = nil; pickedEpisode = nil
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(SourceLabel(match.site.name).text).font(.system(size: 28, weight: .semibold)).lineLimit(1)
+                                        Text(match.video.remarks.isEmpty ? match.video.year ?? "" : match.video.remarks)
+                                            .font(.system(size: 22)).opacity(0.7).lineLimit(1)
+                                    }.frame(width: 300, alignment: .leading)
+                                }
+                                .buttonStyle(DiscoverTVActionStyle(height: 100, font: 26, corner: 24))
+                                .accessibilityIdentifier("discover.episode.source")
+                            }
+                        }.padding(.vertical, 20)
+                    }.scrollClipDisabled().focusSection()
+                }
+                if !sources.finished {
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text(L10n.text("Searched %lld of %lld sources", sources.search.completed, sources.search.total))
+                            .font(.system(size: 22)).opacity(0.7).monospacedDigit()
+                    }
+                } else if matches.isEmpty {
+                    Text(L10n.text(season == nil ? "None of your sources has this title." : "None of your sources has this season."))
+                        .font(.system(size: 24)).opacity(0.7)
+                }
+            }.frame(maxWidth: 1500, alignment: .leading)
+        }
+    }
+
     private func tvFindSources() {
         episode = nil
         if store.subscription == nil { store.section = .settings } else { store.searchVideos(item.name) }
@@ -1444,12 +1540,7 @@ extension DiscoverDetailView {
                     Text(value.overview).font(.system(size: 28)).lineSpacing(4).lineLimit(4).opacity(0.8)
                         .frame(maxWidth: 1300, alignment: .leading)
                 }
-                Button { tvFindSources() } label: {
-                    Label(L10n.text(store.subscription == nil ? "Add Subscription" : "Search Sources"), systemImage: "magnifyingglass")
-                        .frame(width: 380)
-                }
-                .buttonStyle(DiscoverTVActionStyle(height: 86, font: 30))
-                .accessibilityIdentifier("discover.episode.findSources")
+                tvEpisodeSources(value)
             }.padding(Self.tvGutter)
         }
         .ignoresSafeArea().foregroundStyle(.white).preferredColorScheme(.dark)
