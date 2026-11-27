@@ -1,0 +1,59 @@
+name: probe-site-play
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: title to search (appears in the log)
+        default: 后会发期
+      site:
+        description: optional site key/name filter (empty = all matches)
+        default: "555"
+jobs:
+  play:
+    runs-on: xcode-27
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime
+          run-id: 45819094996
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: mkdir -p build && tar -C build -xf runtime.tar
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '19'
+      - name: Select newest Xcode
+        run: |
+          best=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$best/Contents/Developer"
+      - name: Tools
+        run: brew install xcodegen meson ninja 2>&1 | tail -2 || true
+      - name: Restore FFmpeg cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/tvbox-ffmpeg
+            ~/Library/Caches/tvbox-libass
+          key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
+      - name: FFmpeg and libass
+        run: |
+          Scripts/build-apple-ffmpeg.sh
+          Scripts/build-apple-libass.sh
+      - name: Build probe
+        run: swift build -c release --product TVBoxProbe 2>&1 | tail -30
+      - name: Site play, source A
+        continue-on-error: true
+        env:
+          SUB: ${{ secrets.TIMING_SUB_A }}
+        run: |
+          [ -n "$SUB" ] || { echo "TIMING_SUB_A not set"; exit 0; }
+          .build/release/TVBoxProbe --sub-play "$SUB" "${{ inputs.query }}" "A" "${{ inputs.site }}" 2>&1 | grep '^subplay\[' || true
+      - name: Site play, source B
+        continue-on-error: true
+        env:
+          SUB: ${{ secrets.TIMING_SUB_B }}
+        run: |
+          [ -n "$SUB" ] || { echo "TIMING_SUB_B not set"; exit 0; }
+          .build/release/TVBoxProbe --sub-play "$SUB" "${{ inputs.query }}" "B" "${{ inputs.site }}" 2>&1 | grep '^subplay\[' || true
