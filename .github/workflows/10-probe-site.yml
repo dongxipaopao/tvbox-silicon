@@ -43,6 +43,8 @@ jobs:
           Scripts/build-apple-libass.sh
       - name: Build probe
         run: swift build -c release --product TVBoxProbe 2>&1 | tail -30
+      - name: Build script host for the probe
+        run: Scripts/build-script-host.sh
       - name: Link Java host for the probe
         run: |
           set -e
@@ -57,6 +59,9 @@ jobs:
           echo "probe Bundle.main.resourceURL=$RESDIR"
           ln -sfn "$PWD/build/JavaHost" "$RESDIR/JavaHost"
           test -x "$RESDIR/JavaHost/jre/bin/java" && echo "java executable at probe resourceURL: OK" || { echo "java NOT executable at $RESDIR"; exit 1; }
+          ln -sfn "$PWD/build/ScriptHost" .build/release/ScriptHost
+          ln -sfn "$PWD/build/ScriptHost" "$RESDIR/ScriptHost"
+          test -x "$RESDIR/ScriptHost/node" && echo "node executable at probe resourceURL: OK" || { echo "node NOT executable at $RESDIR"; exit 1; }
       - name: Site play, source A
         continue-on-error: true
         env:
