@@ -24,6 +24,8 @@ case "${SCENES:-}" in
     # Discover with no Rex module imported (no fixture, no pin): where the Rex row and its import button sit by themselves (B79).
     shot 27e-discover-no-rex-zh 35 -qaSection discover -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
     # Settings opened by a launch argument at the Cloud Drive Accounts row (automatic scroll, not a touch); the Rex import row is the next one (B79).
+    # Offline fixture imported through the real store path, no -qaRexRow pin; Discover is scrolled to the Rex row automatically (not a touch).
+    shot 27g-discover-rex-after-import-zh 40 -qaSection discover -qaRexFixture 1 -qaScroll rex -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
     shot 27f-settings-rex-import-zh 25 -qaSection settings -qaScrollTo 'settings.search cloudDrive' -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
     ;;
 esac

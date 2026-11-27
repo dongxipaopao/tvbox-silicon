@@ -132,6 +132,7 @@ struct DiscoverView: View {
                 } else {
                     DiscoverBackdrop(paint: nil, width: proxy.size.width, heroHeight: heroHeight, scrollY: 0, trailer: nil, playsTrailer: false)
                 }
+                ScrollViewReader { reader in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 30) {
                         if waiting {
@@ -139,13 +140,13 @@ struct DiscoverView: View {
                         }
                         #if !os(tvOS)
                         // Without Featured Titles the Rex row, with its import button, leads the page.
-                        if !heroShown { RexShelf().padding(.top, 8) }
+                        if !heroShown { RexShelf().padding(.top, 8).id("discover.rex") }
                         #endif
                         ForEach(orderedSections.filter(visible)) { section in
                             sectionView(section, width: proxy.size.width)
                             #if !os(tvOS)
                             // The Rex row sits right under the featured titles, empty or not, so its import button is near the top.
-                            if section == .hero { RexShelf().padding(.top, 8) }
+                            if section == .hero { RexShelf().padding(.top, 8).id("discover.rex") }
                             #endif
                         }
                         if !model.failures.isEmpty || model.collectionsFailed {
@@ -213,6 +214,17 @@ struct DiscoverView: View {
                         await model.load(refresh: true)
                         await douban
                     } else { await model.load(refresh: true) }
+                }
+                #if DEBUG && !os(tvOS)
+                // `-qaScroll rex` scrolls Discover to the Rex row (automatic scroll for screenshots, not a touch).
+                .task {
+                    guard UserDefaults.standard.string(forKey: "qaScroll") == "rex" else { return }
+                    for _ in 0..<2 {
+                        try? await Task.sleep(for: .seconds(4))
+                        reader.scrollTo("discover.rex", anchor: .top)
+                    }
+                }
+                #endif
                 }
             }
             #if os(macOS)

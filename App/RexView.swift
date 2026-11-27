@@ -164,7 +164,7 @@ struct RexImportPage: View {
                 if !model.collections.isEmpty {
                     Section {
                         ForEach(model.collections) { item in
-                            Text(item.collection.title)
+                            HStack { Text(item.collection.title); Spacer(); Text("\(item.collection.widgets.count)").foregroundStyle(.secondary) }
                         }.onDelete { offsets in for index in offsets { model.remove(model.collections[index].address) } }
                     }
                 }
