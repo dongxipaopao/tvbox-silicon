@@ -43,6 +43,10 @@ jobs:
           Scripts/build-apple-libass.sh
       - name: Build probe
         run: swift build -c release --product TVBoxProbe 2>&1 | tail -30
+      - name: Link Java host for the probe
+        run: |
+          ln -sfn "$PWD/build/JavaHost" .build/release/JavaHost
+          ls -l .build/release/JavaHost/jre/bin/java
       - name: Site play, source A
         continue-on-error: true
         env:
