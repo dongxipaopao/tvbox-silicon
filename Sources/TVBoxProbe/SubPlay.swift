@@ -26,6 +26,20 @@ extension Probe {
 
     @MainActor static func subPlay(subscription: String, query: String, label: String, siteFilter: String?) async throws {
         setvbuf(stdout, nil, _IONBF, 0)
+        // A fatal here used to lose the plugin host's own output (node/java stderr lands in Diagnostics);
+        // print the recent records so a dead runtime names its cause in the workflow log.
+        do {
+            try await subPlayRun(subscription: subscription, query: query, label: label, siteFilter: siteFilter)
+        } catch {
+            let snapshot = await Diagnostics.shared.snapshot()
+            for entry in snapshot.entries.suffix(30) {
+                print("diag[\(entry.level.rawValue)] \(entry.category): \(String(entry.message.prefix(300)))")
+            }
+            throw error
+        }
+    }
+
+    @MainActor private static func subPlayRun(subscription: String, query: String, label: String, siteFilter: String?) async throws {
         let tag = "subplay[\(label)]"
         let imported = try await HTTPClient().subscriptionImport(try WebAddress.resolve(subscription), fresh: true)
         guard case .subscription(let config) = imported else { print("\(tag) address is not a source subscription"); return }
