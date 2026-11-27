@@ -526,7 +526,6 @@ struct FormSettingsView: View {
     #if os(iOS)
     @State private var addingSubscription = false
     @State private var showsFeedback = false
-    @State private var showsRexImport = false
     @Environment(\.openURL) private var openURL
     @AppStorage(PhoneTabs.labelsKey) private var showsTabLabels = true
     @AppStorage(PhoneTabs.collapsesKey) private var collapsesTabBar = true
@@ -698,9 +697,6 @@ struct FormSettingsView: View {
                 }
                 FormLink(symbol: "externaldrive.fill.badge.person.crop", tint: .brown, title: L10n.text("Cloud Drive Accounts"), value: cloudSummary) { CloudDriveView() }
                     .settingsAnchor(.cloudDrive)
-                SettingsActionRow(title: L10n.text("Import Rex Subscription")) { showsRexImport = true }
-                    .accessibilityIdentifier("settings.rexImport")
-                    .sheet(isPresented: $showsRexImport) { RexImportPage { showsRexImport = false } }
             }
 
             Section {

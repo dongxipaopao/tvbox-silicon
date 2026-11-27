@@ -2,6 +2,25 @@
   "releases": [
     {
       "version": "1.8.32",
+      "build": 78,
+      "date": "2026-11-27",
+      "links": {},
+      "features": [
+        {
+          "symbol": "trash",
+          "title": {
+            "en": "Rex removed",
+            "zh-Hans": "已移除 Rex"
+          },
+          "detail": {
+            "en": "The Rex Modules row on Discover, the Import Rex Subscription row in Settings and the code behind them are removed. A Rex subscription saved earlier is cleared from this app.",
+            "zh-Hans": "发现页的 Rex 模块一行、设置里的“导入 Rex 订阅”以及相关功能代码已移除。此前在应用里保存的 Rex 订阅会被清除。"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.8.32",
       "build": 77,
       "date": "2026-11-27",
       "links": {},

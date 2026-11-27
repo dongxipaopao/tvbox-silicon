@@ -6,6 +6,11 @@ import QuickJS
 /// work on iOS and tvOS where no separate script process can be started. Each source keeps its
 /// own runtime on its own large-stack thread; the TVBox environment comes from ScriptAssets.
 public actor ScriptRuntime {
+    /// Rex was removed in build 78: delete the module caches it left in the script profiles folder.
+    public nonisolated static func removeRexLeftovers() {
+        guard let items = try? FileManager.default.contentsOfDirectory(at: ScriptAssets.profiles, includingPropertiesForKeys: nil) else { return }
+        for url in items where url.lastPathComponent.hasPrefix("rex-") { try? FileManager.default.removeItem(at: url) }
+    }
     public static let shared = ScriptRuntime()
     public static var available: Bool { ScriptAssets.root != nil }
     private var sessions: [String: ScriptSession] = [:]

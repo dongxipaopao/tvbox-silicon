@@ -32,6 +32,9 @@ import TVCore
         DownloadsLifecycle.install()
         #endif
         SubtitleTranslationSetup.install()
+        // Rex was removed in build 78: drop the subscription list it saved and its module caches.
+        UserDefaults.standard.removeObject(forKey: "rex.collections")
+        ScriptRuntime.removeRexLeftovers()
     }
     var body: some Scene {
         WindowGroup {
