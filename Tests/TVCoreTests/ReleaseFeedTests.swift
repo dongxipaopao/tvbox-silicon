@@ -228,3 +228,13 @@ private extension ReleaseFeed {
     #expect(L10n.text(key, language: "en") == "XiPlayer couldn't relaunch to finish the update. Quit XiPlayer and open it again.")
     for language in L10n.supportedLanguages where language != "en" { #expect(L10n.text(key, language: language) != key) }
 }
+
+@Test func bundledChangelogDecodesPerRevisionEntries() {
+    // The app's offline What's New source: one entry per XiPlayer build, decodable, each with real content.
+    let feed = ReleaseFeed.bundled
+    #expect(feed != nil)
+    let releases = feed?.releases ?? []
+    #expect(!releases.isEmpty)
+    #expect(releases.allSatisfy { $0.build != nil && !$0.features(for: ReleaseFeed.platform).isEmpty })
+    #expect(Set(releases.map(\.id)).count == releases.count)
+}

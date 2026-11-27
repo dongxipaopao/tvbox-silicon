@@ -12,6 +12,15 @@ public struct ReleaseFeed: Codable, Sendable, Equatable {
     public var testflight: [String: TestFlight]?
     public init(releases: [Release], testflight: [String: TestFlight]? = nil) { self.releases = releases; self.testflight = testflight }
 
+    /// The changelog bundled with the app (`xiplayer-changelog.json` in TVCore's resources): one entry per
+    /// XiPlayer revision, so What's New works offline and never waits on the feed.
+    public static var bundled: ReleaseFeed? {
+        guard let url = Bundle.module.url(forResource: "xiplayer-changelog", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let feed = try? JSONDecoder().decode(ReleaseFeed.self, from: data) else { return nil }
+        return feed
+    }
+
     public struct Release: Codable, Sendable, Equatable, Identifiable {
         public var version: String
         /// The release's build number (CFBundleVersion), which its TestFlight build shares.
@@ -22,7 +31,9 @@ public struct ReleaseFeed: Codable, Sendable, Equatable {
         /// Mac package. A platform without a link did not get this release, so its users are not told about it.
         public var links: [String: URL]
         public var features: [Feature]
-        public var id: String { version }
+        /// The bundled changelog can carry several entries for one marketing version (one per build), so the
+        /// build joins the identity when present.
+        public var id: String { build.map { "\(version)-\($0)" } ?? version }
         public init(version: String, build: Int? = nil, date: String? = nil, links: [String: URL], features: [Feature]) {
             self.version = version; self.build = build; self.date = date; self.links = links; self.features = features
         }

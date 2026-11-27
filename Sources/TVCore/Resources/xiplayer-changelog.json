@@ -1,0 +1,68 @@
+{
+  "releases": [
+    {
+      "version": "1.8.32",
+      "build": 73,
+      "date": "2026-11-27",
+      "links": {},
+      "features": [
+        {
+          "symbol": "doc.text",
+          "title": { "en": "Changelog bundled with the app", "zh-Hans": "更新日志随包内置" },
+          "detail": { "en": "What's New ships inside the package now, so it opens without a network connection.", "zh-Hans": "「版本新功能」内容随安装包提供，没有网络也能打开查看。" }
+        },
+        {
+          "symbol": "number",
+          "title": { "en": "Notes per revision", "zh-Hans": "按修订号展示" },
+          "detail": { "en": "Each 1.8.32 revision (R1, R2, R3) lists its own real changes instead of one shared list.", "zh-Hans": "1.8.32 各修订（R1、R2、R3）分别展示本修订的真实改动，不再共用同一份说明。" }
+        }
+      ]
+    },
+    {
+      "version": "1.8.32",
+      "build": 72,
+      "date": "2026-11-27",
+      "links": {},
+      "features": [
+        {
+          "symbol": "music.note",
+          "title": { "en": "Music stays in the tab bar", "zh-Hans": "音乐模块固定到导航栏" },
+          "detail": { "en": "Music no longer disappears when a subscription is removed; it uses the sources in your music source list.", "zh-Hans": "删除订阅后音乐模块不再消失，改为使用音乐源列表中的音源。" }
+        },
+        {
+          "symbol": "shippingbox",
+          "title": { "en": "Bundled 独家音源 v8", "zh-Hans": "内置「独家音源 v8」" },
+          "detail": { "en": "A managed LX music source added once on first launch. Disable or delete it anytime; it is never re-added.", "zh-Hans": "受管理的 LX 音乐源，仅首次启动时添加一次。可随时停用或删除，不会再次自动添加。" }
+        },
+        {
+          "symbol": "person.2",
+          "title": { "en": "Contributors section removed", "zh-Hans": "设置页移除「贡献者」区块" },
+          "detail": { "en": "The contributors list and its sort note are gone from Settings on every platform; open-source licenses stay.", "zh-Hans": "设置中的贡献者列表及排序说明已在各平台移除，开源许可保留。" }
+        },
+        {
+          "symbol": "sparkles",
+          "title": { "en": "What's New entry restored", "zh-Hans": "恢复「版本新功能」入口" },
+          "detail": { "en": "The version number carries an R revision label (like 1.8.32 R2), and Settings again links to these notes.", "zh-Hans": "版本号加入 R 修订号（如 1.8.32 R2），设置页恢复「版本新功能」入口。" }
+        }
+      ]
+    },
+    {
+      "version": "1.8.32",
+      "build": 71,
+      "date": "2026-11-26",
+      "links": {},
+      "features": [
+        {
+          "symbol": "play.circle",
+          "title": { "en": "Playback chain changes", "zh-Hans": "播放链改动" },
+          "detail": { "en": "Failover gating, keeping failed sources on record, and loading-state work. Code and tests are in place; real-source playback verification is still in progress.", "zh-Hans": "换源门禁、保留失败线路记录与加载状态等改动。代码与测试已就绪，真实源播放验证仍在进行中。" }
+        },
+        {
+          "symbol": "wand.and.stars",
+          "title": { "en": "Inline episode sources", "zh-Hans": "剧集行内线路" },
+          "detail": { "en": "Discover detail lists playable sources under each episode, so one tap starts playback.", "zh-Hans": "发现页详情在剧集下方直接列出可播线路，点选即可播放。" }
+        }
+      ]
+    }
+  ]
+}

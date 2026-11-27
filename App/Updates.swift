@@ -129,7 +129,14 @@ import TVCore
     /// The current release's notes, for "What's New in This Version".
     var currentNotes: [ReleaseFeed.Release] {
         switch Self.channel {
-        case .direct: feed.whatsNew(since: nil, current: current)
+        case .direct:
+            // The bundled changelog owns this revision's notes: it works offline and keeps each 1.8.32 R<n>
+            // entry on its own build instead of lumping every revision under the bare marketing version.
+            let local = (ReleaseFeed.bundled?.releases ?? []).filter { release in
+                AppVersion(release.version) == AppVersion(current) && release.build == build
+                    && !release.features(for: ReleaseFeed.platform).isEmpty
+            }
+            return local.isEmpty ? feed.whatsNew(since: nil, current: current) : local
         case .testFlight: feed.testFlightWhatsNew(since: nil, current: build)
         case .none: []
         }
@@ -143,8 +150,17 @@ import TVCore
         case .direct:
             let previous = defaults.string(forKey: Keys.lastVersion)
             defaults.set(current, forKey: Keys.lastVersion)
+            let lastBuild = defaults.object(forKey: Keys.lastBuild) == nil ? 0 : defaults.integer(forKey: Keys.lastBuild)
+            defaults.set(build, forKey: Keys.lastBuild)
             if previous != nil || returning, previous.map({ AppVersion($0) < AppVersion(current) }) ?? true {
-                let notes = feed.whatsNew(since: previous, current: current)
+                // Bundled entries newer than the recorded install carry the notes; the feed is the fallback.
+                let local = (ReleaseFeed.bundled?.releases ?? []).filter { release in
+                    guard let releaseBuild = release.build, !release.features(for: ReleaseFeed.platform).isEmpty else { return false }
+                    let version = AppVersion(release.version)
+                    if version == AppVersion(current) { return releaseBuild > lastBuild && releaseBuild <= build }
+                    return previous.map { version > AppVersion($0) && version < AppVersion(current) } ?? false
+                }.sorted { ($0.build ?? 0) > ($1.build ?? 0) }
+                let notes = local.isEmpty ? feed.whatsNew(since: previous, current: current) : local
                 if !notes.isEmpty { sheet = .whatsNew(notes) }
             }
         case .testFlight:
@@ -239,7 +255,8 @@ struct ReleaseNotesView: View {
     /// TestFlight testers update in the TestFlight app, where every build is called 1.7.7.
     private var testFlight: Bool { Updates.channel == .testFlight }
     private var version: String {
-        guard testFlight else { return releases.first?.version ?? "" }
+        // What's New labels the running build with its R revision, so 1.8.32 R1 and R2 never read as one version.
+        guard testFlight else { return update == nil ? (updates.displayVersion ?? "") : (releases.first?.version ?? "") }
         return (update == nil ? updates.displayVersion : updates.latestVersion) ?? ""
     }
 

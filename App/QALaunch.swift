@@ -32,6 +32,9 @@ enum QALaunch {
     /// `-qaScroll live` scrolls Watch Now to that section once recommendations have loaded.
     static var scrollTarget: String? { UserDefaults.standard.string(forKey: "qaScroll") }
 
+    /// `-qaWhatsNew 1`: opens the What's New sheet with the bundled changelog, for screenshot QA.
+    static var whatsNew: Bool { UserDefaults.standard.bool(forKey: "qaWhatsNew") }
+
     #if os(macOS)
     @MainActor private static func webView(in view: NSView) -> WKWebView? {
         if let web = view as? WKWebView { return web }
