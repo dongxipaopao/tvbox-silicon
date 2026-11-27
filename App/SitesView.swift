@@ -2223,6 +2223,10 @@ struct VideoDetailView: View {
     @State private var loadedBackdrop: URL?
     /// The episode whose playback is being prepared; its row and the Play button show progress.
     @State private var loadingEpisode: Episode.ID?
+    /// The first episode's resolved playback, prepared before the page's top Play is tapped (`DetailEmbed.topPlayReadiness`).
+    @State private var topPlayCache: (episodeID: Episode.ID, plan: PlaybackPlan, choice: PlaybackChoice, channel: Channel)?
+    /// The top Play retry tick already acted on.
+    @State private var topPlayRetried = 0
     /// A failed or blocked playback attempt, shown as an inline banner beside the artwork.
     @State private var playbackIssue: PlaybackIssue?
     /// A drive sign-in the source's CatPawOpen bundle runs itself, with its own code (`CatPawSignIn`).
@@ -3113,6 +3117,21 @@ struct VideoDetailView: View {
         }
         // A drive line goes to the plugin even without an app sign-in: the plugin asks for its account itself, with
         // its own code, which the app shows (PluginSignIn, or the bundle's sign-in below).
+        // The top Play's prefetch resolved this episode already: the tap starts from the cached result.
+        if let cache = topPlayCache, cache.episodeID == episode.id {
+            topPlayCache = nil
+            store.failoverToken = UUID()
+            withAnimation(.smooth(duration: 0.2)) { playbackIssue = nil }
+            if cache.plan.choices.count > 1 {
+                pendingPlan = cache.plan; pendingEpisode = episode; choosingQuality = true
+                return
+            }
+            busy = true; loadingEpisode = episode.id
+            defer { busy = false; loadingEpisode = nil }
+            store.playing = store.catalogChannel(cache.channel, video: currentVideo(), episode: episode,
+                                                 client: store.subscription.map { client.applying($0) } ?? client, resumePosition: resume)
+            return
+        }
         busy = true; loadingEpisode = episode.id
         store.failoverToken = UUID()
         withAnimation(.smooth(duration: 0.2)) { playbackIssue = nil }
@@ -3844,6 +3863,48 @@ extension VideoDetailView {
         await play(list[min(max(asked.number, 1), list.count) - 1])
     }
 
+    /// The top Play is enabled only once the first episode's playable address actually exists: the source's play
+    /// call and the address resolution run ahead of the tap, and the tap reuses the cached result. A failure is
+    /// reported, never spun on forever; the area's retry (topPlayRetry) re-runs this, reloading the details first
+    /// when they are what failed. Nothing here marks a source failed or switches it: playing still decides that.
+    private func prefetchTopPlay(_ embed: DetailEmbed) async {
+        guard let report = embed.topPlayReadiness else { return }
+        let tick = embed.topPlayRetry?.wrappedValue ?? 0
+        guard !busy else { return }
+        guard detail != nil else {
+            if error != nil {
+                report(.failed)
+                if tick != topPlayRetried {
+                    topPlayRetried = tick
+                    startRequest { await loadDetail() }
+                }
+            } else {
+                report(.loading)
+            }
+            return
+        }
+        // The details are in but this line has no episodes at all: never a spinner without end.
+        guard let first = activeEpisodes.first else { report(.failed); return }
+        if download(first)?.status == .completed { report(.ready); return }
+        if topPlayCache?.episodeID == first.id { report(.ready); return }
+        report(.loading)
+        do {
+            let plan = try await client.preparePlayback(first)
+            try Task.checkCancellation()
+            guard let choice = plan.choices.first else { throw TVError.unsupported(L10n.text("The API did not return a single playback URL.")) }
+            let playback = store.subscription.map { client.applying($0) } ?? client
+            let resolved = try await playback.resolvePlayback(plan, choice: choice)
+            try Task.checkCancellation()
+            topPlayCache = (first.id, plan, choice, resolved)
+            report(.ready)
+        } catch {
+            guard !Task.isCancelled, !(error is CancellationError) else { return }
+            topPlayCache = nil
+            topPlayRetried = tick
+            report(.failed)
+        }
+    }
+
     @ViewBuilder func embedded(_ embed: DetailEmbed) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             #if os(tvOS)
@@ -3889,6 +3950,8 @@ extension VideoDetailView {
         .task(id: detail?.id) { await embeddedTMDB(embed) }
         // The episode count re-runs an early request that found no list yet; the request id makes every tap one.
         .task(id: "\(detail?.id ?? "")|\(embed.playEpisode?.wrappedValue?.id.uuidString ?? "-")|\(busy)|\(activeEpisodes.count)") { await playRequested(embed) }
+        // The top Play's readiness follows the details, the list, the busy flag and the area's retry.
+        .task(id: "\(detail?.id ?? "")|\(busy)|\(activeEpisodes.count)|\(embed.topPlayRetry?.wrappedValue ?? 0)|\(error == nil)") { await prefetchTopPlay(embed) }
         .onDisappear { requestTask?.cancel() }
         #if os(tvOS)
         .fullScreenCover(item: $bundleSignIn) { pending in
@@ -4010,7 +4073,17 @@ struct DetailEmbed {
     var adopt: ((String) -> Void)? = nil
     /// Episode to play as soon as the page has its list; cleared once started.
     var playEpisode: Binding<EpisodePlayRequest?>? = nil
+    /// The page's top Play reflects the first episode's resolve state (`TopPlayReadiness`); reported as the
+    /// prefetch finishes, fails, or has to wait.
+    var topPlayReadiness: ((TopPlayReadiness) -> Void)? = nil
+    /// The viewer tapped the top Play area's retry: re-run the prefetch. Increment-only, never decremented.
+    var topPlayRetry: Binding<Int>? = nil
 }
+
+/// How close the page's top Play is to playing. An episode's entry in a list is only a claim until the source's
+/// own play call answers and the address resolution succeeds, so `ready` means that resolve ran and its result is
+/// cached for the tap; `failed` means it threw (the area offers a retry); `loading` is everything before that.
+enum TopPlayReadiness: Equatable { case loading, ready, failed }
 
 /// One tap's ask to play an episode. Every tap is a new request, even for the episode already asked for: an early
 /// Play (before the episode list was in) used to leave the same number sitting there, and a later tap changed

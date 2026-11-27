@@ -90,6 +90,7 @@
 "Previous" = "前へ";
 "Next" = "次へ";
 "No playable sources were found for this video." = "この動画の再生可能なソースが見つかりませんでした。";
+"No playable source" = "再生できるソースがありません";
 "Loading details…" = "詳細を読み込み中…";
 "Resolving playback URL…" = "再生 URL を取得中…";
 "Video Details" = "動画の詳細";

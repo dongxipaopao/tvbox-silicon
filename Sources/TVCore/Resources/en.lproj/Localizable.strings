@@ -90,6 +90,7 @@
 "Previous" = "Previous";
 "Next" = "Next";
 "No playable sources were found for this video." = "No playable sources were found for this video.";
+"No playable source" = "No playable source";
 "Loading details…" = "Loading details…";
 "Resolving playback URL…" = "Resolving playback URL…";
 "Video Details" = "Video Details";

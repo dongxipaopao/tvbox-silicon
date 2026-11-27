@@ -22,6 +22,11 @@ struct DiscoverDetailView: View {
     @State private var episode: DiscoverEpisode?
     /// Episode (1-based) the source page should play as soon as it has its list: Play, or a source picked for an episode.
     @State private var playEpisode: EpisodePlayRequest?
+    /// The top Play's state (B36): the first episode's address resolving (disabled spinner), resolved (tappable),
+    /// or failed/exhausted (explanation plus retry). Reported by the episode section's VideoDetailView.
+    @State private var topPlayReadiness: TopPlayReadiness = .loading
+    /// The top Play area's retry counter; the episode section re-runs the prefetch when it changes.
+    @State private var topPlayRetryTick = 0
     /// The episode whose sources show under the episode row (iOS and Mac); changing the season clears it.
     @State private var pickedEpisode: Int?
     /// The latest season's air dates while it airs (#1186).
@@ -51,6 +56,7 @@ struct DiscoverDetailView: View {
         // A video playing over the page (the player covers it without the page going away) pauses the search for the
         // title's other sources until it closes: their plugins ran flat out under the video and warmed the phone (#1428).
         .onChange(of: store.playing == nil) { _, idle in if idle { startSources() } else { stopSources() } }
+        .onChange(of: sources?.chosen?.id) { _, _ in topPlayReadiness = .loading }
         .task(id: catalogSeason) { await loadSeason() }
         .task(id: details?.id) { await loadAiring() }
         #if DEBUG
@@ -249,19 +255,69 @@ struct DiscoverDetailView: View {
         return values.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
-    /// Play: the title's first episode on its best source, as soon as one is found; when none of the sources has it,
-    /// the old source search.
-    private var playButton: some View {
+    /// Play: the title's first episode on its best source. Enabled only once that episode's playable address is
+    /// actually resolved and cached (the tap starts without resolving again, B36); before that it is disabled with
+    /// a spinner, and when the source search or the resolve ran out it explains and offers a retry instead of
+    /// spinning forever. The retry restarts the source search or the resolve; changing sources stays in the
+    /// episodes section.
+    @ViewBuilder private var playButton: some View {
+        if store.subscription == nil {
+            Button {
+                episode = nil
+                store.section = .settings
+            } label: {
+                Label(L10n.text("Add Subscription"), systemImage: "plus")
+                    .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 54)
+                    .foregroundStyle(dark ? Color.black : Color.white)
+                    .background(dark ? Color.white : Color.black, in: Capsule())
+            }.buttonStyle(.plain).accessibilityIdentifier("discover.play")
+        } else if let sources, sources.finished, sources.chosen == nil {
+            topPlayRetry {
+                sources.restart(store)
+            }
+        } else {
+            switch topPlayReadiness {
+            case .ready:
+                Button {
+                    episode = nil
+                    playEpisode = EpisodePlayRequest(number: 1)
+                } label: {
+                    Label(L10n.text("Play"), systemImage: "play.fill")
+                        .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 54)
+                        .foregroundStyle(dark ? Color.black : Color.white)
+                        .background(dark ? Color.white : Color.black, in: Capsule())
+                }.buttonStyle(.plain).accessibilityIdentifier("discover.play")
+            case .loading:
+                Button {} label: {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small).tint(dark ? Color.black : Color.white)
+                        Text(L10n.text("Loading")).font(.system(size: 15, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 54)
+                    .foregroundStyle((dark ? Color.black : Color.white).opacity(0.6))
+                    .background((dark ? Color.white : Color.black).opacity(0.45), in: Capsule())
+                }.buttonStyle(.plain).disabled(true).accessibilityIdentifier("discover.play")
+            case .failed:
+                topPlayRetry {
+                    topPlayRetryTick += 1
+                }
+            }
+        }
+    }
+
+    /// The top Play area once nothing playable came out: what happened, and a retry (B36). Never a dead spinner.
+    private func topPlayRetry(action: @escaping () -> Void) -> some View {
         Button {
-            episode = nil
-            if store.subscription == nil { store.section = .settings }
-            else if let sources, sources.finished, sources.matches.isEmpty { store.searchVideos(item.name) }
-            else { playEpisode = EpisodePlayRequest(number: 1) }
+            topPlayReadiness = .loading
+            action()
         } label: {
-            Label(L10n.text(store.subscription == nil ? "Add Subscription" : "Play"), systemImage: store.subscription == nil ? "plus" : "play.fill")
-                .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 54)
-                .foregroundStyle(dark ? Color.black : Color.white)
-                .background(dark ? Color.white : Color.black, in: Capsule())
+            VStack(spacing: 2) {
+                Text(L10n.text("No playable source")).font(.system(size: 11)).opacity(0.75)
+                Label(L10n.text("Try Again"), systemImage: "arrow.clockwise").font(.system(size: 15, weight: .semibold))
+            }
+            .frame(maxWidth: .infinity).frame(height: 54)
+            .foregroundStyle(dark ? Color.black : Color.white)
+            .background((dark ? Color.white : Color.black).opacity(0.55), in: Capsule())
         }.buttonStyle(.plain).accessibilityIdentifier("discover.play")
     }
 
@@ -320,6 +376,7 @@ struct DiscoverDetailView: View {
         #endif
         if let sources {
             DiscoverSourceEpisodes(sources: sources, item: followItem, appColorScheme: appColorScheme, selectedSeason: $seasonNumber, playEpisode: $playEpisode,
+                                   topPlayReadiness: $topPlayReadiness, topPlayRetryTick: $topPlayRetryTick,
                                    seasonControl: { number in seasons.isEmpty ? nil : AnyView(catalogSeasonMenu(number)) }) { number in
                 if number == nil || number == catalogSeason {
                     catalogEpisodes(showsSeasonControl: number == nil)
@@ -718,6 +775,12 @@ private struct DiscoverMacSeasonButton: View {
         grace?.cancel(); grace = nil
     }
 
+    /// The viewer asked to look for the title's sources again (the top Play's retry after the search ran out, B36).
+    func restart(_ store: Store) {
+        subscription = nil
+        start(store)
+    }
+
     func choose(_ candidate: SourceTitleMatch.Candidate) {
         grace?.cancel(); grace = nil
         // Picking a source by hand, or the player landing on one that plays, trusts it again: a later automatic
@@ -801,6 +864,9 @@ private struct DiscoverSourceEpisodes<CatalogEpisodes: View>: View {
     let appColorScheme: ColorScheme
     @Binding var selectedSeason: Int?
     @Binding var playEpisode: EpisodePlayRequest?
+    /// The header's top Play state and its retry counter (B36), reported through DetailEmbed.
+    @Binding var topPlayReadiness: TopPlayReadiness
+    @Binding var topPlayRetryTick: Int
     let seasonControl: (Int) -> AnyView?
     @ViewBuilder let catalogEpisodes: (Int?) -> CatalogEpisodes
     @State private var changing = false
@@ -834,7 +900,9 @@ private struct DiscoverSourceEpisodes<CatalogEpisodes: View>: View {
                                                    resetFailed: { sources.resetFailed() },
                                                    markFailed: { sources.markFailed(id: $0) },
                                                    adopt: { sources.adopt(id: $0) },
-                                                   playEpisode: $playEpisode))
+                                                   playEpisode: $playEpisode,
+                                                   topPlayReadiness: { topPlayReadiness = $0 },
+                                                   topPlayRetry: $topPlayRetryTick))
                     .id(chosen.id)
             } else {
                 VStack(alignment: .leading, spacing: 12) {

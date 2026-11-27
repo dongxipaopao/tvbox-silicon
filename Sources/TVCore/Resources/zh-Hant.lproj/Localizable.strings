@@ -90,6 +90,7 @@
 "Previous" = "上一頁";
 "Next" = "下一頁";
 "No playable sources were found for this video." = "此影片沒有可識別的播放來源。";
+"No playable source" = "暫無可用資源";
 "Loading details…" = "正在取得詳細資訊…";
 "Resolving playback URL…" = "正在解析播放網址…";
 "Video Details" = "影片詳細資訊";
