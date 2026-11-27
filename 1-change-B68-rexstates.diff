@@ -1,0 +1,212 @@
+diff --git a/App/RexView.swift b/App/RexView.swift
+index 19ffa9ca..d908a029 100644
+--- a/App/RexView.swift
++++ b/App/RexView.swift
+@@ -115,15 +115,17 @@ struct RexShelf: View {
+             await model.start()
+             #if DEBUG
+             // `-qaRexOpen 1` opens the first module that runs, for screenshots.
+-            if UserDefaults.standard.bool(forKey: "qaRexOpen") {
+-                for _ in 0..<40 where !model.entries.contains(where: { $0.checked && $0.problem == nil }) { try? await Task.sleep(for: .milliseconds(500)) }
+-                qaOpen = model.entries.first { $0.checked && $0.problem == nil }?.widget
++            // The value is a module id (`-qaRexOpen fixture.html`) or 1 for the first module that runs.
++            if let want = UserDefaults.standard.string(forKey: "qaRexOpen") {
++                for _ in 0..<40 where !model.entries.allSatisfy(\.checked) || model.entries.isEmpty { try? await Task.sleep(for: .milliseconds(500)) }
++                qaOpen = want == "1" ? model.entries.first { $0.checked && $0.problem == nil }?.widget
++                    : model.entries.first { $0.widget.id == want && $0.problem == nil }?.widget
+             }
+             #endif
+         }
+         .sheet(isPresented: $importing) { importSheet }
+         #if DEBUG
+-        .sheet(item: $qaOpen) { widget in NavigationStack { RexModuleView(widget: widget) } }
++        .sheet(item: $qaOpen) { widget in NavigationStack { RexModuleView(widget: widget).toolbar { ToolbarItem(placement: .confirmationAction) { Button(L10n.text("Done")) { qaOpen = nil } } } } }
+         #endif
+     }
+ 
+diff --git a/Scripts/qa-scenes-extra.sh b/Scripts/qa-scenes-extra.sh
+index bcbaea14..1161c3fd 100644
+--- a/Scripts/qa-scenes-extra.sh
++++ b/Scripts/qa-scenes-extra.sh
+@@ -4,5 +4,9 @@ case "${SCENES:-}" in
+   rex)
+     shot 25a-rex-row 25 -qaSection discover -qaRexFixture 1 -qaRexRow 1
+     shot 25b-rex-module 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen 1
++    shot 25c-rex-unsupported 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.html
++    shot 25d-rex-row-zh 25 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
++    shot 25e-rex-unsupported-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen fixture.html -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
++    shot 25f-rex-module-zh 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen 1 -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     ;;
+ esac
+diff --git a/Sources/TVCore/Resources/en.lproj/Localizable.strings b/Sources/TVCore/Resources/en.lproj/Localizable.strings
+index 7ca02682..3992f90f 100644
+--- a/Sources/TVCore/Resources/en.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/en.lproj/Localizable.strings
+@@ -2398,3 +2398,17 @@
+ "Delete %lld episodes" = "Delete %lld episodes";
+ "Search settings" = "Search settings";
+ "Switch Source" = "Switch Source";
++"Can't open" = "Can't open";
++"Encrypted Rex modules are not supported yet." = "Encrypted Rex modules are not supported yet.";
++"Encrypted, not supported yet" = "Encrypted, not supported yet";
++"Import Rex Subscription" = "Import Rex Subscription";
++"Import a Rex subscription to browse its list modules here." = "Import a Rex subscription to browse its list modules here.";
++"Import" = "Import";
++"Only list modules that are not encrypted run for now. The address is kept on this device." = "Only list modules that are not encrypted run for now. The address is kept on this device.";
++"Ready" = "Ready";
++"Rex Modules" = "Rex Modules";
++"This is not a Rex subscription." = "This is not a Rex subscription.";
++"This is not a web address." = "This is not a web address.";
++"This list is empty." = "This list is empty.";
++"This subscription has no modules." = "This subscription has no modules.";
++"This module needs %@, which this app does not support yet." = "This module needs %@, which this app does not support yet.";
+diff --git a/Sources/TVCore/Resources/ja.lproj/Localizable.strings b/Sources/TVCore/Resources/ja.lproj/Localizable.strings
+index bcc31704..79969a4a 100644
+--- a/Sources/TVCore/Resources/ja.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/ja.lproj/Localizable.strings
+@@ -2398,3 +2398,17 @@
+ "Delete %lld episodes" = "%lld 話を削除";
+ "Search settings" = "設定を検索";
+ "Switch Source" = "ソースを切り替え";
++"Can't open" = "開けません";
++"Encrypted Rex modules are not supported yet." = "暗号化された Rex モジュールにはまだ対応していません。";
++"Encrypted, not supported yet" = "暗号化済み・未対応";
++"Import Rex Subscription" = "Rex サブスクリプションを読み込む";
++"Import a Rex subscription to browse its list modules here." = "Rex サブスクリプションを読み込むと、リスト型モジュールをここで閲覧できます。";
++"Import" = "読み込む";
++"Only list modules that are not encrypted run for now. The address is kept on this device." = "現在は暗号化されていないリスト型モジュールのみ動作します。アドレスはこの端末にのみ保存されます。";
++"Ready" = "利用可能";
++"Rex Modules" = "Rex モジュール";
++"This is not a Rex subscription." = "Rex サブスクリプションではありません。";
++"This is not a web address." = "Web アドレスではありません。";
++"This list is empty." = "このリストは空です。";
++"This subscription has no modules." = "このサブスクリプションにモジュールはありません。";
++"This module needs %@, which this app does not support yet." = "このモジュールには「%@」が必要ですが、このアプリはまだ対応していません。";
+diff --git a/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings b/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
+index fce98907..920b3004 100644
+--- a/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/zh-Hans.lproj/Localizable.strings
+@@ -2398,3 +2398,17 @@
+ "Delete %lld episodes" = "删除 %lld 集";
+ "Search settings" = "搜索设置";
+ "Switch Source" = "切换源";
++"Can't open" = "无法打开";
++"Encrypted Rex modules are not supported yet." = "暂不支持加密的 Rex 模块。";
++"Encrypted, not supported yet" = "已加密，暂不支持";
++"Import Rex Subscription" = "导入 Rex 订阅";
++"Import a Rex subscription to browse its list modules here." = "导入 Rex 订阅后，可在这里浏览其中的列表模块。";
++"Import" = "导入";
++"Only list modules that are not encrypted run for now. The address is kept on this device." = "目前只运行未加密的列表模块。地址仅保存在本机。";
++"Ready" = "可用";
++"Rex Modules" = "Rex 模块";
++"This is not a Rex subscription." = "这不是 Rex 订阅。";
++"This is not a web address." = "这不是网页地址。";
++"This list is empty." = "这个列表是空的。";
++"This subscription has no modules." = "这个订阅里没有模块。";
++"This module needs %@, which this app does not support yet." = "这个模块需要“%@”，本应用暂不支持。";
+diff --git a/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings b/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
+index 03e855d9..af61646e 100644
+--- a/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
++++ b/Sources/TVCore/Resources/zh-Hant.lproj/Localizable.strings
+@@ -2398,3 +2398,17 @@
+ "Delete %lld episodes" = "刪除 %lld 集";
+ "Search settings" = "搜尋設定";
+ "Switch Source" = "切換來源";
++"Can't open" = "無法開啟";
++"Encrypted Rex modules are not supported yet." = "暫不支援加密的 Rex 模組。";
++"Encrypted, not supported yet" = "已加密，暫不支援";
++"Import Rex Subscription" = "匯入 Rex 訂閱";
++"Import a Rex subscription to browse its list modules here." = "匯入 Rex 訂閱後，可在這裡瀏覽其中的列表模組。";
++"Import" = "匯入";
++"Only list modules that are not encrypted run for now. The address is kept on this device." = "目前只執行未加密的列表模組。位址僅儲存在本機。";
++"Ready" = "可用";
++"Rex Modules" = "Rex 模組";
++"This is not a Rex subscription." = "這不是 Rex 訂閱。";
++"This is not a web address." = "這不是網頁位址。";
++"This list is empty." = "這個列表是空的。";
++"This subscription has no modules." = "這個訂閱裡沒有模組。";
++"This module needs %@, which this app does not support yet." = "這個模組需要「%@」，本應用暫不支援。";
+diff --git a/Sources/TVCore/Rex.swift b/Sources/TVCore/Rex.swift
+index 12470e40..d7d7b453 100644
+--- a/Sources/TVCore/Rex.swift
++++ b/Sources/TVCore/Rex.swift
+@@ -89,6 +89,7 @@ public actor RexRuntime {
+     static func source(_ address: String) async throws -> String {
+         if address.hasPrefix("assets://") {
+             guard let text = ScriptAssets.bundled(address) else { throw RexError.failed("Missing bundled module") }
++            if text.hasPrefix("REXENC") { throw RexError.encrypted }
+             return text
+         }
+         guard let url = URL(string: address), ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { throw RexError.failed(L10n.text("This is not a web address.")) }
+@@ -101,6 +102,13 @@ public actor RexRuntime {
+         return text
+     }
+ 
++    /// A module's own error text, with the host's "not supported" marker turned into a sentence the user can read.
++    static func explain(_ message: String) -> String {
++        guard let range = message.range(of: "REX_UNSUPPORTED:") else { return message }
++        let what = message[range.upperBound...].prefix { !$0.isWhitespace && $0 != "\n" }
++        return L10n.text("This module needs %@, which this app does not support yet.", String(what))
++    }
++
+     public static func fetchCollection(_ address: String) async throws -> RexCollection {
+         if address.hasPrefix("assets://") {
+             guard let text = ScriptAssets.bundled(address) else { throw RexError.failed("Missing bundled collection") }
+@@ -134,9 +142,9 @@ public actor RexRuntime {
+         let literal = String(decoding: try JSONSerialization.data(withJSONObject: [function.functionName], options: []), as: UTF8.self).dropFirst().dropLast()
+         let envelope = await entry.session.evaluate("__rex.call(\(literal), \(json))", within: 40)
+         guard let value = envelope["value"]?.object else {
+-            throw RexError.failed(String((envelope["error"]?.string ?? "The module did not answer").prefix(200)))
++            throw RexError.failed(Self.explain(String((envelope["error"]?.string ?? "The module did not answer").prefix(200))))
+         }
+-        if let message = value["error"]?.string { throw RexError.failed(message) }
++        if let message = value["error"]?.string { throw RexError.failed(Self.explain(message)) }
+         return (value["items"]?.array ?? []).compactMap(Self.item)
+     }
+ 
+diff --git a/Sources/TVCore/ScriptAssets/rex/fixture-encrypted.js b/Sources/TVCore/ScriptAssets/rex/fixture-encrypted.js
+new file mode 100644
+index 00000000..621878b2
+--- /dev/null
++++ b/Sources/TVCore/ScriptAssets/rex/fixture-encrypted.js
+@@ -0,0 +1,2 @@
++REXENC
++{"v":2,"note":"offline sample of an encrypted module"}
+diff --git a/Sources/TVCore/ScriptAssets/rex/fixture-html.js b/Sources/TVCore/ScriptAssets/rex/fixture-html.js
+new file mode 100644
+index 00000000..78da4844
+--- /dev/null
++++ b/Sources/TVCore/ScriptAssets/rex/fixture-html.js
+@@ -0,0 +1,9 @@
++// Offline sample of a module that needs the host's HTML loader, which this app does not have yet.
++WidgetMetadata = {
++  id: "fixture.html", title: "Sample HTML module", version: "1.0.0",
++  modules: [{ id: "list", title: "Hot", functionName: "loadList", params: [{ name: "page", title: "Page", type: "page", value: "1" }] }]
++};
++async function loadList(params) {
++  const doc = await Widget.html.load("https://example.invalid/list");
++  return [];
++}
+diff --git a/Sources/TVCore/ScriptAssets/rex/fixture.json b/Sources/TVCore/ScriptAssets/rex/fixture.json
+index b4597e52..a87f8592 100644
+--- a/Sources/TVCore/ScriptAssets/rex/fixture.json
++++ b/Sources/TVCore/ScriptAssets/rex/fixture.json
+@@ -1 +1,4 @@
+-{"title":"Rex fixture","description":"Built-in sample for testing","widgets":[{"id":"fixture.list","title":"Sample list module","description":"","version":"1.0.0","author":"","url":"assets://rex/fixture-module.js"}]}
++{"title":"Rex fixture","description":"Built-in sample for testing","widgets":[
++{"id":"fixture.list","title":"Sample list module","description":"","version":"1.0.0","author":"","url":"assets://rex/fixture-module.js"},
++{"id":"fixture.html","title":"Sample HTML module","description":"","version":"1.0.0","author":"","url":"assets://rex/fixture-html.js"},
++{"id":"fixture.enc","title":"Sample encrypted module","description":"","version":"2.0.0","author":"","url":"assets://rex/fixture-encrypted.js"}]}
+diff --git a/Sources/TVCore/ScriptAssets/rex/prelude.js b/Sources/TVCore/ScriptAssets/rex/prelude.js
+index 645cdf53..db13db55 100644
+--- a/Sources/TVCore/ScriptAssets/rex/prelude.js
++++ b/Sources/TVCore/ScriptAssets/rex/prelude.js
+@@ -48,7 +48,7 @@ function send(method, url, body, options) {
+     });
+ }
+ 
+-const unsupported = what => () => { throw new Error(what + ' is not supported in this build'); };
++const unsupported = what => () => { throw new Error('REX_UNSUPPORTED:' + what); };
+ globalThis.Widget = {
+     http: {
+         get: (url, options) => send('GET', url, null, options),
