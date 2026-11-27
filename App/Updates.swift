@@ -96,6 +96,12 @@ import TVCore
             defaults.set(try? JSONEncoder().encode(stale), forKey: Keys.feed)
             defaults.removeObject(forKey: Keys.feedAddress)
         }
+        // QA: `-qaUpdateCheckNow 1` ignores the six-hour automatic-check pause and any earlier announcement,
+        // so a shots run that already checked the real feed this session still exercises this launch's scenario.
+        if defaults.bool(forKey: "qaUpdateCheckNow") {
+            defaults.removeObject(forKey: Keys.checked)
+            defaults.removeObject(forKey: Keys.announced)
+        }
         #endif
         self.current = current
         self.build = build
