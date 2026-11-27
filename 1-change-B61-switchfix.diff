@@ -1,0 +1,39 @@
+diff --git a/App/SitesView.swift b/App/SitesView.swift
+index d7959ca9..ebc1a75a 100644
+--- a/App/SitesView.swift
++++ b/App/SitesView.swift
+@@ -1231,14 +1231,15 @@ struct SiteView: View {
+     }
+ 
+     var body: some View {
+-        SiteBrowseView(site: site, origin: origin, jarURL: jarURL,
+-                       initialQuery: switched ? "" : initialQuery, folder: folder,
+-                       preview: switched ? nil : preview, category: switched ? nil : category,
++        SiteBrowseView(site: site,
+                        switcher: folder == nil ? { chosen in
+                            guard chosen.key != site.key else { return }
+                            switched = true
+                            site = chosen
+-                       } : nil)
++                       } : nil,
++                       origin: origin, jarURL: jarURL,
++                       initialQuery: switched ? "" : initialQuery, folder: folder,
++                       preview: switched ? nil : preview, category: switched ? nil : category)
+             .id(site.key)
+     }
+ }
+@@ -1413,11 +1414,10 @@ struct SiteBrowseView: View {
+             }
+             #endif
+             if !showsBilibiliTVSpace {
+-                Group {
+-                    PinSourceButton(site: site, origin: origin)
+-                    HideSourceButton(site: site, origin: origin)
++                ToolbarItemGroup(placement: .automatic) {
++                    PinSourceButton(site: site, origin: origin).environment(store)
++                    HideSourceButton(site: site, origin: origin).environment(store)
+                 }
+-                .environment(store)
+             }
+         }
+         .screenBackdrop()
