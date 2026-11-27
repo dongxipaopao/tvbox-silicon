@@ -1,0 +1,23 @@
+diff --git a/App/SitesView.swift b/App/SitesView.swift
+index 413b64fa..a7ed5736 100644
+--- a/App/SitesView.swift
++++ b/App/SitesView.swift
+@@ -1258,9 +1258,7 @@ struct SiteBrowseView: View {
+     let site: Site
+     /// Picks another source without leaving the page; nil for a folder's page.
+     var switcher: ((Site) -> Void)? = nil
+-    #if !os(tvOS)
+     @State private var switching = false
+-    #endif
+     let origin: URL
+     let jarURL: URL?
+     var initialQuery: String = ""
+@@ -5460,7 +5458,7 @@ struct TVSourceSwitchScreen: View {
+         }
+         .padding(.horizontal, 96).padding(.vertical, 60)
+         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+-        .background(.black.opacity(0.92).ignoresSafeArea())
++        .background { Color.black.opacity(0.92).ignoresSafeArea() }
+         .defaultFocus($focusedSite, sites.contains { $0.key == current.key } ? current.key : sites.first?.key)
+         .onExitCommand { dismiss() }
+     }
