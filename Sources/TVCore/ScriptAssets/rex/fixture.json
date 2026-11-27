@@ -1,4 +1,4 @@
 {"title":"Rex fixture","description":"Built-in sample for testing","widgets":[
 {"id":"fixture.list","title":"Sample list module","description":"","version":"1.0.0","author":"","url":"assets://rex/fixture-module.js"},
-{"id":"fixture.html","title":"Sample HTML module","description":"","version":"1.0.0","author":"","url":"assets://rex/fixture-html.js"},
+{"id":"fixture.html","title":"Sample TMDB module","description":"","version":"1.0.0","author":"","url":"assets://rex/fixture-html.js"},
 {"id":"fixture.enc","title":"Sample encrypted module","description":"","version":"2.0.0","author":"","url":"assets://rex/fixture-encrypted.js"}]}

@@ -1,6 +1,8 @@
 // The host API of Rex / ForwardWidgets modules, over the TVBox prelude (which supplies timers and the console).
 // A module is a plain script that sets `WidgetMetadata` and declares the functions it names. This build supplies
-// `Widget.http`; `Widget.html` and `Widget.tmdb` are refused with a clear error. See Rex.swift.
+// `Widget.http` and `Widget.html.load` (cheerio, as the TVBox prelude uses it); `Widget.tmdb` is refused with a clear error
+// until its mapping is done. See Rex.swift.
+import * as cheerio from 'assets://js/lib/cheerio.min.js';
 const host = globalThis.__host;
 const requestTimeout = 15000;
 
@@ -57,7 +59,8 @@ globalThis.Widget = {
             return send('POST', url, body, options);
         },
     },
-    html: { load: unsupported('Widget.html.load') },
+    // Rex passes the page text and gets a synchronous jQuery-like function back.
+    html: { load: html => cheerio.load(typeof html === 'string' ? html : html == null ? '' : typeof html === 'object' ? JSON.stringify(html) : String(html)) },
     tmdb: { get: unsupported('Widget.tmdb.get') },
 };
 
