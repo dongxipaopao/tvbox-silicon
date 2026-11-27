@@ -1,0 +1,87 @@
+name: tvos-ui2
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Optional -only-testing filter, e.g. TVUITests/TVNavigationUITests/testSourcesOpenOnContentAndMagnifierOpensSearch (blank = the four parity tests)"
+        required: false
+        default: ""
+jobs:
+  ui:
+    runs-on: xcode-27
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select newest Xcode
+        run: |
+          best=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$best/Contents/Developer"
+          xcodebuild -version
+      - name: Tools
+        run: brew install xcodegen meson ninja ffmpeg 2>&1 | tail -2 || true
+      - name: Restore FFmpeg cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/Library/Caches/tvbox-ffmpeg
+            ~/Library/Caches/tvbox-libass
+          key: ffmpeg-v1-${{ hashFiles('Scripts/build-apple-ffmpeg.sh', 'Scripts/build-apple-libass.sh') }}
+      - name: FFmpeg and libass
+        run: |
+          Scripts/build-apple-ffmpeg.sh
+          Scripts/build-apple-libass.sh
+      - name: Boot an Apple TV simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          c=[x for k,v in d.items() if 'tvOS' in k for x in v if 'Apple TV' in x['name']]
+          print(c[-1]['udid'])")
+          echo "UDID=$UDID" | tee -a "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+      - name: Remote UI tests
+        run: |
+          set -o pipefail
+          mkdir -p build/TVUI
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'testsrc2=size=640x360:rate=24' -f lavfi -i 'sine=frequency=440' -t 120 -c:v libx264 -preset ultrafast -g 48 -c:a aac -movflags +faststart build/TVUI/clip.mp4
+          if [ -n "${{ inputs.only }}" ]; then
+            ONLY="-only-testing:${{ inputs.only }}"
+            Scripts/test-tv-ui.sh "$UDID" -resultBundlePath build/TVUI/result.xcresult "$ONLY" 2>&1 | tee tvui.log | tail -80
+          else
+            Scripts/test-tv-ui.sh "$UDID" -resultBundlePath build/TVUI/result.xcresult \
+              -only-testing:TVUITests/TVNavigationUITests/testSourcesOpenOnContentAndMagnifierOpensSearch \
+              -only-testing:TVUITests/TVNavigationUITests/testMusicOpensWithoutKeyboardAndHasMagnifier \
+              -only-testing:TVUITests/TVNavigationUITests/testMusicSettingsHasMusicExtensions \
+              -only-testing:TVUITests/TVNavigationUITests/testSourcePageSwitchesSourceFromItsName \
+              -only-testing:TVUITests/TVNavigationUITests/testSourcePageSearchesWithTheSearchButton 2>&1 | tee tvui.log | tail -80
+          fi
+      - name: Test summary
+        if: always()
+        run: grep -E "error:|Test Case .*(passed|failed)|Executed [0-9]+ tests|TEST (SUCCEEDED|FAILED)" tvui.log | sort -u | head -80 || true
+      - name: Export screenshots and notes
+        if: always()
+        run: |
+          mkdir -p shots
+          xcrun xcresulttool export attachments --path build/TVUI/result.xcresult --output-path shots 2>&1 | tail -5 || true
+          ls shots | head -80
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tvui-shots
+          path: shots
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tvui-log
+          path: |
+            tvui.log
+            build/TVUI/server.log
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tvui-xcresult
+          path: build/TVUI/result.xcresult
+          if-no-files-found: ignore
