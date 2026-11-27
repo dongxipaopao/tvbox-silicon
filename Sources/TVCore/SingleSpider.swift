@@ -26,7 +26,7 @@ extension Subscription {
     /// A lone spider script, a Python `base.spider` class or a CatVod JavaScript spider, added as
     /// a subscription of its own that holds just that source, as a TVBox configuration would list
     /// it: type 3, with the script's address as its api. Nil when `data` is neither.
-    static func singleSpider(_ data: Data, origin: URL) -> Subscription? {
+    public static func singleSpider(_ data: Data, origin: URL) -> Subscription? {
         let runtime: SourceRuntime
         if Site.sniffedRuntime(data) == .python { runtime = .python }
         else if Site.isJavaScriptSpider(data) { runtime = .javascript }
