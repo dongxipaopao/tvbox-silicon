@@ -1,0 +1,101 @@
+name: smoke-tvos-python
+on:
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: xcode-27
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select newest Xcode
+        run: |
+          best=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$best/Contents/Developer"
+          xcodebuild -version
+      - name: Python runtime (tvOS simulator)
+        run: |
+          brew install python@3.14 2>&1 | tail -3 || true
+          export HOST_PYTHON="$(brew --prefix python@3.14)/bin/python3.14"
+          Scripts/build-apple-python.sh tvos-simulator 2>&1 | tee python-tvsim.log | tail -60
+          ls build/ApplePython/appletvsimulator
+          ls build/ApplePython/appletvsimulator/PythonHost | head
+      - name: Boot an Apple TV simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          c=[x for k,v in d.items() if 'tvOS' in k for x in v if 'Apple TV' in x['name']]
+          print(c[-1]['udid'])")
+          echo "UDID=$UDID" | tee -a "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+      - name: Build the bridge smoke binary (tvOS simulator, arm64)
+        run: |
+          mkdir -p build/smoke
+          cat > build/smoke/main.c <<'C'
+          #include <stdio.h>
+          #include <stdlib.h>
+          char *TVPythonRequest(const char *resources, const char *request);
+          int main(int argc, char **argv) {
+              for (int i = 2; i < argc; i++) { char *r = TVPythonRequest(argv[1], argv[i]); printf("RESPONSE %d %s\n", i - 1, r); fflush(stdout); free(r); }
+              return 0;
+          }
+          C
+          SDK=$(xcrun --sdk appletvsimulator --show-sdk-path)
+          xcrun clang -target arm64-apple-tvos17.0-simulator -isysroot "$SDK" -o build/smoke/smoke build/smoke/main.c Runtime/AppleRuntime/Native/ApplePython.c
+          cp build/smoke/smoke build/ApplePython/appletvsimulator/smoke
+          file build/smoke/smoke
+          vtool -show-build build/smoke/smoke | head -8
+          vtool -show-build build/ApplePython/appletvsimulator/Frameworks/Python.framework/Python | head -8
+      - name: Run the real C bridge and host.py in the tvOS simulator
+        run: |
+          set -o pipefail
+          R="$PWD/build/ApplePython/appletvsimulator"
+          J=/tmp/smokejob; rm -rf $J; mkdir -p $J
+          cat > $J/fixture.py <<'PY'
+          import sys
+          sys.path.append('..')
+          from base.spider import Spider
+          import hmac, hashlib, ssl, json, base64
+          import requests, urllib3, certifi
+          from Crypto.Cipher import AES
+          from bs4 import BeautifulSoup
+          from pyquery import PyQuery
+          from lxml import etree
+          import cryptography
+
+          class Spider(Spider):
+              def init(self, extend=''):
+                  self.ext = extend
+              def homeContent(self, filter):
+                  sig = hmac.new(b'k', b'm', hashlib.sha256).hexdigest()[:8]
+                  facts = {
+                      'python': sys.version.split()[0], 'platform': sys.platform, 'ssl': ssl.OPENSSL_VERSION,
+                      'requests': requests.__version__, 'urllib3': urllib3.__version__, 'bs4': BeautifulSoup('<a>1</a>', 'html.parser').a.text,
+                      'pyquery': PyQuery('<b>t</b>')('b').text(), 'lxml': etree.fromstring('<x>y</x>').text,
+                      'aes_block': str(AES.block_size), 'cryptography': cryptography.__version__, 'hmac': sig,
+                  }
+                  return {'class': [{'type_id': k, 'type_name': v} for k, v in facts.items()], 'list': []}
+          PY
+          mk() { python3 -c "import json,sys; print(json.dumps(dict(session='s', script=sys.argv[1], cache='$J/s', profile='$J/s/profile', api='https://fixture.invalid/spider.py', key='s', ext='e', params={})))" "$1"; }
+          xcrun simctl spawn "$UDID" "$R/smoke" "$R" "$(mk $J/fixture.py)" "$(mk $J/missing.py)" 2>&1 | tee build/smoke/out.txt
+          echo '--- facts'
+          grep -c '^RESPONSE 1 ' build/smoke/out.txt
+          python3 - <<'PY'
+          import json,re
+          t=open('build/smoke/out.txt').read()
+          r1=re.search(r'^RESPONSE 1 (.*)$',t,re.M); r2=re.search(r'^RESPONSE 2 (.*)$',t,re.M)
+          a=json.loads(r1.group(1)); print('r1 keys',list(a))
+          home=json.loads(a['result']); print({c['type_id']:c['type_name'] for c in home['class']})
+          b=json.loads(r2.group(1)); print('missing script ->',b.get('errorCode'))
+          assert home['class'] and b.get('errorCode')=='script_error'
+          print('SMOKE OK (tvOS simulator slice, no network)')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-tvos-python
+          path: |
+            build/smoke/out.txt
+            python-tvsim.log
+          if-no-files-found: ignore
