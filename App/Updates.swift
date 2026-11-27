@@ -41,13 +41,13 @@ import TVCore
         }
     }
     /// The custom revision on this version's base: the first package build of a marketing version is its R1,
-    /// and every later build on the same base is the next R, so "1.8.32 R2" names exactly one package build
+    /// and every later build on the same base is the next R, so "1.8.32 R1" names exactly one package build
     /// (project.yml's XI_BASE_BUILD records the base; bump it with MARKETING_VERSION).
     var revision: Int {
         let base = (Bundle.main.object(forInfoDictionaryKey: "XiRevisionBaseBuild") as? String).flatMap(Int.init) ?? build
         return max(1, build - base + 1)
     }
-    /// This build as people see it: "1.8.32 R2" for a sideloaded copy; TestFlight names builds "1.7.7 (30)".
+    /// This build as people see it: "1.8.32 R1" for a sideloaded copy; TestFlight names builds "1.7.7 (30)".
     var displayVersion: String { Self.channel == .testFlight ? "\(current) (\(build))" : "\(current) R\(revision)" }
     /// The newest release to install, as people will see it once it's installed.
     var latestVersion: String? {
