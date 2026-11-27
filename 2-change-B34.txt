@@ -1,0 +1,1 @@
+Fix compile error in B27: BuiltInMusic.cached is lock-guarded, mark it nonisolated(unsafe) per codebase convention (Danmaku.swift, CrashReports.swift). Failure: build-ios run 45911992090, xcodebuild exit 65, single error Sources/TVCore/BuiltInMusic.swift:13:24.
