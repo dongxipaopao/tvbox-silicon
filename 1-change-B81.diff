@@ -1,0 +1,72 @@
+diff --git a/App/DiscoverView.swift b/App/DiscoverView.swift
+index 3a0ba694..df54d2f4 100644
+--- a/App/DiscoverView.swift
++++ b/App/DiscoverView.swift
+@@ -132,6 +132,7 @@ struct DiscoverView: View {
+                 } else {
+                     DiscoverBackdrop(paint: nil, width: proxy.size.width, heroHeight: heroHeight, scrollY: 0, trailer: nil, playsTrailer: false)
+                 }
++                ScrollViewReader { reader in
+                 ScrollView {
+                     LazyVStack(alignment: .leading, spacing: 30) {
+                         if waiting {
+@@ -139,13 +140,13 @@ struct DiscoverView: View {
+                         }
+                         #if !os(tvOS)
+                         // Without Featured Titles the Rex row, with its import button, leads the page.
+-                        if !heroShown { RexShelf().padding(.top, 8) }
++                        if !heroShown { RexShelf().padding(.top, 8).id("discover.rex") }
+                         #endif
+                         ForEach(orderedSections.filter(visible)) { section in
+                             sectionView(section, width: proxy.size.width)
+                             #if !os(tvOS)
+                             // The Rex row sits right under the featured titles, empty or not, so its import button is near the top.
+-                            if section == .hero { RexShelf().padding(.top, 8) }
++                            if section == .hero { RexShelf().padding(.top, 8).id("discover.rex") }
+                             #endif
+                         }
+                         if !model.failures.isEmpty || model.collectionsFailed {
+@@ -214,6 +215,17 @@ struct DiscoverView: View {
+                         await douban
+                     } else { await model.load(refresh: true) }
+                 }
++                #if DEBUG && !os(tvOS)
++                // `-qaScroll rex` scrolls Discover to the Rex row (automatic scroll for screenshots, not a touch).
++                .task {
++                    guard UserDefaults.standard.string(forKey: "qaScroll") == "rex" else { return }
++                    for _ in 0..<2 {
++                        try? await Task.sleep(for: .seconds(4))
++                        reader.scrollTo("discover.rex", anchor: .top)
++                    }
++                }
++                #endif
++                }
+             }
+             #if os(macOS)
+             // The reader's own frame ignoring the safe area isn't enough on the Mac: what it holds still starts below the
+diff --git a/App/RexView.swift b/App/RexView.swift
+index c3e81218..6d259835 100644
+--- a/App/RexView.swift
++++ b/App/RexView.swift
+@@ -164,7 +164,7 @@ struct RexImportPage: View {
+                 if !model.collections.isEmpty {
+                     Section {
+                         ForEach(model.collections) { item in
+-                            Text(item.collection.title)
++                            HStack { Text(item.collection.title); Spacer(); Text("\(item.collection.widgets.count)").foregroundStyle(.secondary) }
+                         }.onDelete { offsets in for index in offsets { model.remove(model.collections[index].address) } }
+                     }
+                 }
+diff --git a/Scripts/qa-scenes-extra.sh b/Scripts/qa-scenes-extra.sh
+index 7ee5c314..ff422216 100644
+--- a/Scripts/qa-scenes-extra.sh
++++ b/Scripts/qa-scenes-extra.sh
+@@ -24,6 +24,8 @@ case "${SCENES:-}" in
+     # Discover with no Rex module imported (no fixture, no pin): where the Rex row and its import button sit by themselves (B79).
+     shot 27e-discover-no-rex-zh 35 -qaSection discover -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     # Settings opened by a launch argument at the Cloud Drive Accounts row (automatic scroll, not a touch); the Rex import row is the next one (B79).
++    # Offline fixture imported through the real store path, no -qaRexRow pin; Discover is scrolled to the Rex row automatically (not a touch).
++    shot 27g-discover-rex-after-import-zh 40 -qaSection discover -qaRexFixture 1 -qaScroll rex -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     shot 27f-settings-rex-import-zh 25 -qaSection settings -qaScrollTo 'settings.search cloudDrive' -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+     ;;
+ esac
