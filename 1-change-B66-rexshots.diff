@@ -1,0 +1,31 @@
+diff --git a/App/DiscoverView.swift b/App/DiscoverView.swift
+index 57977be9..8a5f025e 100644
+--- a/App/DiscoverView.swift
++++ b/App/DiscoverView.swift
+@@ -120,6 +120,12 @@ struct DiscoverView: View {
+         GeometryReader { proxy in
+             let heroHeight = DiscoverLayout.heroHeight(proxy.size.width)
+             ZStack(alignment: .top) {
++                #if DEBUG && !os(tvOS)
++                // Screenshot-only (-qaRexRow 1): pins the Rex row over the page, since the row sits far below the full-height hero.
++                if UserDefaults.standard.bool(forKey: "qaRexRow") {
++                    RexShelf().padding(.top, 140).background(.black.opacity(0.75)).zIndex(5)
++                }
++                #endif
+                 if heroShown {
+                     DiscoverHeroBackground(state: heroState, items: featured, width: proxy.size.width, height: heroHeight,
+                                            active: onScreen && scenePhase == .active)
+diff --git a/Scripts/qa-scenes-extra.sh b/Scripts/qa-scenes-extra.sh
+index ca656fe1..bcbaea14 100644
+--- a/Scripts/qa-scenes-extra.sh
++++ b/Scripts/qa-scenes-extra.sh
+@@ -2,7 +2,7 @@
+ # not the web editor). Uses the workflow's own shot function. Offline fixtures only: no real network in CI.
+ case "${SCENES:-}" in
+   rex)
+-    shot 25a-rex-row 25 -qaSection discover -qaRexFixture 1
+-    shot 25b-rex-module 30 -qaSection discover -qaRexFixture 1 -qaRexOpen 1
++    shot 25a-rex-row 25 -qaSection discover -qaRexFixture 1 -qaRexRow 1
++    shot 25b-rex-module 30 -qaSection discover -qaRexFixture 1 -qaRexRow 1 -qaRexOpen 1
+     ;;
+ esac
