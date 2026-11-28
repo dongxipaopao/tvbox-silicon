@@ -651,10 +651,9 @@ final class TVNavigationUITests: XCTestCase {
         let panelAfterRight = panel.exists
         // Controls shown: wake the bar with a click, then double-click Down.
         sleep(8)
-        remote.press(.up); sleep(1)
         snap(app, "remote-shown-before-down")
         let downAt = Date().timeIntervalSince(started)
-        remote.press(.down); remote.press(.down)
+        remote.press(.down, forDuration: 3.5)
         let episode = waitFor("play l2-2")
         sleep(1)
         snap(app, "remote-shown-after-down")
@@ -700,20 +699,24 @@ final class TVNavigationUITests: XCTestCase {
         snap(app, "hold-after")
         let playsAfterHold = plays()
         let jumpsAfterHold = jumps()
+        let startsAfterHold = serverReports().filter { $0.hasPrefix("item start") }
         let panelAfterHold = panel(app).exists
         let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Getting it ready'")).firstMatch.exists
         // Down double-click is unchanged: the next episode of the new line, and no panel left open.
-        remote.press(.up); sleep(1)
-        remote.press(.down); remote.press(.down)
+        remote.press(.down, forDuration: 3.5)
         let episode = waitFor("play f2-3")
         sleep(6)
         snap(app, "hold-after-down")
         let positions = serverReports().filter { $0.hasPrefix("pos") }
-        note("afterClick=\(playsAfterClick) afterHold=\(playsAfterHold) all=\(plays()) jumpsAfterClick=\(jumpsAfterClick) jumpsAfterHold=\(jumpsAfterHold) positions=\(positions) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold) stillLoading=\(loading)")
+        note("afterClick=\(playsAfterClick) afterHold=\(playsAfterHold) all=\(plays()) starts=\(startsAfterHold) jumpsAfterClick=\(jumpsAfterClick) jumpsAfterHold=\(jumpsAfterHold) positions=\(positions) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold) stillLoading=\(loading)")
         XCTAssertFalse(playsAfterClick.contains { $0.hasPrefix("play f2") }, "A short Right click switched the line: \(playsAfterClick)")
         XCTAssertTrue(line, "Holding Right did not go to the next line: \(serverReports())")
         XCTAssertEqual(playsAfterHold.filter { $0 == "play f2-1" }.count, 1, "The hold switched more than once: \(playsAfterHold)")
         XCTAssertEqual(Set(playsAfterHold).subtracting(playsAfterClick), ["play f2-1", "play f2-2"], "Something else was asked for during the hold: \(playsAfterClick) then \(playsAfterHold)")
+        // The line switch goes on from where the first line was (about 14 s or more here), not from the start.
+        let resumedAt = startsAfterHold.last.flatMap { Int($0.replacingOccurrences(of: "item start ", with: "")) } ?? -1
+        XCTAssertEqual(startsAfterHold.count, 2, "Expected the first episode and the switched line to start: \(startsAfterHold)")
+        XCTAssertGreaterThanOrEqual(resumedAt, 10, "The new line did not go on from the old position: \(startsAfterHold)")
         XCTAssertFalse(positions.isEmpty, "The position watch reported nothing, so a missing seek proves nothing")
         XCTAssertEqual(jumpsAfterHold, jumpsAfterClick, "The playback position jumped (a seek) during the hold: \(jumpsAfterClick) then \(jumpsAfterHold)")
         XCTAssertFalse(panelAfterHold, "The info panel opened on the hold")
@@ -725,7 +728,7 @@ final class TVNavigationUITests: XCTestCase {
         app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "线路乙")).firstMatch
     }
 
-    /// Full screen, controls hidden, nothing pressed before: a double Down goes to the next episode, no Up first.
+    /// Full screen, controls hidden, nothing pressed before: holding Down for 3 s goes to the next episode once, no Up first.
     func testRemoteDoubleDownWithHiddenControls() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-rc", "-qaVideoID", "rc3", "-qaIsolatedData", "1",
@@ -740,14 +743,15 @@ final class TVNavigationUITests: XCTestCase {
         sleep(12)
         snap(app, "down2-before")
         let before = serverReports()
-        remote.press(.down); remote.press(.down)
-        for _ in 0..<15 where serverReports().filter({ $0 == "pos 0" }).count < 2 { sleep(1) }
+        remote.press(.down, forDuration: 3.5)
+        for _ in 0..<15 where serverReports().filter({ $0.hasPrefix("item start") }).count < 2 { sleep(1) }
         sleep(6)
         snap(app, "down2-after")
         let after = serverReports()
-        let restarts = after.filter { $0 == "pos 0" }.count
+        let restarts = after.filter { $0.hasPrefix("item start") }.count
         note("before=\(before) after=\(after) positionRestarts=\(restarts)")
         XCTAssertGreaterThanOrEqual(restarts, 2, "The player did not start another episode: \(after)")
+        XCTAssertEqual(after.filter { $0 == "play f1-3" }.count, 1, "The next episode was not asked for exactly once: \(after)")
         XCTAssertFalse(after.contains { $0.hasPrefix("seekjump") && !before.contains($0) }, "A seek happened: \(after)")
     }
 
@@ -763,7 +767,7 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertTrue(serverReports().contains("play l1-1"), "The episode never started: \(serverReports())")
         sleep(10)
         remote.press(.right); remote.press(.right); sleep(3)
-        remote.press(.down); remote.press(.down); sleep(6)
+        remote.press(.down, forDuration: 3.5); sleep(6)
         snap(app, "remote-single-after")
         note("single: reports=\(serverReports())")
         XCTAssertEqual(serverReports(), ["play l1-1"], "A double-click on a single episode asked for another stream")

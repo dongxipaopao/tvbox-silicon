@@ -721,24 +721,16 @@ private final class TitleSafePlayerController: AVPlayerViewController {
                                   bottom: max(0, Self.titleSafe.bottom - (given.bottom - extra.bottom)), right: max(0, Self.titleSafe.right - (given.right - extra.right)))
         if wanted != extra { additionalSafeAreaInsets = wanted }
     }
-    /// With the controls hidden, a Down press is a focus move into the hidden bar, so AVKit takes it before any gesture
-    /// recognizer sees it. The focus update is where a second Down within a short time is told apart: it goes to the next
-    /// episode instead of moving focus again. The first Down moves focus as before.
+    /// With the controls hidden, a Down press is a focus move into the hidden bar, which AVKit takes before any gesture
+    /// recognizer sees the press (QA: no recognizer fired). Holding Down is the next-episode gesture, so the move is
+    /// refused while the bar is hidden and the press goes on to the recognizers; with the bar showing it moves focus as usual.
     var barVisible: () -> Bool = { true }
-    var onDownTwice: (() -> Void)?
-    private var lastHiddenDown = Date.distantPast
     override func shouldUpdateFocus(in context: UIFocusUpdateContext) -> Bool {
         if context.focusHeading.contains(.down), !barVisible() {
-            let now = Date()
             #if DEBUG
-            qaPlayerPost("focus down hidden gap=\(Int(min(now.timeIntervalSince(lastHiddenDown), 99) * 1000))ms")
+            qaPlayerPost("focus down refused (bar hidden)")
             #endif
-            if now.timeIntervalSince(lastHiddenDown) < 0.7, let go = onDownTwice {
-                lastHiddenDown = .distantPast
-                go()
-                return false
-            }
-            lastHiddenDown = now
+            return false
         }
         return super.shouldUpdateFocus(in: context)
     }
@@ -856,6 +848,15 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         @objc private func pressedDoubleRight() { onDoubleRight?() }
         /// Holding Right for three seconds goes to the video's next line too, once per hold (an experiment beside the double-click).
         let rightHold = UILongPressGestureRecognizer()
+        /// Holding Down for three seconds goes to the next episode (the next item of the list, for a single video), once per hold.
+        let downHold = UILongPressGestureRecognizer()
+        @objc private func heldDown(_ recognizer: UILongPressGestureRecognizer) {
+            guard recognizer.state == .began else { return }
+            #if DEBUG
+            qaPlayerPost("gesture down hold handler=\(onDoubleDown != nil)")
+            #endif
+            onDoubleDown?()
+        }
         @objc private func heldRight(_ recognizer: UILongPressGestureRecognizer) { if recognizer.state == .began { onDoubleRight?() } }
         #if DEBUG
         /// QA only: reports the playback position every 10 s and any jump of it (a seek) to the QA server.
@@ -873,7 +874,7 @@ private struct NativePlayerView: UIViewControllerRepresentable {
             watch.token = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { time in
                 let seconds = time.seconds, item = watched.currentItem
                 if let last = watch.last, last.0 === item, abs(seconds - last.1) > 3 { post("seekjump \(Int(last.1)) -> \(Int(seconds))") }
-                if watch.last?.0 !== item { watch.decade = -1 }
+                if watch.last?.0 !== item { watch.decade = -1; post("item start \(Int(seconds))") }
                 watch.last = (item, seconds)
                 let decade = Int(seconds / 10)
                 if decade != watch.decade { watch.decade = decade; post("pos \(decade * 10)") }
@@ -897,6 +898,11 @@ private struct NativePlayerView: UIViewControllerRepresentable {
             rightHold.cancelsTouchesInView = false
             rightHold.delegate = self
             rightHold.addTarget(self, action: #selector(heldRight))
+            downHold.allowedPressTypes = [NSNumber(value: UIPress.PressType.downArrow.rawValue)]
+            downHold.minimumPressDuration = 3
+            downHold.cancelsTouchesInView = false
+            downHold.delegate = self
+            downHold.addTarget(self, action: #selector(heldDown))
             back.allowedPressTypes = [NSNumber(value: UIPress.PressType.menu.rawValue)]
             back.delegate = self
             back.addTarget(self, action: #selector(pressedBack))
@@ -910,7 +916,6 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         controller.player = player
         controller.delegate = context.coordinator
         controller.barVisible = { [weak coordinator = context.coordinator] in coordinator?.transportBar?.visible ?? true }
-        controller.onDownTwice = { [weak coordinator = context.coordinator] in coordinator?.onDoubleDown?() }
         context.coordinator.subtitles = subtitles
         context.coordinator.transportBar = transportBar
         let host = UIHostingController(rootView: overlay)
@@ -933,6 +938,7 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         controller.view.addGestureRecognizer(context.coordinator.down)
         controller.view.addGestureRecognizer(context.coordinator.right)
         controller.view.addGestureRecognizer(context.coordinator.rightHold)
+        controller.view.addGestureRecognizer(context.coordinator.downHold)
         #if DEBUG
         context.coordinator.watchPosition(player)
         #endif
@@ -947,7 +953,7 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         context.coordinator.host?.rootView = overlay
         context.coordinator.exit = exitWhileWaiting
         context.coordinator.onDoubleDown = doubleDown; context.coordinator.onDoubleRight = doubleRight
-        context.coordinator.down.isEnabled = doubleDown != nil; context.coordinator.right.isEnabled = doubleRight != nil; context.coordinator.rightHold.isEnabled = doubleRight != nil
+        context.coordinator.down.isEnabled = false; context.coordinator.downHold.isEnabled = doubleDown != nil; context.coordinator.right.isEnabled = doubleRight != nil; context.coordinator.rightHold.isEnabled = doubleRight != nil
         context.coordinator.back.isEnabled = exitWhileWaiting != nil
         // The episodes and the chapters are tabs in the info panel (swipe down), beside the video's own info.
         let listed = "\(chapters.map(\.start)):\(episodes?.key ?? ""):\(channels?.key ?? "")"
