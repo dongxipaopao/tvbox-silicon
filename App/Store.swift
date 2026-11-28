@@ -572,6 +572,13 @@ import TVCore
         let failed = subscriptions.filter { $0.enabled && subscriptionErrors[$0.address] != nil && !ImportedFiles.isMissing($0.address) }.count
         if failed > 0 { notice = L10n.text("%lld subscriptions could not be refreshed; their last copies stay in use.", failed) }
     }
+    /// Fetches this one subscription again, from its page; if it fails its last good copy stays and the page says why.
+    func refreshSubscription(_ entry: SubscriptionEntry) async {
+        guard !importing, subscriptions.contains(where: { $0.address == entry.address }) else { return }
+        importing = true; importError = nil; notice = nil
+        defer { importing = false }
+        await fetch([entry])
+    }
     func setSubscription(_ entry: SubscriptionEntry, enabled: Bool) async {
         guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }) else { return }
         subscriptions[index].enabled = enabled

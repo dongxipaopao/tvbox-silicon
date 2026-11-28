@@ -622,6 +622,29 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertTrue(episode, "Double Down did not go to the next episode (on the line playing): \(reports())")
     }
 
+    /// The subscription page's Refresh fetches that subscription again: the server sees its address asked for once more.
+    func testSubscriptionRefreshButtonFetchesAgain() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "settings", "-qaPage", "subscription:0", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/fo-config.json",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let refresh = app.descendants(matching: .any)["subscription.refresh"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 30), "Refresh is not on the subscription page")
+        let remote = XCUIRemote.shared
+        var presses = 0
+        while !refresh.hasFocus && presses < 15 { remote.press(.down); presses += 1; sleep(1) }
+        snap(app, "subscription-refresh-focused")
+        let before = serverCounts()["/fo-config.json"] ?? 0
+        remote.press(.select)
+        var after = before
+        for _ in 0..<20 where after <= before { sleep(1); after = serverCounts()["/fo-config.json"] ?? 0 }
+        sleep(2)
+        snap(app, "subscription-refresh-after")
+        note("focused=\(refresh.hasFocus) after \(presses) down presses; subscription address requests before=\(before) after=\(after)")
+        XCTAssertGreaterThan(after, before, "Refresh did not ask the subscription's address again")
+    }
+
     /// A dead first line falls through to the second line of the same source on its own: the fixture's first line
     /// points at a 404, so the server must see that address asked for and then the working clip, and a picture must show.
     func testDeadFirstLineSwitchesToSecondLine() throws {

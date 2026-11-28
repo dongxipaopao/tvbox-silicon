@@ -1737,6 +1737,11 @@ struct SubscriptionDetailView: View {
                 }
             }
             Section {
+                Button { Task { await store.refreshSubscription(current) } } label: {
+                    Label(store.importing ? L10n.text("Loading…") : L10n.text("Refresh"), systemImage: "arrow.clockwise")
+                }
+                .disabled(store.importing)
+                .accessibilityIdentifier("subscription.refresh")
                 Button(L10n.text("Remove"), role: .destructive) { confirmsRemoval = true }
             }
         }.settingsRows() }
@@ -2663,7 +2668,10 @@ struct TVSubscriptionPage: View {
                     if index < store.subscriptions.count - 2 { TVSettingsAction(title: L10n.text("Move to Bottom")) { store.moveSubscription(current, toTop: false) } }
                 }
             }
-            TVSettingsSection(title: L10n.text("Remove")) {
+            TVSettingsSection {
+                TVSettingsAction(title: L10n.text("Refresh"), busy: store.importing) { Task { await store.refreshSubscription(current) } }
+                    .disabled(store.importing)
+                    .accessibilityIdentifier("subscription.refresh")
                 TVSettingsAction(title: L10n.text("Remove"), destructive: true) { confirmsRemoval = true }
             }
         }
