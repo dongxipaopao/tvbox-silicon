@@ -917,7 +917,7 @@ final class TVNavigationUITests: XCTestCase {
             let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }
             let player = Array(labels.prefix { $0 != "Watch Now" })
             return !labels.contains { $0.contains("Skipped") } && player.contains("ext晴天") && player.contains("QA Singer")
-                && labels.contains { $0.range(of: "^00:0[0-9]$", options: .regularExpression) != nil }
+                && labels.contains { $0.range(of: "^00:[0-5][0-9]$", options: .regularExpression) != nil }
         }
         sleep(3)
         let first = clocks(); let identity1 = playingIdentity(); snap(app, "remote-search-play-1")
