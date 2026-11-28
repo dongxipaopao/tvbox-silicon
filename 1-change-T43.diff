@@ -1,0 +1,32 @@
+diff --git a/App/Store.swift b/App/Store.swift
+index acb8ac81..4e7c0524 100644
+--- a/App/Store.swift
++++ b/App/Store.swift
+@@ -578,6 +578,14 @@ import TVCore
+         importing = true; importError = nil; notice = nil
+         defer { importing = false }
+         await fetch([entry])
++        #if DEBUG
++        // QA only: tells the QA server what the page holds after a refresh, so a UI test can read it.
++        if let address = UserDefaults.standard.string(forKey: "qaSubscription"), var parts = URLComponents(string: address) {
++            parts.path = "/qa-report"
++            parts.queryItems = [URLQueryItem(name: "text", value: "refresh done: sites=\(documents[entry.address]?.sites.count ?? -1) error=\(subscriptionErrors[entry.address] ?? "-") listed=\(subscriptions.contains { $0.address == entry.address })")]
++            if let url = parts.url { Task.detached { _ = try? await URLSession.shared.data(from: url) } }
++        }
++        #endif
+     }
+     func setSubscription(_ entry: SubscriptionEntry, enabled: Bool) async {
+         guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }) else { return }
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index 10f194f1..295874d2 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -714,7 +714,7 @@ final class TVNavigationUITests: XCTestCase {
+         sleep(2)
+         snap(app, "refresh-fail-after")
+         let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }.filter { $0.contains("Sources:") || $0.contains("refresh") }
+-        note("requests before=\(before) after=\(after); page texts=\(labels)")
++        note("requests before=\(before) after=\(after); page texts=\(labels); reports=\(serverReports())")
+         XCTAssertGreaterThan(after, before, "Refresh did not ask the subscription's address again")
+         XCTAssertTrue(labels.contains { $0.contains("Couldn't refresh") }, "The page did not say the refresh failed: \(labels)")
+         XCTAssertTrue(labels.contains { $0.contains("Sources: 1") }, "The failed refresh dropped the Sources the subscription held: \(labels)")
