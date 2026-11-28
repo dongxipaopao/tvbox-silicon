@@ -1,0 +1,35 @@
+diff --git a/Sources/TVCore/MusicResolution.swift b/Sources/TVCore/MusicResolution.swift
+index a2b2feba..dd62c1f9 100644
+--- a/Sources/TVCore/MusicResolution.swift
++++ b/Sources/TVCore/MusicResolution.swift
+@@ -536,6 +536,13 @@ public struct MusicResolver: Sendable {
+             let failure = MusicProviderError(error)
+             if failure != .cancelled { await health.record(key, error: failure) }
+             Diagnostics.shared.record(.info, "music", "\(candidate.provider.rawValue) \(candidate.platform.rawValue) failed: \(failure.detail)")
++            #if DEBUG
++            // QA only: tells the QA server (the `-qaMusicExtension` address) why a candidate failed, so a UI test can read it.
++            if candidate.provider == .extension, let address = UserDefaults.standard.string(forKey: "qaMusicExtension"), var parts = URLComponents(string: address) {
++                parts.path = "/qa-report"; parts.queryItems = [URLQueryItem(name: "text", value: "ext candidate failed: " + String(failure.detail.prefix(300)))]
++                if let url = parts.url { _ = try? await URLSession.shared.data(from: url) }
++            }
++            #endif
+             return (candidate, .failure(failure), Date().timeIntervalSince(start))
+         }
+     }
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index 8bf93f59..3818b103 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -880,8 +880,11 @@ final class TVNavigationUITests: XCTestCase {
+         func playingIdentity() -> Bool {
+             // The results list stays in the tree behind the player, so its labels prove nothing; what a failed song shows is
+             // a "Skipped" notice, and a different song moving on shows a different elapsed clock only the pixel can name.
++            // The player's own labels come before the sidebar's ("Watch Now"): the song it shows must be the extension's.
+             let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }
+-            return !labels.contains { $0.contains("Skipped") } && labels.contains { $0.range(of: "^00:0[0-9]$", options: .regularExpression) != nil }
++            let player = Array(labels.prefix { $0 != "Watch Now" })
++            return !labels.contains { $0.contains("Skipped") } && player.contains("ext晴天") && player.contains("QA Singer")
++                && labels.contains { $0.range(of: "^00:0[0-9]$", options: .regularExpression) != nil }
+         }
+         sleep(3)
+         let first = clocks(); let identity1 = playingIdentity(); snap(app, "remote-search-play-1")
