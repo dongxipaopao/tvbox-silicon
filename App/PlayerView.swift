@@ -819,6 +819,10 @@ private struct NativePlayerView: UIViewControllerRepresentable {
             for (recognizer, type, action) in [(down, UIPress.PressType.downArrow, #selector(pressedDoubleDown)), (right, .rightArrow, #selector(pressedDoubleRight))] {
                 recognizer.allowedPressTypes = [NSNumber(value: type.rawValue)]
                 recognizer.numberOfTapsRequired = 2
+                // The first click waits out the double-click window, and is dropped when the second one comes: it must not
+                // also open the info panel or skip ahead. A single click is delivered after the window, as before.
+                recognizer.delaysTouchesBegan = true
+                recognizer.cancelsTouchesInView = true
                 recognizer.delegate = self
                 recognizer.addTarget(self, action: action)
             }
