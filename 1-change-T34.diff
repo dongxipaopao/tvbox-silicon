@@ -1,0 +1,12 @@
+diff --git a/App/MusicView.swift b/App/MusicView.swift
+index 4b074c53..71a02c08 100644
+--- a/App/MusicView.swift
++++ b/App/MusicView.swift
+@@ -55,6 +55,7 @@ struct MusicView: View {
+             }
+             .glassRowInsets()
+             .pageContainer()
++            .tvFocusSection()
+         }
+         #if os(tvOS)
+         .focusScope(focusScope)
