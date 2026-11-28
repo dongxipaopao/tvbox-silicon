@@ -1,0 +1,26 @@
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index fc4f75f2..910214c6 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -826,7 +826,20 @@ final class TVNavigationUITests: XCTestCase {
+         let afterRight = focusedNow.exists ? "id=\(focusedNow.identifier) label=\(focusedNow.label)" : "none"
+         remote.press(.left); sleep(1)
+         let afterLeft = focusedNow.exists ? "id=\(focusedNow.identifier) label=\(focusedNow.label)" : "none"
+-        while !focusedRow.exists && moves < 30 { remote.press(.down); moves += 1; sleep(1) }
++        var trail: [String] = []
++        func where_() -> String { focusedNow.exists ? "\(focusedNow.identifier)|\(focusedNow.label)" : "none" }
++        while !focusedRow.exists && moves < 30 {
++            remote.press(.down); moves += 1; sleep(1)
++            if moves <= 6 { trail.append(where_()) }
++            // Stuck on the search button: try the other ways out a listener has (Up, then Down again; Right then Left).
++            if moves == 6 && !focusedRow.exists {
++                remote.press(.up); sleep(1); trail.append("up:" + where_())
++                remote.press(.down); sleep(1); trail.append("down2:" + where_())
++                remote.press(.right); sleep(1); trail.append("right:" + where_())
++                remote.press(.down); sleep(1); trail.append("down3:" + where_())
++            }
++        }
++        note("focus trail: \(trail)")
+         let focusedLabel = focusedRow.exists ? focusedRow.label : "none"
+         snap(app, "remote-search-row-focused")
+         let before = serverCounts()["/clip.mp4"] ?? 0
