@@ -880,6 +880,7 @@ private struct NativePlayerView: UIViewControllerRepresentable {
                     // Which stream this is: the fixture's own play id, carried in its address as `ep` (QA streams only).
                     let ep = ((item?.asset as? AVURLAsset)?.url).flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "ep" }?.value } ?? "-"
                     post("item ep \(ep)")
+                    if ep == "-" { post("item asset \(((item?.asset as? AVURLAsset)?.url.path ?? "none").suffix(40)) \(item?.asset.isKind(of: AVURLAsset.self) == true ? "url" : String(describing: type(of: item?.asset as Any)))") }
                     if let last = watch.last { post("item switch \(Int(last.1)) -> \(Int(seconds))") }
                 }
                 watch.last = (item, seconds)
