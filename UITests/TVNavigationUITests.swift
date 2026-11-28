@@ -880,8 +880,11 @@ final class TVNavigationUITests: XCTestCase {
         func playingIdentity() -> Bool {
             // The results list stays in the tree behind the player, so its labels prove nothing; what a failed song shows is
             // a "Skipped" notice, and a different song moving on shows a different elapsed clock only the pixel can name.
+            // The player's own labels come before the sidebar's ("Watch Now"): the song it shows must be the extension's.
             let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }
-            return !labels.contains { $0.contains("Skipped") } && labels.contains { $0.range(of: "^00:0[0-9]$", options: .regularExpression) != nil }
+            let player = Array(labels.prefix { $0 != "Watch Now" })
+            return !labels.contains { $0.contains("Skipped") } && player.contains("ext晴天") && player.contains("QA Singer")
+                && labels.contains { $0.range(of: "^00:0[0-9]$", options: .regularExpression) != nil }
         }
         sleep(3)
         let first = clocks(); let identity1 = playingIdentity(); snap(app, "remote-search-play-1")

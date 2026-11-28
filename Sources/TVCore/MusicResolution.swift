@@ -536,6 +536,13 @@ public struct MusicResolver: Sendable {
             let failure = MusicProviderError(error)
             if failure != .cancelled { await health.record(key, error: failure) }
             Diagnostics.shared.record(.info, "music", "\(candidate.provider.rawValue) \(candidate.platform.rawValue) failed: \(failure.detail)")
+            #if DEBUG
+            // QA only: tells the QA server (the `-qaMusicExtension` address) why a candidate failed, so a UI test can read it.
+            if candidate.provider == .extension, let address = UserDefaults.standard.string(forKey: "qaMusicExtension"), var parts = URLComponents(string: address) {
+                parts.path = "/qa-report"; parts.queryItems = [URLQueryItem(name: "text", value: "ext candidate failed: " + String(failure.detail.prefix(300)))]
+                if let url = parts.url { _ = try? await URLSession.shared.data(from: url) }
+            }
+            #endif
             return (candidate, .failure(failure), Date().timeIntervalSince(start))
         }
     }
