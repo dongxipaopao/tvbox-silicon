@@ -1,0 +1,41 @@
+diff --git a/App/PlayerView.swift b/App/PlayerView.swift
+index 748c1688..ae0914aa 100644
+--- a/App/PlayerView.swift
++++ b/App/PlayerView.swift
+@@ -721,6 +721,27 @@ private final class TitleSafePlayerController: AVPlayerViewController {
+                                   bottom: max(0, Self.titleSafe.bottom - (given.bottom - extra.bottom)), right: max(0, Self.titleSafe.right - (given.right - extra.right)))
+         if wanted != extra { additionalSafeAreaInsets = wanted }
+     }
++    /// With the controls hidden, a Down press is a focus move into the hidden bar, so AVKit takes it before any gesture
++    /// recognizer sees it. The focus update is where a second Down within a short time is told apart: it goes to the next
++    /// episode instead of moving focus again. The first Down moves focus as before.
++    var barVisible: () -> Bool = { true }
++    var onDownTwice: (() -> Void)?
++    private var lastHiddenDown = Date.distantPast
++    override func shouldUpdateFocus(in context: UIFocusUpdateContext) -> Bool {
++        if context.focusHeading.contains(.down), !barVisible() {
++            let now = Date()
++            #if DEBUG
++            qaPlayerPost("focus down hidden gap=\(Int(min(now.timeIntervalSince(lastHiddenDown), 99) * 1000))ms")
++            #endif
++            if now.timeIntervalSince(lastHiddenDown) < 0.7, let go = onDownTwice {
++                lastHiddenDown = .distantPast
++                go()
++                return false
++            }
++            lastHiddenDown = now
++        }
++        return super.shouldUpdateFocus(in: context)
++    }
+     #if DEBUG
+     override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+         for press in presses where press.type == .downArrow || press.type == .rightArrow { qaPlayerPost("press \(press.type == .downArrow ? "down" : "right") began") }
+@@ -888,6 +909,8 @@ private struct NativePlayerView: UIViewControllerRepresentable {
+         let controller = TitleSafePlayerController()
+         controller.player = player
+         controller.delegate = context.coordinator
++        controller.barVisible = { [weak coordinator = context.coordinator] in coordinator?.transportBar?.visible ?? true }
++        controller.onDownTwice = { [weak coordinator = context.coordinator] in coordinator?.onDoubleDown?() }
+         context.coordinator.subtitles = subtitles
+         context.coordinator.transportBar = transportBar
+         let host = UIHostingController(rootView: overlay)
