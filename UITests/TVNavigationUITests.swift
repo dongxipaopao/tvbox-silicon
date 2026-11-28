@@ -796,13 +796,13 @@ final class TVNavigationUITests: XCTestCase {
         _ = hit.waitForExistence(timeout: 60)
         snap(app, "music-extension-hit-listed")
         var waited = 0
-        while (serverCounts()["/clip.mp4"] ?? 0) == 0 && waited < 60 { sleep(1); waited += 1 }
+        while (serverCounts()["/tone.wav"] ?? 0) == 0 && waited < 60 { sleep(1); waited += 1 }
         sleep(3)
         snap(app, "music-extension-search-play")
         let counts = serverCounts()
-        note("song title shown=\(hit.exists); clip requests=\(counts["/clip.mp4"] ?? 0) after \(waited)s; reports=\(serverReports())")
+        note("song title shown=\(hit.exists); clip requests=\(counts["/tone.wav"] ?? 0) after \(waited)s; reports=\(serverReports())")
         XCTAssertTrue(hit.exists, "The extension's song is not shown")
-        XCTAssertGreaterThan(counts["/clip.mp4"] ?? 0, 0, "The extension's stream was never asked for: \(counts)")
+        XCTAssertGreaterThan(counts["/tone.wav"] ?? 0, 0, "The extension's stream was never asked for: \(counts)")
     }
 
     /// The same search, but the song is chosen with the remote like a listener would (no auto play, no renamed shortcut):
@@ -842,20 +842,27 @@ final class TVNavigationUITests: XCTestCase {
         note("focus trail: \(trail)")
         let focusedLabel = focusedRow.exists ? focusedRow.label : "none"
         snap(app, "remote-search-row-focused")
-        let before = serverCounts()["/clip.mp4"] ?? 0
+        let before = serverCounts()["/tone.wav"] ?? 0
         remote.press(.select)
         var waited = 0
-        while (serverCounts()["/clip.mp4"] ?? 0) <= before && waited < 40 { sleep(1); waited += 1 }
+        while (serverCounts()["/tone.wav"] ?? 0) <= before && waited < 40 { sleep(1); waited += 1 }
         func clocks() -> [String] {
             app.staticTexts.allElementsBoundByIndex.map { $0.label }.filter { $0.range(of: "^[0-9]+:[0-9][0-9]$", options: .regularExpression) != nil }
         }
+        func playingIdentity() -> Bool {
+            let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }
+            return labels.contains("ext晴天") && labels.contains("QA Singer")
+        }
         sleep(3)
-        let first = clocks(); snap(app, "remote-search-play-1")
+        let first = clocks(); let identity1 = playingIdentity(); snap(app, "remote-search-play-1")
         sleep(6)
-        let second = clocks(); snap(app, "remote-search-play-2")
-        note("focus after Right: \(afterRight); after Left: \(afterLeft); focused row=\(focusedLabel) after \(moves) down presses; clip requests before=\(before) after=\(serverCounts()["/clip.mp4"] ?? 0) (\(waited)s); clocks first=\(first) second=\(second); reports=\(serverReports())")
-        XCTAssertTrue(focusedRow.exists, "The extension's row never took focus")
-        XCTAssertGreaterThan(serverCounts()["/clip.mp4"] ?? 0, before, "Selecting the extension's song did not ask for its stream")
+        let second = clocks(); let identity2 = playingIdentity(); snap(app, "remote-search-play-2")
+        note("focus after Right: \(afterRight); after Left: \(afterLeft); focused row=\(focusedLabel) after \(moves) down presses; clip requests before=\(before) after=\(serverCounts()["/tone.wav"] ?? 0) (\(waited)s); clocks first=\(first) second=\(second); identity=\(identity1)/\(identity2); reports=\(serverReports())")
+        // Focus is read before Select (the row is gone once the player opens), identity of the playing track is read twice.
+        XCTAssertTrue(focusedLabel.contains("QA Singer"), "The extension's row never took focus: \(focusedLabel)")
+        XCTAssertGreaterThan(serverCounts()["/tone.wav"] ?? 0, before, "Selecting the extension's song did not ask for its stream")
+        XCTAssertTrue(identity1, "Now playing is not ext晴天 / QA Singer at the first shot")
+        XCTAssertTrue(identity2, "Now playing is not ext晴天 / QA Singer at the second shot (the queue moved on?)")
         XCTAssertNotEqual(first, second, "The player's clock did not move: \(first) then \(second)")
     }
 

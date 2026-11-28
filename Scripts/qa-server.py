@@ -2,6 +2,8 @@
 """Deterministic local API/playlists/media for manual app QA; binds only to loopback."""
 import argparse
 import json
+import math
+import struct
 import pathlib
 import re
 import threading
@@ -142,7 +144,7 @@ async function search(ext) {
   if (type === 'song') return jsonify({ list: [song(7, text)] })
   return jsonify({ list: [] })
 }
-async function getSongInfo(ext) { return jsonify({ urls: ['BASE/clip.mp4'] }) }
+async function getSongInfo(ext) { return jsonify({ urls: ['BASE/tone.wav'] }) }
 """.replace('BASE', base), mime='application/javascript')
         if path == '/empty-config.json': return self.send({'sites': [], 'lives': [{'name':'测试频道','url':base+'/live.m3u'}]})
         # A source whose video details never arrive, for Back while a page is still loading.
@@ -188,6 +190,23 @@ async function getSongInfo(ext) { return jsonify({ urls: ['BASE/clip.mp4'] }) }
                     self.wfile.write(stream.read(65536)); self.wfile.flush()
                 time.sleep(600)
             except (BrokenPipeError,ConnectionResetError): pass
+            return
+        # An audio-only stream for the music extension: 30 s of 440 Hz, 16-bit mono WAV, with Range support.
+        if path == '/tone.wav':
+            rate=22050; frames=rate*30
+            data=b''.join(struct.pack('<h',int(8000*math.sin(2*math.pi*440*i/rate))) for i in range(frames))
+            body=b'RIFF'+struct.pack('<I',36+len(data))+b'WAVEfmt '+struct.pack('<IHHIIHH',16,1,1,rate,rate*2,2,16)+b'data'+struct.pack('<I',len(data))+data
+            size=len(body)
+            match=re.match(r'bytes=(\d+)-(\d*)',self.headers.get('Range',''))
+            start=int(match[1]) if match else 0
+            end=min(int(match[2]) if match and match[2] else size-1,size-1)
+            self.send_response(206 if match else 200)
+            self.send_header('Content-Type','audio/wav');self.send_header('Accept-Ranges','bytes')
+            self.send_header('Content-Length',str(end-start+1))
+            if match:self.send_header('Content-Range',f'bytes {start}-{end}/{size}')
+            self.end_headers()
+            try:self.wfile.write(body[start:end+1])
+            except (BrokenPipeError,ConnectionResetError):pass
             return
         if path in ['/clip.mp4','/slow.mp4','/portrait.mp4','/tone.mp4']:
             media = args.media if path in ['/clip.mp4','/slow.mp4'] else args.media.with_name(path.lstrip('/'))
