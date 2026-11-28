@@ -592,6 +592,36 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertFalse(panel.exists, "The Episodes tab stayed open after choosing an episode")
     }
 
+    /// Double-click on the remote while the full-screen player plays: Right goes to the video's next line (same episode),
+    /// Down to the next episode. The server's reports name each stream asked for.
+    func testRemoteDoubleClicks() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-rc", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/rc-config.json", "-autoPlayNextEpisode", "NO",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let remote = XCUIRemote.shared
+        func reports() -> [String] { serverReports() }
+        func waitFor(_ text: String, _ seconds: Int = 25) -> Bool {
+            for _ in 0..<seconds { if reports().contains(text) { return true }; sleep(1) }
+            return reports().contains(text)
+        }
+        XCTAssertTrue(waitFor("play l1-1", 40), "The first episode never started: \(reports())")
+        sleep(6)
+        snap(app, "remote-before")
+        remote.press(.right); remote.press(.right)
+        let line = waitFor("play l2-1")
+        sleep(4)
+        snap(app, "remote-after-double-right")
+        remote.press(.down); remote.press(.down)
+        let episode = waitFor("play l2-2")
+        sleep(4)
+        snap(app, "remote-after-double-down")
+        note("reports=\(reports()) nextLine=\(line) nextEpisode=\(episode)")
+        XCTAssertTrue(line, "Double Right did not go to the next line: \(reports())")
+        XCTAssertTrue(episode, "Double Down did not go to the next episode (on the line playing): \(reports())")
+    }
+
     /// A dead first line falls through to the second line of the same source on its own: the fixture's first line
     /// points at a 404, so the server must see that address asked for and then the working clip, and a picture must show.
     func testDeadFirstLineSwitchesToSecondLine() throws {
@@ -675,6 +705,10 @@ final class TVNavigationUITests: XCTestCase {
         var presses = 0
         _ = shelf.waitForExistence(timeout: 45)
         while !shelf.exists && presses < 14 { remote.press(.down); presses += 1; sleep(1) }
+        // The shelf can exist below the fold: bring it into view for the pixel.
+        var scrolls = 0
+        while shelf.exists && !(shelf.frame.minY >= 0 && shelf.frame.maxY <= app.frame.maxY) && scrolls < 20 { remote.press(.down); scrolls += 1; sleep(1) }
+        snap(app, "music-extension-shelf-visible")
         snap(app, "music-extension-shelf-after-down")
         var ups = 0
         while !shelf.exists && ups < 16 { remote.press(.up); ups += 1; sleep(1) }

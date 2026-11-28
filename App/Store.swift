@@ -106,6 +106,25 @@ import TVCore
         }
         return true
     }
+    /// The viewer's own switch to the video's next line (double-click Right on Apple TV): the same episode on the next
+    /// line that has it for sure (`SourceFailover.place`), wrapping round to the first. False when there is no other line.
+    @discardableResult func switchToNextLine(from channel: Channel) -> Bool {
+        guard playing == channel, resolvingEpisode == nil, let context = channel.historyContext, let catalog = catalog(for: channel),
+              let episode = catalog.video.episodes.first(where: { $0.id == context.episodeID }) else { return false }
+        var flags: [String] = []
+        for other in catalog.video.episodes where !flags.contains(other.flag) { flags.append(other.flag) }
+        guard let at = flags.firstIndex(of: episode.flag), flags.count > 1 else { return false }
+        let current = catalog.video.episodes.filter { $0.flag == episode.flag }
+        for step in 1..<flags.count {
+            let flag = flags[(at + step) % flags.count]
+            let list = catalog.video.episodes.filter { $0.flag == flag }
+            guard let place = SourceFailover.place(current: episode.name, currentCount: current.count, other: list.map(\.name)) else { continue }
+            Diagnostics.shared.record(.info, "catalog", "line by remote: \(episode.flag) -> \(flag)")
+            selectEpisode(list[place], from: channel)
+            return true
+        }
+        return false
+    }
     /// Lines (flags) of a video already tried for an episode by an automatic line switch, with when: a later,
     /// unrelated failure of the same episode starts over after a few minutes.
     @ObservationIgnored private var triedLines: [String: (flags: Set<String>, last: String, at: Date)] = [:]

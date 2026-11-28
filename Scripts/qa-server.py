@@ -81,6 +81,16 @@ class Spider(Spider):
     def playerContent(self, flag, id, vipFlags):
         return {'parse': 0, 'url': id}
 """,mime='text/x-python')
+        # Remote double-click: two lines of three episodes; line one plays clip.mp4, line two slow.mp4. Each play is reported.
+        if path == '/rc-config.json': return self.send({'sites': [{'key':'qa-rc','name':'遥控切换 / Remote','type':4,'api':base+'/rc'}], 'lives': []})
+        if path == '/rc':
+            if 'play' in q:
+                reports.append('play ' + q['play'])
+                return self.send({'parse':0,'url':base+('/slow.mp4' if q['play'].startswith('l2') else '/clip.mp4')+'?ep='+q['play']})
+            if 'ids' in q:
+                return self.send({'list':[{'vod_id':q['ids'],'vod_name':'遥控测试影片','vod_pic':base+'/poster.png','vod_play_from':'线路甲$$$线路乙',
+                    'vod_play_url':'#'.join(f'第{i}集$l1-{i}' for i in (1,2,3))+'$$$'+'#'.join(f'第{i}集$l2-{i}' for i in (1,2,3))}]})
+            return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'rc1','vod_name':'遥控测试影片','vod_pic':base+'/poster.png'}]})
         # Same-source line failover: line one's only episode points at a dead address, line two's plays.
         if path == '/fo-config.json': return self.send({'sites': [{'key':'qa-fo','name':'线路切换 / Lines','type':4,'api':base+'/fo'}], 'lives': []})
         # Line two has two entries of episode 1: the same episode can't be told for sure, so nothing may switch.

@@ -84,7 +84,10 @@ struct PlaybackView: View {
                                  chapters: session.chapters,
                                  exitWhileWaiting: session.showsPicture ? nil : { dismiss() }, episodes: episodeChoices, channels: channelChoices,
                                  lines: session.lines.indices.map { L10n.text("Line %@", "\($0 + 1)") }, line: session.line,
-                                 chooseLine: { session.choose(line: $0) }, transportBar: transportBar,
+                                 chooseLine: { session.choose(line: $0) },
+                                 doubleDown: store.step(back: false, from: channel, session: session).map { step in { step.go() } },
+                                 doubleRight: store.catalog(for: channel).map { _ in { [channel] in store.switchToNextLine(from: channel) } },
+                                 transportBar: transportBar,
                                  titleRow: AnyView(TVPlayerTitleRow(channel: channel, session: session, transportBar: transportBar).environment(store))).ignoresSafeArea()
                     .onAppear { playbackSpeed = session.player.defaultRate }
             }
@@ -787,6 +790,9 @@ private struct NativePlayerView: UIViewControllerRepresentable {
     var lines: [String] = []
     var line = 0
     var chooseLine: @MainActor (Int) -> Void = { _ in }
+    /// Double-click Down and Right on the remote: the next episode, and the video's next line.
+    var doubleDown: (@MainActor () -> Void)? = nil
+    var doubleRight: (@MainActor () -> Void)? = nil
     /// Told when AVKit shows or hides the transport bar, for `titleRow`.
     var transportBar: TransportBarVisibility? = nil
     /// The title's logo and the video's tags, over the transport bar while it shows (#758).
@@ -804,8 +810,18 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         func playerViewControllerWillStartPictureInPicture(_ controller: AVPlayerViewController) { subtitles?.native = true }
         func playerViewControllerDidStopPictureInPicture(_ controller: AVPlayerViewController) { subtitles?.native = false }
         let back = UITapGestureRecognizer()
+        let down = UITapGestureRecognizer(), right = UITapGestureRecognizer()
+        var onDoubleDown: (@MainActor () -> Void)?, onDoubleRight: (@MainActor () -> Void)?
+        @objc private func pressedDoubleDown() { onDoubleDown?() }
+        @objc private func pressedDoubleRight() { onDoubleRight?() }
         override init() {
             super.init()
+            for (recognizer, type, action) in [(down, UIPress.PressType.downArrow, #selector(pressedDoubleDown)), (right, .rightArrow, #selector(pressedDoubleRight))] {
+                recognizer.allowedPressTypes = [NSNumber(value: type.rawValue)]
+                recognizer.numberOfTapsRequired = 2
+                recognizer.delegate = self
+                recognizer.addTarget(self, action: action)
+            }
             back.allowedPressTypes = [NSNumber(value: UIPress.PressType.menu.rawValue)]
             back.delegate = self
             back.addTarget(self, action: #selector(pressedBack))
@@ -837,6 +853,8 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         }
         context.coordinator.host = host
         controller.view.addGestureRecognizer(context.coordinator.back)
+        controller.view.addGestureRecognizer(context.coordinator.down)
+        controller.view.addGestureRecognizer(context.coordinator.right)
         return controller
     }
     func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {
@@ -847,6 +865,8 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         if controller.videoGravity != gravity { controller.videoGravity = gravity }
         context.coordinator.host?.rootView = overlay
         context.coordinator.exit = exitWhileWaiting
+        context.coordinator.onDoubleDown = doubleDown; context.coordinator.onDoubleRight = doubleRight
+        context.coordinator.down.isEnabled = doubleDown != nil; context.coordinator.right.isEnabled = doubleRight != nil
         context.coordinator.back.isEnabled = exitWhileWaiting != nil
         // The episodes and the chapters are tabs in the info panel (swipe down), beside the video's own info.
         let listed = "\(chapters.map(\.start)):\(episodes?.key ?? ""):\(channels?.key ?? "")"
