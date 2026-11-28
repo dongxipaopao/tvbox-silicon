@@ -1299,6 +1299,105 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertNotEqual(app.buttons["site.switcher"].value as? String ?? "", before, "The page did not switch to the chosen source")
     }
 
+    /// With two subscriptions, the switcher's chips choose the subscription; its sources list changes; picking one switches the page.
+    func testSourceSwitcherSwitchesAcrossSubscriptions() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "sites", "-qaPage", "site:qa-standard", "-qaSubscription", "http://127.0.0.1:8776/config.json",
+                          "-qaSubscriptionExtra", "http://127.0.0.1:8776/stall-config.json"])
+        XCTAssertTrue(shown("测试影片 01", in: app).waitForExistence(timeout: 60), "The source page did not load")
+        let switcher = app.buttons["site.switcher"]
+        XCTAssertTrue(switcher.waitForExistence(timeout: 10), "The source page has no switcher")
+        let remote = XCUIRemote.shared
+        enterContent(app)
+        trace(app, switcher, "source page")
+        XCTAssertTrue(switcher.hasFocus, "The remote did not reach the source name button")
+        let before = switcher.value as? String ?? ""
+        remote.press(.select); sleep(2)
+        let chips = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'site.switch.group.'"))
+        note("chips=\(chips.count) before=\(before)")
+        snap(app, "cross-open")
+        XCTAssertGreaterThanOrEqual(chips.count, 2, "The switcher shows fewer than two subscription chips")
+        XCTAssertFalse(app.buttons["site.switch.row.qa-stall"].exists, "The second subscription's source is listed before choosing its chip")
+        var ups = 0
+        while chips.matching(NSPredicate(format: "hasFocus == true")).count == 0 && ups < 8 { remote.press(.up); ups += 1; sleep(1) }
+        XCTAssertEqual(chips.matching(NSPredicate(format: "hasFocus == true")).count, 1, "Focus never reached the chips: \(focusInfo(app))")
+        for _ in 0..<3 where !app.buttons["site.switch.row.qa-stall"].exists {
+            remote.press(.right); sleep(1); remote.press(.select); sleep(2)
+        }
+        snap(app, "cross-second-subscription")
+        XCTAssertTrue(app.buttons["site.switch.row.qa-stall"].exists, "Choosing the second chip did not list its sources")
+        XCTAssertFalse(app.buttons["site.switch.row.qa-standard"].exists, "The first subscription's source is still listed")
+        let target = app.buttons["site.switch.row.qa-stall"]
+        var downs = 0
+        while !target.hasFocus && downs < 8 { remote.press(.down); downs += 1; sleep(1) }
+        XCTAssertTrue(target.hasFocus, "Focus did not reach the second subscription's source: \(focusInfo(app))")
+        remote.press(.select); sleep(5)
+        snap(app, "cross-after-switch")
+        let after = switcher.value as? String ?? ""
+        note("switcher now \(after)")
+        XCTAssertTrue(after.contains("详情卡住"), "The page did not switch to the second subscription's source: \(after)")
+    }
+
+    private func focusRow(_ element: XCUIElement, _ remote: XCUIRemote, limit: Int = 16) {
+        var presses = 0
+        while !element.hasFocus && presses < limit { remote.press(.down); presses += 1; sleep(1) }
+    }
+
+    /// The extension's shelf opens its playlist, which lists the extension's song.
+    func testMusicExtensionShelfOpensPlaylistDetail() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js"])
+        let remote = XCUIRemote.shared
+        let card = shown("Chart One", in: app)
+        XCTAssertTrue(card.waitForExistence(timeout: 60), "The extension's playlist card is not on the Music page")
+        remote.press(.right); sleep(1)
+        focusRow(card, remote, limit: 24)
+        snap(app, "ext-shelf-card-focus")
+        XCTAssertTrue(card.hasFocus, "The playlist card never took focus: \(focusInfo(app))")
+        remote.press(.select); sleep(4)
+        snap(app, "ext-playlist-detail")
+        XCTAssertTrue(shown("Chart Song One", in: app).waitForExistence(timeout: 20), "The playlist detail does not list the extension's song")
+    }
+
+    /// Turning the extension off in Music Settings removes its shelf from the Music page without a restart.
+    func testMusicExtensionToggleOffRemovesShelf() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1"])
+        XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
+        let remote = XCUIRemote.shared
+        sleep(3)
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'QA Fake FM' AND NOT label BEGINSWITH 'Remove'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 20), "The extension is not listed in Music Settings")
+        focusRow(row, remote)
+        XCTAssertTrue(row.hasFocus, "The extension row never took focus: \(focusInfo(app))")
+        snap(app, "toggle-before")
+        remote.press(.select); sleep(2)
+        snap(app, "toggle-after")
+        note("row after toggle: label=\(row.label) value=\(String(describing: row.value))")
+        remote.press(.menu); sleep(4)
+        snap(app, "toggle-music-page")
+        XCTAssertFalse(shown("测试榜单", in: app).exists, "The extension's shelf is still on the Music page after turning it off")
+    }
+
+    /// Removing the extension in Music Settings takes it out of the list and off the Music page.
+    func testMusicExtensionRemoveDropsShelf() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1"])
+        XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
+        let remote = XCUIRemote.shared
+        sleep(3)
+        let remove = shown("Remove “QA Fake FM”", in: app)
+        XCTAssertTrue(remove.waitForExistence(timeout: 20), "No Remove row for the extension")
+        focusRow(remove, remote)
+        XCTAssertTrue(remove.hasFocus, "The Remove row never took focus: \(focusInfo(app))")
+        remote.press(.select); sleep(2)
+        snap(app, "remove-after")
+        XCTAssertFalse(shown("QA Fake FM", in: app).exists, "The extension is still listed after Remove")
+        remote.press(.menu); sleep(4)
+        snap(app, "remove-music-page")
+        XCTAssertFalse(shown("测试榜单", in: app).exists, "The extension's shelf is still on the Music page after removing it")
+    }
+
     /// Poster titles are part of their card's label, so look for the text anywhere in a label.
     private func shown(_ text: String, in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
