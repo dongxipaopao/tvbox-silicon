@@ -1,0 +1,102 @@
+diff --git a/Scripts/qa-server.py b/Scripts/qa-server.py
+index 21919cd3..dc6fb0ba 100644
+--- a/Scripts/qa-server.py
++++ b/Scripts/qa-server.py
+@@ -2,6 +2,8 @@
+ """Deterministic local API/playlists/media for manual app QA; binds only to loopback."""
+ import argparse
+ import json
++import math
++import struct
+ import pathlib
+ import re
+ import threading
+@@ -142,7 +144,7 @@ async function search(ext) {
+   if (type === 'song') return jsonify({ list: [song(7, text)] })
+   return jsonify({ list: [] })
+ }
+-async function getSongInfo(ext) { return jsonify({ urls: ['BASE/clip.mp4'] }) }
++async function getSongInfo(ext) { return jsonify({ urls: ['BASE/tone.wav'] }) }
+ """.replace('BASE', base), mime='application/javascript')
+         if path == '/empty-config.json': return self.send({'sites': [], 'lives': [{'name':'测试频道','url':base+'/live.m3u'}]})
+         # A source whose video details never arrive, for Back while a page is still loading.
+@@ -189,6 +191,23 @@ async function getSongInfo(ext) { return jsonify({ urls: ['BASE/clip.mp4'] }) }
+                 time.sleep(600)
+             except (BrokenPipeError,ConnectionResetError): pass
+             return
++        # An audio-only stream for the music extension: 30 s of 440 Hz, 16-bit mono WAV, with Range support.
++        if path == '/tone.wav':
++            rate=22050; frames=rate*30
++            data=b''.join(struct.pack('<h',int(8000*math.sin(2*math.pi*440*i/rate))) for i in range(frames))
++            body=b'RIFF'+struct.pack('<I',36+len(data))+b'WAVEfmt '+struct.pack('<IHHIIHH',16,1,1,rate,rate*2,2,16)+b'data'+struct.pack('<I',len(data))+data
++            size=len(body)
++            match=re.match(r'bytes=(\d+)-(\d*)',self.headers.get('Range',''))
++            start=int(match[1]) if match else 0
++            end=min(int(match[2]) if match and match[2] else size-1,size-1)
++            self.send_response(206 if match else 200)
++            self.send_header('Content-Type','audio/wav');self.send_header('Accept-Ranges','bytes')
++            self.send_header('Content-Length',str(end-start+1))
++            if match:self.send_header('Content-Range',f'bytes {start}-{end}/{size}')
++            self.end_headers()
++            try:self.wfile.write(body[start:end+1])
++            except (BrokenPipeError,ConnectionResetError):pass
++            return
+         if path in ['/clip.mp4','/slow.mp4','/portrait.mp4','/tone.mp4']:
+             media = args.media if path in ['/clip.mp4','/slow.mp4'] else args.media.with_name(path.lstrip('/'))
+             if not media.exists(): return self.send('Generate clip with Scripts/test-player.sh first',404,'text/plain')
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index 910214c6..8df25871 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -796,13 +796,13 @@ final class TVNavigationUITests: XCTestCase {
+         _ = hit.waitForExistence(timeout: 60)
+         snap(app, "music-extension-hit-listed")
+         var waited = 0
+-        while (serverCounts()["/clip.mp4"] ?? 0) == 0 && waited < 60 { sleep(1); waited += 1 }
++        while (serverCounts()["/tone.wav"] ?? 0) == 0 && waited < 60 { sleep(1); waited += 1 }
+         sleep(3)
+         snap(app, "music-extension-search-play")
+         let counts = serverCounts()
+-        note("song title shown=\(hit.exists); clip requests=\(counts["/clip.mp4"] ?? 0) after \(waited)s; reports=\(serverReports())")
++        note("song title shown=\(hit.exists); clip requests=\(counts["/tone.wav"] ?? 0) after \(waited)s; reports=\(serverReports())")
+         XCTAssertTrue(hit.exists, "The extension's song is not shown")
+-        XCTAssertGreaterThan(counts["/clip.mp4"] ?? 0, 0, "The extension's stream was never asked for: \(counts)")
++        XCTAssertGreaterThan(counts["/tone.wav"] ?? 0, 0, "The extension's stream was never asked for: \(counts)")
+     }
+ 
+     /// The same search, but the song is chosen with the remote like a listener would (no auto play, no renamed shortcut):
+@@ -842,20 +842,27 @@ final class TVNavigationUITests: XCTestCase {
+         note("focus trail: \(trail)")
+         let focusedLabel = focusedRow.exists ? focusedRow.label : "none"
+         snap(app, "remote-search-row-focused")
+-        let before = serverCounts()["/clip.mp4"] ?? 0
++        let before = serverCounts()["/tone.wav"] ?? 0
+         remote.press(.select)
+         var waited = 0
+-        while (serverCounts()["/clip.mp4"] ?? 0) <= before && waited < 40 { sleep(1); waited += 1 }
++        while (serverCounts()["/tone.wav"] ?? 0) <= before && waited < 40 { sleep(1); waited += 1 }
+         func clocks() -> [String] {
+             app.staticTexts.allElementsBoundByIndex.map { $0.label }.filter { $0.range(of: "^[0-9]+:[0-9][0-9]$", options: .regularExpression) != nil }
+         }
++        func playingIdentity() -> Bool {
++            let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }
++            return labels.contains("ext晴天") && labels.contains("QA Singer")
++        }
+         sleep(3)
+-        let first = clocks(); snap(app, "remote-search-play-1")
++        let first = clocks(); let identity1 = playingIdentity(); snap(app, "remote-search-play-1")
+         sleep(6)
+-        let second = clocks(); snap(app, "remote-search-play-2")
+-        note("focus after Right: \(afterRight); after Left: \(afterLeft); focused row=\(focusedLabel) after \(moves) down presses; clip requests before=\(before) after=\(serverCounts()["/clip.mp4"] ?? 0) (\(waited)s); clocks first=\(first) second=\(second); reports=\(serverReports())")
+-        XCTAssertTrue(focusedRow.exists, "The extension's row never took focus")
+-        XCTAssertGreaterThan(serverCounts()["/clip.mp4"] ?? 0, before, "Selecting the extension's song did not ask for its stream")
++        let second = clocks(); let identity2 = playingIdentity(); snap(app, "remote-search-play-2")
++        note("focus after Right: \(afterRight); after Left: \(afterLeft); focused row=\(focusedLabel) after \(moves) down presses; clip requests before=\(before) after=\(serverCounts()["/tone.wav"] ?? 0) (\(waited)s); clocks first=\(first) second=\(second); identity=\(identity1)/\(identity2); reports=\(serverReports())")
++        // Focus is read before Select (the row is gone once the player opens), identity of the playing track is read twice.
++        XCTAssertTrue(focusedLabel.contains("QA Singer"), "The extension's row never took focus: \(focusedLabel)")
++        XCTAssertGreaterThan(serverCounts()["/tone.wav"] ?? 0, before, "Selecting the extension's song did not ask for its stream")
++        XCTAssertTrue(identity1, "Now playing is not ext晴天 / QA Singer at the first shot")
++        XCTAssertTrue(identity2, "Now playing is not ext晴天 / QA Singer at the second shot (the queue moved on?)")
+         XCTAssertNotEqual(first, second, "The player's clock did not move: \(first) then \(second)")
+     }
+ 
