@@ -660,6 +660,33 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground)
     }
 
+    /// The subscription page's Refresh fetches that subscription again: the server sees its address asked for once more.
+    func testSubscriptionRefreshButtonFetchesAgain() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "settings", "-qaPage", "subscription:0", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/fo-config.json",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let refresh = app.descendants(matching: .any)["subscription.refresh"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 30), "Refresh is not on the subscription page")
+        let remote = XCUIRemote.shared
+        // Focus opens in the sidebar here: move into the page first, then down to Refresh.
+        let focusedRefresh = app.descendants(matching: .any).matching(NSPredicate(format: "hasFocus == true AND label CONTAINS %@", "Refresh")).firstMatch
+        var presses = 0
+        remote.press(.right); sleep(1)
+        while !focusedRefresh.exists && presses < 15 { remote.press(.down); presses += 1; sleep(1) }
+        snap(app, "subscription-refresh-focused")
+        XCTAssertTrue(focusedRefresh.exists, "Refresh never took focus")
+        let before = serverCounts()["/fo-config.json"] ?? 0
+        remote.press(.select)
+        var after = before
+        for _ in 0..<20 where after <= before { sleep(1); after = serverCounts()["/fo-config.json"] ?? 0 }
+        sleep(2)
+        snap(app, "subscription-refresh-after")
+        note("focused=\(focusedRefresh.exists) after \(presses) down presses; subscription address requests before=\(before) after=\(after)")
+        XCTAssertGreaterThan(after, before, "Refresh did not ask the subscription's address again")
+    }
+
     /// A dead first line falls through to the second line of the same source on its own: the fixture's first line
     /// points at a 404, so the server must see that address asked for and then the working clip, and a picture must show.
     func testDeadFirstLineSwitchesToSecondLine() throws {
