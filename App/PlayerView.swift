@@ -874,7 +874,11 @@ private struct NativePlayerView: UIViewControllerRepresentable {
             watch.token = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { time in
                 let seconds = time.seconds, item = watched.currentItem
                 if let last = watch.last, last.0 === item, abs(seconds - last.1) > 3 { post("seekjump \(Int(last.1)) -> \(Int(seconds))") }
-                if watch.last?.0 !== item { watch.decade = -1; post("item start \(Int(seconds))") }
+                if watch.last?.0 !== item {
+                    watch.decade = -1
+                    post("item start \(Int(seconds))")
+                    if let last = watch.last { post("item switch \(Int(last.1)) -> \(Int(seconds))") }
+                }
                 watch.last = (item, seconds)
                 let decade = Int(seconds / 10)
                 if decade != watch.decade { watch.decade = decade; post("pos \(decade * 10)") }

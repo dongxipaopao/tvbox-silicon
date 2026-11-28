@@ -700,6 +700,7 @@ final class TVNavigationUITests: XCTestCase {
         let playsAfterHold = plays()
         let jumpsAfterHold = jumps()
         let startsAfterHold = serverReports().filter { $0.hasPrefix("item start") }
+        let switches = serverReports().filter { $0.hasPrefix("item switch") }
         let panelAfterHold = panel(app).exists
         let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Getting it ready'")).firstMatch.exists
         // Down double-click is unchanged: the next episode of the new line, and no panel left open.
@@ -708,7 +709,7 @@ final class TVNavigationUITests: XCTestCase {
         sleep(6)
         snap(app, "hold-after-down")
         let positions = serverReports().filter { $0.hasPrefix("pos") }
-        note("afterClick=\(playsAfterClick) afterHold=\(playsAfterHold) all=\(plays()) starts=\(startsAfterHold) jumpsAfterClick=\(jumpsAfterClick) jumpsAfterHold=\(jumpsAfterHold) positions=\(positions) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold) stillLoading=\(loading)")
+        note("afterClick=\(playsAfterClick) afterHold=\(playsAfterHold) all=\(plays()) starts=\(startsAfterHold) switches=\(switches) jumpsAfterClick=\(jumpsAfterClick) jumpsAfterHold=\(jumpsAfterHold) positions=\(positions) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold) stillLoading=\(loading)")
         XCTAssertFalse(playsAfterClick.contains { $0.hasPrefix("play f2") }, "A short Right click switched the line: \(playsAfterClick)")
         XCTAssertTrue(line, "Holding Right did not go to the next line: \(serverReports())")
         XCTAssertEqual(playsAfterHold.filter { $0 == "play f2-1" }.count, 1, "The hold switched more than once: \(playsAfterHold)")
@@ -717,6 +718,11 @@ final class TVNavigationUITests: XCTestCase {
         let resumedAt = startsAfterHold.last.flatMap { Int($0.replacingOccurrences(of: "item start ", with: "")) } ?? -1
         XCTAssertEqual(startsAfterHold.count, 2, "Expected the first episode and the switched line to start: \(startsAfterHold)")
         XCTAssertGreaterThanOrEqual(resumedAt, 10, "The new line did not go on from the old position: \(startsAfterHold)")
+        // "item switch <old line's last position> -> <new line's first position>": the old line goes on playing while the
+        // new one loads, so the new one starts a little before where the old one ended, never after it.
+        let numbers = switches.first.map { $0.components(separatedBy: CharacterSet.decimalDigits.inverted).compactMap { Int($0) } } ?? []
+        XCTAssertEqual(numbers.count, 2, "No item switch was reported: \(switches)")
+        if numbers.count == 2 { XCTAssertTrue(numbers[0] - numbers[1] >= 0 && numbers[0] - numbers[1] <= 6, "The new line did not start near the old position: \(switches)") }
         XCTAssertFalse(positions.isEmpty, "The position watch reported nothing, so a missing seek proves nothing")
         XCTAssertEqual(jumpsAfterHold, jumpsAfterClick, "The playback position jumped (a seek) during the hold: \(jumpsAfterClick) then \(jumpsAfterHold)")
         XCTAssertFalse(panelAfterHold, "The info panel opened on the hold")
