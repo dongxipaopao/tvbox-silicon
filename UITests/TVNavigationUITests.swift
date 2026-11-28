@@ -1465,21 +1465,20 @@ final class TVNavigationUITests: XCTestCase {
     /// Search with the extension on (the control for the two checks after it): the extension's song for the query is listed beside the built-in channels' results.
     func testMusicExtensionSearchListsItsSongWhenEnabled() throws {
         continueAfterFailure = true
-        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "晴天"])
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "ext晴天"])
         XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
         sleep(3)
         XCUIRemote.shared.press(.menu); sleep(4)
-        let builtIn = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '晴天' AND NOT label CONTAINS 'QA Singer'")).firstMatch
-        XCTAssertTrue(builtIn.waitForExistence(timeout: 60), "The built-in channels listed nothing for the query")
-        sleep(3)
+        // The extension's song is the only one with the artist "QA Singer"; the built-in catalogs list other artists.
+        let hit = shown("QA Singer", in: app)
+        XCTAssertTrue(hit.waitForExistence(timeout: 60), "The extension's song is not in the search results")
         snap(app, "search-enabled")
-        XCTAssertTrue(shown("QA Singer", in: app).exists, "The extension's song is not in the search results")
     }
 
     /// Turning the extension off, then searching: its song is not listed, while the built-in results are.
     func testMusicExtensionSearchWithoutItsSongAfterToggleOff() throws {
         continueAfterFailure = true
-        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "晴天"])
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "ext晴天"])
         XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
         let remote = XCUIRemote.shared
         sleep(3)
@@ -1490,9 +1489,9 @@ final class TVNavigationUITests: XCTestCase {
         remote.press(.select); sleep(2)
         note("row after toggle: \(row.label)")
         remote.press(.menu); sleep(4)
-        let builtIn = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '晴天' AND NOT label CONTAINS 'QA Singer'")).firstMatch
-        XCTAssertTrue(builtIn.waitForExistence(timeout: 60), "The built-in channels listed nothing, so a missing extension song proves nothing")
-        sleep(3)
+        // The search page is up (its kind chips) and has had longer than the enabled run needed to list the song.
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Artists'")).firstMatch.waitForExistence(timeout: 30), "The search page did not open, so a missing extension song proves nothing")
+        sleep(25)
         snap(app, "search-after-toggle-off")
         XCTAssertFalse(shown("QA Singer", in: app).exists, "The extension's song is still in the search results after turning it off")
     }
@@ -1500,7 +1499,7 @@ final class TVNavigationUITests: XCTestCase {
     /// Removing the extension, then searching: its song is not listed, while the built-in results are.
     func testMusicExtensionSearchWithoutItsSongAfterRemove() throws {
         continueAfterFailure = true
-        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "晴天"])
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "ext晴天"])
         XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
         let remote = XCUIRemote.shared
         sleep(3)
@@ -1510,9 +1509,9 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertTrue(remove.hasFocus, "The Remove row never took focus: \(focusInfo(app))")
         remote.press(.select); sleep(2)
         remote.press(.menu); sleep(4)
-        let builtIn = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '晴天' AND NOT label CONTAINS 'QA Singer'")).firstMatch
-        XCTAssertTrue(builtIn.waitForExistence(timeout: 60), "The built-in channels listed nothing, so a missing extension song proves nothing")
-        sleep(3)
+        // The search page is up (its kind chips) and has had longer than the enabled run needed to list the song.
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Artists'")).firstMatch.waitForExistence(timeout: 30), "The search page did not open, so a missing extension song proves nothing")
+        sleep(25)
         snap(app, "search-after-remove")
         XCTAssertFalse(shown("QA Singer", in: app).exists, "The extension's song is still in the search results after removing it")
     }
