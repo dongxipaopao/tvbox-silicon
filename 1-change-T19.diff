@@ -1,0 +1,93 @@
+diff --git a/App/MusicView.swift b/App/MusicView.swift
+index fe803f07..12cfe6d6 100644
+--- a/App/MusicView.swift
++++ b/App/MusicView.swift
+@@ -6,6 +6,15 @@ import TVCore
+ /// charts, playlists and new albums as Discover has for video, then what played recently.
+ struct MusicView: View {
+     @Environment(Store.self) private var store
++    #if DEBUG
++    /// Tells the QA server what a `-qaMusicExtension` step did, so the UI test can read it (the app's own log can't be).
++    private static func qaReport(_ address: URL, _ text: String) async {
++        var parts = URLComponents()
++        parts.scheme = address.scheme; parts.host = address.host(); parts.port = address.port; parts.path = "/qa-report"
++        parts.queryItems = [URLQueryItem(name: "text", value: String(text.prefix(400)))]
++        if let url = parts.url { _ = try? await URLSession.shared.data(from: url) }
++    }
++    #endif
+     @State private var query = ""
+     /// The query Return was pressed for: its direct hit plays once the search knows it. Typing
+     /// something else clears it.
+@@ -140,9 +149,13 @@ struct MusicView: View {
+                 do {
+                     let item = try await MusicExtensionLibrary.shared.add(script: MusicExtensionLibrary.download(url), origin: url)
+                     Diagnostics.shared.record(.info, "qa", "music extension \(item.name) functions=\(item.functions.joined(separator: ","))")
++                    await Self.qaReport(url, "added name=\(item.name) functions=\(item.functions.joined(separator: ",")) enabled=\(item.enabled)")
+                     await store.musicBrowse.reload(.ext)
++                    let shelves = store.musicBrowse.sections.map(\.title).joined(separator: "|")
++                    await Self.qaReport(url, "reloaded shelves=\(shelves)")
+                 } catch {
+                     Diagnostics.shared.record(.warning, "qa", "music extension not added: \(error.localizedDescription)")
++                    await Self.qaReport(url, "failed \(error.localizedDescription)")
+                 }
+             }
+             // `-qaSection music -qaQuery <text> [-qaMusicKind albums] [-qaMusicPlay 1]` searches, and plays the direct hit.
+diff --git a/Scripts/qa-server.py b/Scripts/qa-server.py
+index a1866382..aa515f7b 100644
+--- a/Scripts/qa-server.py
++++ b/Scripts/qa-server.py
+@@ -17,6 +17,7 @@ args = parser.parse_args()
+ base = f'http://127.0.0.1:{args.port}'
+ lock = threading.Lock()
+ counts = {}
++reports = []
+ 
+ class Handler(BaseHTTPRequestHandler):
+     def log_message(self, fmt, *values):
+@@ -97,6 +98,10 @@ class Spider(Spider):
+                     'vod_play_from':'坏线路$$$好线路','vod_play_url':'第1集$dead-1$$$第1集$episode-1'}]})
+             return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'fo1','vod_name':'线路测试影片','vod_pic':base+'/poster.png'}]})
+         # A Listenify-style music extension: one chart shelf, a search that echoes its text, and a song that plays the QA clip.
++        if path == '/qa-report':
++            reports.append(q.get('text',''))
++            return self.send({'ok':1})
++        if path == '/reports': return self.send(reports)
+         if path == '/music-ext.js':
+             return self.send("""/*!
+  * @name QA Fake FM
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index 9ea35009..1c726419 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -655,6 +655,17 @@ final class TVNavigationUITests: XCTestCase {
+         return counts
+     }
+ 
++    private func serverReports() -> [String] {
++        var reports: [String] = []
++        let semaphore = DispatchSemaphore(value: 0)
++        URLSession.shared.dataTask(with: URL(string: "http://127.0.0.1:8776/reports")!) { data, _, _ in
++            if let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String] { reports = json }
++            semaphore.signal()
++        }.resume()
++        _ = semaphore.wait(timeout: .now() + 10)
++        return reports
++    }
++
+     /// A music extension added from an address (its download, start and check) shows its chart shelf on the Music page.
+     func testMusicExtensionShelfShowsOnMusicPage() throws {
+         continueAfterFailure = true
+@@ -664,8 +675,11 @@ final class TVNavigationUITests: XCTestCase {
+         var presses = 0
+         _ = shelf.waitForExistence(timeout: 45)
+         while !shelf.exists && presses < 14 { remote.press(.down); presses += 1; sleep(1) }
+-        snap(app, "music-extension-shelf")
+-        note("extension script requests=\(serverCounts()["/music-ext.js"] ?? 0) shelf exists=\(shelf.exists) after \(presses) presses")
++        snap(app, "music-extension-shelf-after-down")
++        var ups = 0
++        while !shelf.exists && ups < 16 { remote.press(.up); ups += 1; sleep(1) }
++        snap(app, "music-extension-shelf-after-up")
++        note("extension script requests=\(serverCounts()["/music-ext.js"] ?? 0) shelf exists=\(shelf.exists) after \(presses) down and \(ups) up presses; app reports: \(serverReports())")
+         XCTAssertGreaterThan(serverCounts()["/music-ext.js"] ?? 0, 0, "The extension was never downloaded")
+         XCTAssertTrue(shelf.exists, "The extension's shelf is not on the Music page")
+     }
