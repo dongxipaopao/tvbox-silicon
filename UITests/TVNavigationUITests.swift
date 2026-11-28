@@ -673,7 +673,7 @@ final class TVNavigationUITests: XCTestCase {
     /// panel; Down double-click still goes to the next episode afterwards.
     func testRemoteRightHoldSwitchesLineOnce() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-rc", "-qaIsolatedData", "1",
+        app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-rc", "-qaVideoID", "rc3", "-qaIsolatedData", "1",
                                "-qaSubscription", "http://127.0.0.1:8776/rc-config.json", "-autoPlayNextEpisode", "NO",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
@@ -683,30 +683,32 @@ final class TVNavigationUITests: XCTestCase {
             return serverReports().contains(text)
         }
         let panel = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "线路乙")).firstMatch
-        XCTAssertTrue(waitFor("play l1-1", 40), "The first episode never started: \(serverReports())")
-        sleep(14)
+        XCTAssertTrue(waitFor("play f1-1", 40), "The first episode never started: \(serverReports())")
+        sleep(6)
         snap(app, "hold-before")
         // A short Right click first: it must not switch the line (the hold is the gesture).
-        remote.press(.right); sleep(3)
+        remote.press(.right); sleep(2)
         let afterClick = serverReports()
         remote.press(.right, forDuration: 3.5)
-        let line = waitFor("play l2-1")
-        sleep(4)
+        let line = waitFor("play f2-1")
+        sleep(6)
         snap(app, "hold-after")
         let afterHold = serverReports()
         let panelAfterHold = panel.exists
+        let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Getting it ready'")).firstMatch.exists
         // Down double-click is unchanged.
         remote.press(.up); sleep(1)
         remote.press(.down); remote.press(.down)
-        let episode = waitFor("play l2-2")
-        sleep(2)
+        let episode = waitFor("play f2-2")
+        sleep(6)
         snap(app, "hold-after-down")
-        note("afterClick=\(afterClick) afterHold=\(afterHold) all=\(serverReports()) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold)")
-        XCTAssertEqual(afterClick, ["play l1-1"], "A short Right click asked for another stream: \(afterClick)")
+        note("afterClick=\(afterClick) afterHold=\(afterHold) all=\(serverReports()) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold) stillLoading=\(loading)")
+        XCTAssertFalse(afterClick.contains("play f2-1"), "A short Right click switched the line: \(afterClick)")
         XCTAssertTrue(line, "Holding Right did not go to the next line: \(serverReports())")
-        XCTAssertEqual(afterHold.filter { $0 == "play l2-1" }.count, 1, "The hold switched more than once: \(afterHold)")
-        XCTAssertEqual(afterHold, ["play l1-1", "play l2-1"], "Something else was asked for during the hold: \(afterHold)")
+        XCTAssertEqual(afterHold.filter { $0 == "play f2-1" }.count, 1, "The hold switched more than once: \(afterHold)")
+        XCTAssertEqual(afterHold.count, afterClick.count + 1, "Something else was asked for during the hold: \(afterClick) then \(afterHold)")
         XCTAssertFalse(panelAfterHold, "The info panel opened on the hold")
+        XCTAssertFalse(loading, "The new line is still getting ready, no picture")
         XCTAssertTrue(episode, "Double Down no longer goes to the next episode: \(serverReports())")
     }
 

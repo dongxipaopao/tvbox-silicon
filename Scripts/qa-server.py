@@ -89,6 +89,10 @@ class Spider(Spider):
             if 'play' in q:
                 reports.append('play ' + q['play'])
                 return self.send({'parse':0,'url':base+('/slow.mp4' if q['play'].startswith('l2') else '/clip.mp4')+'?ep='+q['play']})
+            # rc3: both lines fast (clip.mp4), so a switched line shows a picture; the ids are f<line>-<episode>.
+            if 'ids' in q and q['ids'] == 'rc3':
+                return self.send({'list':[{'vod_id':'rc3','vod_name':'遥控测试影片 B','vod_pic':base+'/poster.png','vod_play_from':'线路甲$$$线路乙',
+                    'vod_play_url':'#'.join(f'第{i}集$f1-{i}' for i in (1,2,3))+'$$$'+'#'.join(f'第{i}集$f2-{i}' for i in (1,2,3))}]})
             if 'ids' in q and q['ids'] == 'rc2':
                 return self.send({'list':[{'vod_id':'rc2','vod_name':'单集影片','vod_pic':base+'/poster.png','vod_play_from':'唯一线路','vod_play_url':'第1集$l1-1'}]})
             if 'ids' in q:
