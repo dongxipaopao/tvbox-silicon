@@ -139,7 +139,7 @@ async function getSongs(ext) {
 }
 async function search(ext) {
   const { text, type } = argsify(ext)
-  if (type === 'song') return jsonify({ list: [song(7, text + ' hit')] })
+  if (type === 'song') return jsonify({ list: [song(7, text)] })
   return jsonify({ list: [] })
 }
 async function getSongInfo(ext) { return jsonify({ urls: ['BASE/clip.mp4'] }) }

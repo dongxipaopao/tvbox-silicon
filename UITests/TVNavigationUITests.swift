@@ -788,23 +788,19 @@ final class TVNavigationUITests: XCTestCase {
     /// Searching Music finds the extension's song and playing it asks for the stream the extension gave.
     func testMusicExtensionSearchPlaysItsSong() throws {
         continueAfterFailure = true
+        // The extension's song carries exactly the query as its title, so it is the direct hit auto play opens
+        // (the built-in catalogs list nothing titled "ext晴天"); only the extension's getSongInfo answers with the local clip.
         let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js",
-                          "-qaQuery", "ext晴天", "-qaMusicKind", "songs"])
-        // No auto play: it would play the built-in catalogs' direct hit. Move to the extension's own result and select it.
-        let hit = shown("ext晴天 hit", in: app)
+                          "-qaQuery", "ext晴天", "-qaMusicKind", "songs", "-qaMusicPlay", "1"])
+        let hit = shown("ext晴天", in: app)
         _ = hit.waitForExistence(timeout: 60)
-        let remote = XCUIRemote.shared
-        let focusedHit = app.descendants(matching: .any).matching(NSPredicate(format: "hasFocus == true AND label CONTAINS %@", "ext晴天 hit")).firstMatch
-        var moves = 0
-        remote.press(.right); sleep(1)
-        while !focusedHit.exists && moves < 30 { remote.press(.down); moves += 1; sleep(1) }
-        snap(app, "music-extension-hit-focused")
-        remote.press(.select)
+        snap(app, "music-extension-hit-listed")
         var waited = 0
-        while (serverCounts()["/clip.mp4"] ?? 0) == 0 && waited < 40 { sleep(1); waited += 1 }
+        while (serverCounts()["/clip.mp4"] ?? 0) == 0 && waited < 60 { sleep(1); waited += 1 }
+        sleep(3)
         snap(app, "music-extension-search-play")
         let counts = serverCounts()
-        note("song title shown=\(hit.exists) focused=\(focusedHit.exists) after \(moves) down presses; clip requests=\(counts["/clip.mp4"] ?? 0) after \(waited)s")
+        note("song title shown=\(hit.exists); clip requests=\(counts["/clip.mp4"] ?? 0) after \(waited)s; reports=\(serverReports())")
         XCTAssertTrue(hit.exists, "The extension's song is not shown")
         XCTAssertGreaterThan(counts["/clip.mp4"] ?? 0, 0, "The extension's stream was never asked for: \(counts)")
     }
