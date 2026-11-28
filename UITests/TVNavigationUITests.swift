@@ -725,6 +725,33 @@ final class TVNavigationUITests: XCTestCase {
         app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "线路乙")).firstMatch
     }
 
+    /// Full screen, controls hidden, nothing pressed before: a double Down goes to the next episode, no Up first.
+    func testRemoteDoubleDownWithHiddenControls() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-rc", "-qaVideoID", "rc3", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/rc-config.json", "-autoPlayNextEpisode", "NO",
+                               "-qaPlayerReport", "http://127.0.0.1:8776",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let remote = XCUIRemote.shared
+        func has(_ text: String) -> Bool { serverReports().contains(text) }
+        for _ in 0..<40 where !has("play f1-1") { sleep(1) }
+        XCTAssertTrue(has("play f1-1"), "The first episode never started: \(serverReports())")
+        sleep(12)
+        snap(app, "down2-before")
+        let before = serverReports()
+        remote.press(.down); remote.press(.down)
+        for _ in 0..<15 where !serverReports().contains(where: { $0.hasPrefix("gesture down2") }) { sleep(1) }
+        sleep(6)
+        snap(app, "down2-after")
+        let after = serverReports()
+        let restarts = after.filter { $0 == "pos 0" }.count
+        note("before=\(before) after=\(after) positionRestarts=\(restarts)")
+        XCTAssertTrue(after.contains { $0.hasPrefix("gesture down2") }, "The double Down never reached the player's recognizer: \(after)")
+        XCTAssertGreaterThanOrEqual(restarts, 2, "The player did not start another episode: \(after)")
+        XCTAssertFalse(after.contains { $0.hasPrefix("seekjump") && !before.contains($0) }, "A seek happened: \(after)")
+    }
+
     /// One episode on one line: double Right and double Down must do nothing (no request, the picture stays).
     func testRemoteDoubleClicksOnSingleEpisodeDoNothing() throws {
         let app = XCUIApplication()

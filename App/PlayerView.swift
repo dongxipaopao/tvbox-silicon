@@ -701,6 +701,14 @@ private struct PlayerSurface: NSViewRepresentable {
     }
 }
 #else
+#if DEBUG
+/// QA only: sends a line to the QA server named by the `qaPlayerReport` launch argument.
+func qaPlayerPost(_ text: String) {
+    guard let address = UserDefaults.standard.string(forKey: "qaPlayerReport"), var parts = URLComponents(string: address) else { return }
+    parts.path = "/qa-report"; parts.queryItems = [URLQueryItem(name: "text", value: text)]
+    if let url = parts.url { Task.detached { _ = try? await URLSession.shared.data(from: url) } }
+}
+#endif
 /// Full screen inside a SwiftUI view that ignores the safe area, the controller is told it has none,
 /// and AVKit then lays its bottom controls into the TV's overscan margin, where focus effects are cut
 /// off. This restores the title-safe area for the controls; the video and its overlays still fill the screen.
@@ -713,6 +721,12 @@ private final class TitleSafePlayerController: AVPlayerViewController {
                                   bottom: max(0, Self.titleSafe.bottom - (given.bottom - extra.bottom)), right: max(0, Self.titleSafe.right - (given.right - extra.right)))
         if wanted != extra { additionalSafeAreaInsets = wanted }
     }
+    #if DEBUG
+    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        for press in presses where press.type == .downArrow || press.type == .rightArrow { qaPlayerPost("press \(press.type == .downArrow ? "down" : "right") began") }
+        super.pressesBegan(presses, with: event)
+    }
+    #endif
 }
 
 struct EpisodeAction {
@@ -812,7 +826,12 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         let back = UITapGestureRecognizer()
         let down = UITapGestureRecognizer(), right = UITapGestureRecognizer()
         var onDoubleDown: (@MainActor () -> Void)?, onDoubleRight: (@MainActor () -> Void)?
-        @objc private func pressedDoubleDown() { onDoubleDown?() }
+        @objc private func pressedDoubleDown() {
+            #if DEBUG
+            qaPlayerPost("gesture down2 handler=\(onDoubleDown != nil)")
+            #endif
+            onDoubleDown?()
+        }
         @objc private func pressedDoubleRight() { onDoubleRight?() }
         /// Holding Right for three seconds goes to the video's next line too, once per hold (an experiment beside the double-click).
         let rightHold = UILongPressGestureRecognizer()
