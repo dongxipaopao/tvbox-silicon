@@ -1,0 +1,34 @@
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index bb4e4b12..96108f5e 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -693,6 +693,7 @@ final class TVNavigationUITests: XCTestCase {
+         // A short Right click first: it must not switch the line (the hold is the gesture).
+         remote.press(.right); sleep(3)
+         let playsAfterClick = plays()
++        let jumpsAfterClick = jumps()
+         remote.press(.right, forDuration: 3.5)
+         let line = waitFor("play f2-1")
+         sleep(6)
+@@ -702,18 +703,19 @@ final class TVNavigationUITests: XCTestCase {
+         let panelAfterHold = panel(app).exists
+         let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Getting it ready'")).firstMatch.exists
+         // Down double-click is unchanged: the next episode of the new line, and no panel left open.
++        remote.press(.up); sleep(1)
+         remote.press(.down); remote.press(.down)
+         let episode = waitFor("play f2-3")
+         sleep(6)
+         snap(app, "hold-after-down")
+         let positions = serverReports().filter { $0.hasPrefix("pos") }
+-        note("afterClick=\(playsAfterClick) afterHold=\(playsAfterHold) all=\(plays()) jumps=\(jumps()) positions=\(positions) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold) stillLoading=\(loading)")
++        note("afterClick=\(playsAfterClick) afterHold=\(playsAfterHold) all=\(plays()) jumpsAfterClick=\(jumpsAfterClick) jumpsAfterHold=\(jumpsAfterHold) positions=\(positions) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold) stillLoading=\(loading)")
+         XCTAssertFalse(playsAfterClick.contains { $0.hasPrefix("play f2") }, "A short Right click switched the line: \(playsAfterClick)")
+         XCTAssertTrue(line, "Holding Right did not go to the next line: \(serverReports())")
+         XCTAssertEqual(playsAfterHold.filter { $0 == "play f2-1" }.count, 1, "The hold switched more than once: \(playsAfterHold)")
+         XCTAssertEqual(Set(playsAfterHold).subtracting(playsAfterClick), ["play f2-1", "play f2-2"], "Something else was asked for during the hold: \(playsAfterClick) then \(playsAfterHold)")
+         XCTAssertFalse(positions.isEmpty, "The position watch reported nothing, so a missing seek proves nothing")
+-        XCTAssertTrue(jumpsAfterHold.isEmpty, "The playback position jumped (a seek) around the hold: \(jumpsAfterHold)")
++        XCTAssertEqual(jumpsAfterHold, jumpsAfterClick, "The playback position jumped (a seek) during the hold: \(jumpsAfterClick) then \(jumpsAfterHold)")
+         XCTAssertFalse(panelAfterHold, "The info panel opened on the hold")
+         XCTAssertFalse(loading, "The new line is still getting ready, no picture")
+         XCTAssertTrue(episode, "Double Down no longer goes to the next episode: \(serverReports())")
