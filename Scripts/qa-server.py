@@ -96,6 +96,10 @@ class Spider(Spider):
                     'vod_play_url':'#'.join(f'第{i}集$l1-{i}' for i in (1,2,3))+'$$$'+'#'.join(f'第{i}集$l2-{i}' for i in (1,2,3))}]})
             return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'rc1','vod_name':'遥控测试影片','vod_pic':base+'/poster.png'},{'vod_id':'rc2','vod_name':'单集影片','vod_pic':base+'/poster.png'}]})
         # Same-source line failover: line one's only episode points at a dead address, line two's plays.
+        # Answers once, then fails: a refresh that fails must keep the copy the first answer gave.
+        if path == '/refresh-once-config.json':
+            if count == 1: return self.send({'sites': [{'key':'qa-fo','name':'线路切换 / Lines','type':4,'api':base+'/fo'}], 'lives': []})
+            return self.send('Service unavailable',500,'text/plain')
         if path == '/fo-config.json': return self.send({'sites': [{'key':'qa-fo','name':'线路切换 / Lines','type':4,'api':base+'/fo'}], 'lives': []})
         # Line two has two entries of episode 1: the same episode can't be told for sure, so nothing may switch.
         if path == '/fo2-config.json': return self.send({'sites': [{'key':'qa-fo2','name':'线路不明 / Ambiguous','type':4,'api':base+'/fo2'}], 'lives': []})

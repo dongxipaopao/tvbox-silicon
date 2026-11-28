@@ -1725,8 +1725,13 @@ struct SubscriptionDetailView: View {
                 }
             } footer: {
                 if let changeError { Text(changeError).foregroundStyle(.red) }
-                else if let failure { Text(L10n.text("Couldn't refresh: %@", failure)) }
-                else if let copy { Text(L10n.text("Sources: %lld · Live playlists: %lld", copy.sites.count, copy.lives.count)) }
+                else {
+                    // A failed refresh keeps the last good copy in use, so the page says why and still shows what it holds.
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let failure { Text(L10n.text("Couldn't refresh: %@", failure)) }
+                        if let copy { Text(L10n.text("Sources: %lld · Live playlists: %lld", copy.sites.count, copy.lives.count)) }
+                    }
+                }
             }
             if store.subscriptions.count > 1 {
                 Section(L10n.text("Order")) {

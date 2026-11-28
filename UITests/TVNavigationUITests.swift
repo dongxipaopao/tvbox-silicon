@@ -687,6 +687,39 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertEqual(serverReports(), ["play l1-1"], "A double-click on a single episode asked for another stream")
         XCTAssertEqual(app.state, .runningForeground)
     }
+    /// A refresh that fails keeps the last good copy: the page says why and still shows the Sources it holds.
+    func testSubscriptionRefreshFailureKeepsOldData() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "settings", "-qaPage", "subscription:0", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/refresh-once-config.json",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let refresh = app.descendants(matching: .any)["subscription.refresh"]
+        XCTAssertTrue(refresh.waitForExistence(timeout: 30), "Refresh is not on the subscription page")
+        let holds = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Sources: 1"))
+        XCTAssertTrue(holds.firstMatch.waitForExistence(timeout: 30), "The page does not show the Sources the subscription holds before the refresh")
+        snap(app, "refresh-fail-before")
+        let remote = XCUIRemote.shared
+        let focusedRefresh = app.descendants(matching: .any).matching(NSPredicate(format: "hasFocus == true AND label CONTAINS %@", "Refresh")).firstMatch
+        var presses = 0
+        remote.press(.right); sleep(1)
+        while !focusedRefresh.exists && presses < 15 { remote.press(.down); presses += 1; sleep(1) }
+        XCTAssertTrue(focusedRefresh.exists, "Refresh never took focus")
+        let before = serverCounts()["/refresh-once-config.json"] ?? 0
+        remote.press(.select)
+        var after = before
+        for _ in 0..<20 where after <= before { sleep(1); after = serverCounts()["/refresh-once-config.json"] ?? 0 }
+        let failed = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "refresh")).firstMatch
+        _ = failed.waitForExistence(timeout: 20)
+        sleep(2)
+        snap(app, "refresh-fail-after")
+        let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }.filter { $0.contains("Sources:") || $0.contains("refresh") }
+        note("requests before=\(before) after=\(after); page texts=\(labels)")
+        XCTAssertGreaterThan(after, before, "Refresh did not ask the subscription's address again")
+        XCTAssertTrue(labels.contains { $0.contains("Couldn't refresh") }, "The page did not say the refresh failed: \(labels)")
+        XCTAssertTrue(labels.contains { $0.contains("Sources: 1") }, "The failed refresh dropped the Sources the subscription held: \(labels)")
+    }
+
 
     /// The subscription page's Refresh fetches that subscription again: the server sees its address asked for once more.
     func testSubscriptionRefreshButtonFetchesAgain() throws {
