@@ -1249,6 +1249,12 @@ final class TVNavigationUITests: XCTestCase {
         sleep(3)
         snap(app, "phone-add-music-page")
         XCTAssertTrue(shown("测试榜单", in: app).exists, "The uploaded extension's shelf is not on the Music page")
+        // Visible proof: move focus off the sidebar into the page so the sidebar closes, then look at the shelf.
+        remote.press(.right); sleep(2); remote.press(.down); sleep(2)
+        let shelf = shown("测试榜单", in: app)
+        note("shelf frame=\(shelf.frame) focus=\(shelf.hasFocus) hittable=\(shelf.isHittable)")
+        snap(app, "phone-add-shelf-visible")
+        XCTAssertTrue(shelf.exists && shelf.frame.minX > 150, "The shelf is still under the sidebar: \(shelf.frame)")
     }
 
     /// The remaining checks in one run (one build): the search with the extension on, off and removed, and the shelf after a phone upload.
