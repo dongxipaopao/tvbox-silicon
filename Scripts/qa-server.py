@@ -191,9 +191,9 @@ async function getSongInfo(ext) { return jsonify({ urls: ['BASE/tone.wav'] }) }
                 time.sleep(600)
             except (BrokenPipeError,ConnectionResetError): pass
             return
-        # An audio-only stream for the music extension: 30 s of 440 Hz, 16-bit mono WAV, with Range support.
+        # An audio-only stream for the music extension: 20 s of 440 Hz (the fixture song says 0:20), 16-bit mono WAV, with Range support.
         if path == '/tone.wav':
-            rate=22050; frames=rate*30
+            rate=22050; frames=rate*20
             data=b''.join(struct.pack('<h',int(8000*math.sin(2*math.pi*440*i/rate))) for i in range(frames))
             body=b'RIFF'+struct.pack('<I',36+len(data))+b'WAVEfmt '+struct.pack('<IHHIIHH',16,1,1,rate,rate*2,2,16)+b'data'+struct.pack('<I',len(data))+data
             size=len(body)
