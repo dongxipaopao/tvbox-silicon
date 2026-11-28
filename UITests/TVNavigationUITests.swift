@@ -1235,7 +1235,8 @@ final class TVNavigationUITests: XCTestCase {
         let accept = app.descendants(matching: .any)["ext.receiver.accept"]
         XCTAssertTrue(accept.exists, "No Add button")
         var tries = 0
-        while !accept.hasFocus && tries < 4 { remote.press(.up); tries += 1; sleep(1) }
+        while !accept.hasFocus && tries < 6 { sleep(1); tries += 1 }
+        XCTAssertTrue(accept.hasFocus, "Add did not take focus when the upload arrived")
         remote.press(.select); sleep(4)
         snap(app, "phone-add-after-accept")
         XCTAssertTrue(shown("QA Fake FM", in: app).waitForExistence(timeout: 20), "The accepted extension is not listed in Music Extensions")
