@@ -487,6 +487,9 @@ typealias MusicTrack = TVCore.MusicTrack
         let stream = selection.stream
         setItem(url: stream.url, headers: stream.headers, metadata: track ?? selection.track, at: seconds, run: run)
         loadLyrics(for: selection)
+        #if DEBUG
+        Self.qaReport("start \(selection.candidate.provider.rawValue) probeDuration=\(selection.probe.duration ?? -1) completeness=\(selection.probe.completeness.rawValue) track=\(track?.title ?? "-")")
+        #endif
         Diagnostics.shared.record(.info, "music", "start \(selection.candidate.provider.rawValue) host=\(stream.url.host() ?? "-") \(selection.probe.format.label)\(selection.degraded ? " degraded" : "")")
     }
 
@@ -621,6 +624,9 @@ typealias MusicTrack = TVCore.MusicTrack
 
     private func songEnded(run: UUID) {
         guard generation == run else { return }
+        #if DEBUG
+        Self.qaReport("songEnded at=\(currentSeconds) duration=\(duration ?? -1) track=\(track?.title ?? "-")")
+        #endif
         // Sleep Timer, End of Song: stop here, with the next song ready to play in the morning.
         if SleepTimer.shared.endsWithItem {
             cueNext()
