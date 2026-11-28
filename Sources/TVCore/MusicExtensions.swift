@@ -223,8 +223,20 @@ public final class MusicExtensionLibrary: @unchecked Sendable {
         }
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try Data(script.utf8).write(to: file(item.id), options: .atomic)
+        // Two adds of one address can both pass the check above before either is saved: the second one replaces the first
+        // here, under the lock, so one address stays one entry.
+        var replaced: String?
         update { list in
-            if let index = list.firstIndex(where: { $0.id == item.id }) { list[index] = item } else { list.append(item) }
+            if let index = list.firstIndex(where: { $0.id == item.id }) { list[index] = item }
+            else if let origin = item.origin, let twin = list.firstIndex(where: { $0.origin == origin }) {
+                replaced = list[twin].id
+                item.added = list[twin].added
+                list[twin] = item
+            } else { list.append(item) }
+        }
+        if let replaced {
+            try? FileManager.default.removeItem(at: file(replaced))
+            await runtime.close(replaced)
         }
         Diagnostics.shared.record(.info, "music", "extension added: \(item.functions.joined(separator: ","))")
         return item

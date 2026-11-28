@@ -159,6 +159,34 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertTrue(shown("hello 01", in: app).waitForExistence(timeout: 20), "Pressing Search did not show results")
         XCTAssertFalse(submit.exists, "The Search button stayed after its query ran")
     }
+    /// A source's own page opens on its content with no keyboard (the first cover is the default focus, not the search),
+    /// and the magnifier at the top right opens the search only when pressed.
+    func testSourcePageOpensOnFirstCoverWithMagnifier() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "sites", "-qaPage", "site:qa-standard", "-qaSubscription", "http://127.0.0.1:8776/config.json"])
+        XCTAssertTrue(shown("测试影片 01", in: app).waitForExistence(timeout: 60), "The source page did not load")
+        let entry = app.buttons["search.entry"]
+        XCTAssertTrue(entry.waitForExistence(timeout: 30), "The source page has no search magnifier")
+        sleep(3)
+        note("Source page initial focus (before any press): \(focusInfo(app)); keyboards=\(app.keyboards.count); magnifier=\(describe(entry))")
+        snap(app, "source-page-initial")
+        XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up on opening a source page")
+        XCTAssertFalse(entry.hasFocus, "The magnifier has the initial focus")
+        enterContent(app)
+        let focus = focusInfo(app)
+        note("Source page focus after entering content: \(focus)")
+        snap(app, "source-page-content-focus")
+        XCTAssertTrue(focus.contains("site.firstPoster") || focus.contains("测试影片 01"), "Focus is not the first cover: \(focus)")
+        XCTAssertEqual(app.keyboards.count, 0, "The keyboard is up after entering the content")
+        let remote = XCUIRemote.shared
+        for _ in 0..<6 where !entry.hasFocus { remote.press(.up); sleep(1) }
+        snap(app, "source-page-magnifier-focused")
+        XCTAssertTrue(entry.hasFocus, "Up from the first cover did not reach the magnifier: \(focusInfo(app))")
+        XCTAssertEqual(app.keyboards.count, 0, "Focus on the magnifier opened the keyboard")
+        remote.press(.select); sleep(3)
+        snap(app, "source-page-search-open")
+        XCTAssertTrue(app.keyboards.count > 0 || app.searchFields.count > 0, "Select on the magnifier did not open the search")
+    }
     /// A video with several sources and one file each: the rail ends above Play, so Right from the
     /// Play row once found nothing and the source chips were unreachable with the remote.
     func testRemoteReachesTheSourceChips() throws {
