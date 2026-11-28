@@ -2647,8 +2647,10 @@ struct TVSubscriptionPage: View {
         let copy = store.documents[address]
         TVSettingsSubpage(symbol: "list.bullet.rectangle", title: current.title, subtitle: current.address) {
             TVSettingsSection(title: L10n.text("Subscription"),
-                              footer: changeError ?? failure.map { L10n.text("Couldn't refresh: %@", $0) }
-                                ?? copy.map { L10n.text("Sources: %lld · Live playlists: %lld", $0.sites.count, $0.lives.count) }) {
+                              // A failed refresh keeps the last good copy in use: say why, and still say what it holds.
+                              footer: changeError ?? Optional([failure.map { L10n.text("Couldn't refresh: %@", $0) },
+                                                              copy.map { L10n.text("Sources: %lld · Live playlists: %lld", $0.sites.count, $0.lives.count) }]
+                                .compactMap { $0 }.joined(separator: "\n")).flatMap { $0.isEmpty ? nil : $0 }) {
                 TVSettingsToggle(title: L10n.text("Use This Subscription"),
                                  isOn: Binding(get: { current.enabled }, set: { on in Task { await store.setSubscription(current, enabled: on) } }))
                     .disabled(store.importing)
