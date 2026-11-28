@@ -817,6 +817,29 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         /// Holding Right for three seconds goes to the video's next line too, once per hold (an experiment beside the double-click).
         let rightHold = UILongPressGestureRecognizer()
         @objc private func heldRight(_ recognizer: UILongPressGestureRecognizer) { if recognizer.state == .began { onDoubleRight?() } }
+        #if DEBUG
+        /// QA only: reports the playback position every 10 s and any jump of it (a seek) to the QA server.
+        final class QAWatch: @unchecked Sendable { var last: (AVPlayerItem?, Double)?; var decade = -1; var token: Any? }
+        let qaWatch = QAWatch()
+        func watchPosition(_ player: AVPlayer) {
+            guard let address = UserDefaults.standard.string(forKey: "qaPlayerReport"), qaWatch.token == nil else { return }
+            func post(_ text: String) {
+                guard var parts = URLComponents(string: address) else { return }
+                parts.path = "/qa-report"; parts.queryItems = [URLQueryItem(name: "text", value: text)]
+                if let url = parts.url { Task.detached { _ = try? await URLSession.shared.data(from: url) } }
+            }
+            nonisolated(unsafe) let watched = player
+            let watch = qaWatch
+            watch.token = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 600), queue: .main) { time in
+                let seconds = time.seconds, item = watched.currentItem
+                if let last = watch.last, last.0 === item, abs(seconds - last.1) > 3 { post("seekjump \(Int(last.1)) -> \(Int(seconds))") }
+                if watch.last?.0 !== item { watch.decade = -1 }
+                watch.last = (item, seconds)
+                let decade = Int(seconds / 10)
+                if decade != watch.decade { watch.decade = decade; post("pos \(decade * 10)") }
+            }
+        }
+        #endif
         override init() {
             super.init()
             for (recognizer, type, action) in [(down, UIPress.PressType.downArrow, #selector(pressedDoubleDown)), (right, .rightArrow, #selector(pressedDoubleRight))] {
@@ -868,6 +891,9 @@ private struct NativePlayerView: UIViewControllerRepresentable {
         controller.view.addGestureRecognizer(context.coordinator.down)
         controller.view.addGestureRecognizer(context.coordinator.right)
         controller.view.addGestureRecognizer(context.coordinator.rightHold)
+        #if DEBUG
+        context.coordinator.watchPosition(player)
+        #endif
         return controller
     }
     func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {

@@ -675,6 +675,7 @@ final class TVNavigationUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-rc", "-qaVideoID", "rc3", "-qaIsolatedData", "1",
                                "-qaSubscription", "http://127.0.0.1:8776/rc-config.json", "-autoPlayNextEpisode", "NO",
+                               "-qaPlayerReport", "http://127.0.0.1:8776",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         let remote = XCUIRemote.shared
@@ -682,34 +683,44 @@ final class TVNavigationUITests: XCTestCase {
             for _ in 0..<seconds { if serverReports().contains(text) { return true }; sleep(1) }
             return serverReports().contains(text)
         }
-        let panel = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "线路乙")).firstMatch
+        // The app resolves the next episode of a short video ahead, so a request for it is not a gesture's doing: the
+        // plays of a line are its current episode and the one ahead.
+        func plays() -> [String] { serverReports().filter { $0.hasPrefix("play ") } }
+        func jumps() -> [String] { serverReports().filter { $0.hasPrefix("seekjump") } }
         XCTAssertTrue(waitFor("play f1-1", 40), "The first episode never started: \(serverReports())")
         sleep(6)
         snap(app, "hold-before")
         // A short Right click first: it must not switch the line (the hold is the gesture).
-        remote.press(.right); sleep(2)
-        let afterClick = serverReports()
+        remote.press(.right); sleep(3)
+        let playsAfterClick = plays()
         remote.press(.right, forDuration: 3.5)
         let line = waitFor("play f2-1")
         sleep(6)
         snap(app, "hold-after")
-        let afterHold = serverReports()
-        let panelAfterHold = panel.exists
+        let playsAfterHold = plays()
+        let jumpsAfterHold = jumps()
+        let panelAfterHold = panel(app).exists
         let loading = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Getting it ready'")).firstMatch.exists
-        // Down double-click is unchanged.
-        remote.press(.up); sleep(1)
+        // Down double-click is unchanged: the next episode of the new line, and no panel left open.
         remote.press(.down); remote.press(.down)
-        let episode = waitFor("play f2-2")
+        let episode = waitFor("play f2-3")
         sleep(6)
         snap(app, "hold-after-down")
-        note("afterClick=\(afterClick) afterHold=\(afterHold) all=\(serverReports()) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold) stillLoading=\(loading)")
-        XCTAssertFalse(afterClick.contains("play f2-1"), "A short Right click switched the line: \(afterClick)")
+        let positions = serverReports().filter { $0.hasPrefix("pos") }
+        note("afterClick=\(playsAfterClick) afterHold=\(playsAfterHold) all=\(plays()) jumps=\(jumps()) positions=\(positions) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold) stillLoading=\(loading)")
+        XCTAssertFalse(playsAfterClick.contains { $0.hasPrefix("play f2") }, "A short Right click switched the line: \(playsAfterClick)")
         XCTAssertTrue(line, "Holding Right did not go to the next line: \(serverReports())")
-        XCTAssertEqual(afterHold.filter { $0 == "play f2-1" }.count, 1, "The hold switched more than once: \(afterHold)")
-        XCTAssertEqual(afterHold.count, afterClick.count + 1, "Something else was asked for during the hold: \(afterClick) then \(afterHold)")
+        XCTAssertEqual(playsAfterHold.filter { $0 == "play f2-1" }.count, 1, "The hold switched more than once: \(playsAfterHold)")
+        XCTAssertEqual(Set(playsAfterHold).subtracting(playsAfterClick), ["play f2-1", "play f2-2"], "Something else was asked for during the hold: \(playsAfterClick) then \(playsAfterHold)")
+        XCTAssertFalse(positions.isEmpty, "The position watch reported nothing, so a missing seek proves nothing")
+        XCTAssertTrue(jumpsAfterHold.isEmpty, "The playback position jumped (a seek) around the hold: \(jumpsAfterHold)")
         XCTAssertFalse(panelAfterHold, "The info panel opened on the hold")
         XCTAssertFalse(loading, "The new line is still getting ready, no picture")
         XCTAssertTrue(episode, "Double Down no longer goes to the next episode: \(serverReports())")
+        XCTAssertEqual(plays().filter { $0 == "play f2-3" }.count, 1)
+    }
+    private func panel(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "线路乙")).firstMatch
     }
 
     /// One episode on one line: double Right and double Down must do nothing (no request, the picture stays).
