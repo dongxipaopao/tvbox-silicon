@@ -1,0 +1,26 @@
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index dd9ed458..fc4f75f2 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -820,6 +820,12 @@ final class TVNavigationUITests: XCTestCase {
+         snap(app, "remote-search-before-moves")
+         var moves = 0
+         remote.press(.right); sleep(1)
++        // Right from the sidebar lands on the search button at the far right, and Down from there found nothing in the
++        // earlier run (30 presses, focus never left it): Left goes to the kind chips, and Down then walks to the rows.
++        let focusedNow = app.descendants(matching: .any).matching(NSPredicate(format: "hasFocus == true")).firstMatch
++        let afterRight = focusedNow.exists ? "id=\(focusedNow.identifier) label=\(focusedNow.label)" : "none"
++        remote.press(.left); sleep(1)
++        let afterLeft = focusedNow.exists ? "id=\(focusedNow.identifier) label=\(focusedNow.label)" : "none"
+         while !focusedRow.exists && moves < 30 { remote.press(.down); moves += 1; sleep(1) }
+         let focusedLabel = focusedRow.exists ? focusedRow.label : "none"
+         snap(app, "remote-search-row-focused")
+@@ -834,7 +840,7 @@ final class TVNavigationUITests: XCTestCase {
+         let first = clocks(); snap(app, "remote-search-play-1")
+         sleep(6)
+         let second = clocks(); snap(app, "remote-search-play-2")
+-        note("focused row=\(focusedLabel) after \(moves) down presses; clip requests before=\(before) after=\(serverCounts()["/clip.mp4"] ?? 0) (\(waited)s); clocks first=\(first) second=\(second); reports=\(serverReports())")
++        note("focus after Right: \(afterRight); after Left: \(afterLeft); focused row=\(focusedLabel) after \(moves) down presses; clip requests before=\(before) after=\(serverCounts()["/clip.mp4"] ?? 0) (\(waited)s); clocks first=\(first) second=\(second); reports=\(serverReports())")
+         XCTAssertTrue(focusedRow.exists, "The extension's row never took focus")
+         XCTAssertGreaterThan(serverCounts()["/clip.mp4"] ?? 0, before, "Selecting the extension's song did not ask for its stream")
+         XCTAssertNotEqual(first, second, "The player's clock did not move: \(first) then \(second)")
