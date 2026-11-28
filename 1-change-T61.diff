@@ -1,0 +1,50 @@
+diff --git a/App/MusicExtensionReceiver.swift b/App/MusicExtensionReceiver.swift
+index 57092b56..0fd7ba14 100644
+--- a/App/MusicExtensionReceiver.swift
++++ b/App/MusicExtensionReceiver.swift
+@@ -183,6 +183,8 @@ struct MusicExtensionReceiveScreen: View {
+     let model: MusicExtensionsModel
+     @State private var receiver = MusicExtensionReceiver()
+     @Environment(\.dismiss) private var dismiss
++    private enum Field { case accept, discard, close }
++    @FocusState private var focus: Field?
+     var body: some View {
+         VStack(spacing: 28) {
+             Text(L10n.text("Add from Phone")).font(.title2.bold())
+@@ -192,15 +194,18 @@ struct MusicExtensionReceiveScreen: View {
+             if let name = receiver.pendingName {
+                 Text(L10n.text("Received “%@”. Add it?", name)).font(.headline).accessibilityIdentifier("ext.receiver.pending")
+                 HStack(spacing: 24) {
+-                    Button(L10n.text("Add")) { receiver.accept(model); dismiss() }.accessibilityIdentifier("ext.receiver.accept")
+-                    Button(L10n.text("Discard")) { receiver.reject() }.accessibilityIdentifier("ext.receiver.reject")
++                    Button(L10n.text("Add")) { receiver.accept(model); dismiss() }.accessibilityIdentifier("ext.receiver.accept").focused($focus, equals: .accept)
++                    Button(L10n.text("Discard")) { receiver.reject() }.accessibilityIdentifier("ext.receiver.reject").focused($focus, equals: .discard)
+                 }
+             }
+             if let note = receiver.note { Text(note).foregroundStyle(.secondary) }
+-            Button(L10n.text("Close")) { dismiss() }.accessibilityIdentifier("ext.receiver.close")
++            Button(L10n.text("Close")) { dismiss() }.accessibilityIdentifier("ext.receiver.close").focused($focus, equals: .close)
+         }
+         .padding(60)
+-        .onAppear { receiver.start() }
++        .frame(maxWidth: .infinity, maxHeight: .infinity)
++        .background(Color(red: 0.03, green: 0.03, blue: 0.10).ignoresSafeArea())
++        .onChange(of: receiver.pendingName) { _, name in focus = name == nil ? .close : .accept }
++        .onAppear { focus = .close; receiver.start() }
+         .onDisappear { receiver.stop() }
+     }
+ }
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index 6fabc665..a51e0776 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -1235,7 +1235,8 @@ final class TVNavigationUITests: XCTestCase {
+         let accept = app.descendants(matching: .any)["ext.receiver.accept"]
+         XCTAssertTrue(accept.exists, "No Add button")
+         var tries = 0
+-        while !accept.hasFocus && tries < 4 { remote.press(.up); tries += 1; sleep(1) }
++        while !accept.hasFocus && tries < 6 { sleep(1); tries += 1 }
++        XCTAssertTrue(accept.hasFocus, "Add did not take focus when the upload arrived")
+         remote.press(.select); sleep(4)
+         snap(app, "phone-add-after-accept")
+         XCTAssertTrue(shown("QA Fake FM", in: app).waitForExistence(timeout: 20), "The accepted extension is not listed in Music Extensions")
