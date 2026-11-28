@@ -117,6 +117,9 @@ public enum MusicBrowse {
 
     /// Fetches `platform`'s shelves again, the others staying: after music extensions were added or turned off.
     public func reload(_ platform: MusicPlatform) async {
+        // A fetch already under way (the page's own, started before the extension was added) would make `load` return
+        // at once and leave the new shelves unfetched; let it finish, then ask again.
+        while loading { try? await Task.sleep(nanoseconds: 100_000_000); if Task.isCancelled { return } }
         for index in sources.indices where sources[index].platform == platform { answers[index] = nil }
         sections = MusicBrowse.merge(sources.indices.compactMap { answers[$0] })
         await load()
