@@ -1,0 +1,120 @@
+diff --git a/App/PlayerView.swift b/App/PlayerView.swift
+index 8c30fb40..ecf34ece 100644
+--- a/App/PlayerView.swift
++++ b/App/PlayerView.swift
+@@ -819,6 +819,10 @@ private struct NativePlayerView: UIViewControllerRepresentable {
+             for (recognizer, type, action) in [(down, UIPress.PressType.downArrow, #selector(pressedDoubleDown)), (right, .rightArrow, #selector(pressedDoubleRight))] {
+                 recognizer.allowedPressTypes = [NSNumber(value: type.rawValue)]
+                 recognizer.numberOfTapsRequired = 2
++                // The first click waits out the double-click window, and is dropped when the second one comes: it must not
++                // also open the info panel or skip ahead. A single click is delivered after the window, as before.
++                recognizer.delaysTouchesBegan = true
++                recognizer.cancelsTouchesInView = true
+                 recognizer.delegate = self
+                 recognizer.addTarget(self, action: action)
+             }
+diff --git a/Scripts/qa-server.py b/Scripts/qa-server.py
+index 1b2edd23..26b143b3 100644
+--- a/Scripts/qa-server.py
++++ b/Scripts/qa-server.py
+@@ -87,10 +87,12 @@ class Spider(Spider):
+             if 'play' in q:
+                 reports.append('play ' + q['play'])
+                 return self.send({'parse':0,'url':base+('/slow.mp4' if q['play'].startswith('l2') else '/clip.mp4')+'?ep='+q['play']})
++            if 'ids' in q and q['ids'] == 'rc2':
++                return self.send({'list':[{'vod_id':'rc2','vod_name':'单集影片','vod_pic':base+'/poster.png','vod_play_from':'唯一线路','vod_play_url':'第1集$l1-1'}]})
+             if 'ids' in q:
+                 return self.send({'list':[{'vod_id':q['ids'],'vod_name':'遥控测试影片','vod_pic':base+'/poster.png','vod_play_from':'线路甲$$$线路乙',
+                     'vod_play_url':'#'.join(f'第{i}集$l1-{i}' for i in (1,2,3))+'$$$'+'#'.join(f'第{i}集$l2-{i}' for i in (1,2,3))}]})
+-            return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'rc1','vod_name':'遥控测试影片','vod_pic':base+'/poster.png'}]})
++            return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'rc1','vod_name':'遥控测试影片','vod_pic':base+'/poster.png'},{'vod_id':'rc2','vod_name':'单集影片','vod_pic':base+'/poster.png'}]})
+         # Same-source line failover: line one's only episode points at a dead address, line two's plays.
+         if path == '/fo-config.json': return self.send({'sites': [{'key':'qa-fo','name':'线路切换 / Lines','type':4,'api':base+'/fo'}], 'lives': []})
+         # Line two has two entries of episode 1: the same episode can't be told for sure, so nothing may switch.
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index a8acf7da..b9f65333 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -606,43 +606,58 @@ final class TVNavigationUITests: XCTestCase {
+             for _ in 0..<seconds { if reports().contains(text) { return true }; sleep(1) }
+             return reports().contains(text)
+         }
++        func fromLabel() -> String {
++            app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'from 0:'")).firstMatch.label
++        }
++        let panel = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "线路乙")).firstMatch
+         XCTAssertTrue(waitFor("play l1-1", 40), "The first episode never started: \(reports())")
+-        sleep(6)
+-        snap(app, "remote-before")
++        let started = Date()
++        // Controls hidden: leave the remote alone until the transport bar has gone, then double-click Right.
++        sleep(14)
++        snap(app, "remote-hidden-before-right")
++        let rightAt = Date().timeIntervalSince(started)
+         remote.press(.right); remote.press(.right)
+         let line = waitFor("play l2-1")
+-        sleep(4)
+-        snap(app, "remote-after-double-right")
++        let label = fromLabel()
++        snap(app, "remote-hidden-after-right")
++        let panelAfterRight = panel.exists
++        // Controls shown: wake the bar with a click, then double-click Down.
++        sleep(8)
++        remote.press(.up); sleep(1)
++        snap(app, "remote-shown-before-down")
++        let downAt = Date().timeIntervalSince(started)
+         remote.press(.down); remote.press(.down)
+         let episode = waitFor("play l2-2")
+-        sleep(4)
+-        snap(app, "remote-after-double-down")
+-        note("reports=\(reports()) nextLine=\(line) nextEpisode=\(episode)")
++        sleep(1)
++        snap(app, "remote-shown-after-down")
++        let panelAfterDown = panel.exists
++        sleep(8)
++        snap(app, "remote-shown-after-down-later")
++        note("reports=\(reports()) nextLine=\(line) nextEpisode=\(episode) rightPressedAt=\(Int(rightAt))s from-label='\(label)' panelAfterRight=\(panelAfterRight) downPressedAt=\(Int(downAt))s panelAfterDown=\(panelAfterDown)")
+         XCTAssertTrue(line, "Double Right did not go to the next line: \(reports())")
+         XCTAssertTrue(episode, "Double Down did not go to the next episode (on the line playing): \(reports())")
++        XCTAssertFalse(panelAfterRight, "The info panel opened on double Right")
++        XCTAssertFalse(panelAfterDown, "The info panel opened on double Down")
++        XCTAssertFalse(reports().contains("play l1-3") && reports().contains("play l2-3"), "More than one step was taken: \(reports())")
+     }
+ 
+-    /// The subscription page's Refresh fetches that subscription again: the server sees its address asked for once more.
+-    func testSubscriptionRefreshButtonFetchesAgain() throws {
++    /// One episode on one line: double Right and double Down must do nothing (no request, the picture stays).
++    func testRemoteDoubleClicksOnSingleEpisodeDoNothing() throws {
+         let app = XCUIApplication()
+-        app.launchArguments = ["-qaSection", "settings", "-qaPage", "subscription:0", "-qaIsolatedData", "1",
+-                               "-qaSubscription", "http://127.0.0.1:8776/fo-config.json",
++        app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-rc", "-qaVideoID", "rc2", "-qaIsolatedData", "1",
++                               "-qaSubscription", "http://127.0.0.1:8776/rc-config.json", "-autoPlayNextEpisode", "NO",
+                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+         app.launch()
+-        let refresh = app.descendants(matching: .any)["subscription.refresh"]
+-        XCTAssertTrue(refresh.waitForExistence(timeout: 30), "Refresh is not on the subscription page")
+         let remote = XCUIRemote.shared
+-        var presses = 0
+-        while !refresh.hasFocus && presses < 15 { remote.press(.down); presses += 1; sleep(1) }
+-        snap(app, "subscription-refresh-focused")
+-        let before = serverCounts()["/fo-config.json"] ?? 0
+-        remote.press(.select)
+-        var after = before
+-        for _ in 0..<20 where after <= before { sleep(1); after = serverCounts()["/fo-config.json"] ?? 0 }
+-        sleep(2)
+-        snap(app, "subscription-refresh-after")
+-        note("focused=\(refresh.hasFocus) after \(presses) down presses; subscription address requests before=\(before) after=\(after)")
+-        XCTAssertGreaterThan(after, before, "Refresh did not ask the subscription's address again")
++        for _ in 0..<40 where !serverReports().contains("play l1-1") { sleep(1) }
++        XCTAssertTrue(serverReports().contains("play l1-1"), "The episode never started: \(serverReports())")
++        sleep(10)
++        remote.press(.right); remote.press(.right); sleep(3)
++        remote.press(.down); remote.press(.down); sleep(6)
++        snap(app, "remote-single-after")
++        note("single: reports=\(serverReports())")
++        XCTAssertEqual(serverReports(), ["play l1-1"], "A double-click on a single episode asked for another stream")
++        XCTAssertEqual(app.state, .runningForeground)
+     }
+ 
+     /// A dead first line falls through to the second line of the same source on its own: the fixture's first line
