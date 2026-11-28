@@ -877,6 +877,9 @@ private struct NativePlayerView: UIViewControllerRepresentable {
                 if watch.last?.0 !== item {
                     watch.decade = -1
                     post("item start \(Int(seconds))")
+                    // Which stream this is: the fixture's own play id, carried in its address as `ep` (QA streams only).
+                    let ep = ((item?.asset as? AVURLAsset)?.url).flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "ep" }?.value } ?? "-"
+                    post("item ep \(ep)")
                     if let last = watch.last { post("item switch \(Int(last.1)) -> \(Int(seconds))") }
                 }
                 watch.last = (item, seconds)
