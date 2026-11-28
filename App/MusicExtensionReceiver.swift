@@ -74,6 +74,8 @@ import TVCore
         return found
     }
 
+    final class Flag: @unchecked Sendable { var done = false }
+
     /// The listener: GET /token gives the page, POST /token takes the script text. Everything else is 404.
     final class Server: @unchecked Sendable {
         private let token: String
@@ -89,13 +91,13 @@ import TVCore
             listener = server
             server.newConnectionHandler = { [weak self] connection in self?.accept(connection) }
             return try await withCheckedThrowingContinuation { continuation in
-                let once = NSLock(); var done = false
-                server.stateUpdateHandler = { state in
+                let once = NSLock(); let state = Flag()
+                server.stateUpdateHandler = { newState in
                     once.lock(); defer { once.unlock() }
-                    guard !done else { return }
-                    switch state {
-                    case .ready: done = true; continuation.resume(returning: server.port?.rawValue ?? 0)
-                    case .failed(let error): done = true; continuation.resume(throwing: error)
+                    guard !state.done else { return }
+                    switch newState {
+                    case .ready: state.done = true; continuation.resume(returning: server.port?.rawValue ?? 0)
+                    case .failed(let error): state.done = true; continuation.resume(throwing: error)
                     default: break
                     }
                 }

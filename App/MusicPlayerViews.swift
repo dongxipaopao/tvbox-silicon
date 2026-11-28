@@ -666,10 +666,6 @@ struct MusicScrubber: View {
         run { try await LXSourceLibrary.shared.add(script: LXSourceLibrary.download(url), origin: url) }
     }
 
-    func add(script: String) {
-        run { try await MusicExtensionLibrary.shared.add(script: script, origin: nil) }
-    }
-
     func add(file: URL) {
         run {
             let scoped = file.startAccessingSecurityScopedResource()
@@ -842,6 +838,10 @@ struct MusicLXSourcesSection: View {
             report(TVError.invalidURL); return
         }
         run { try await MusicExtensionLibrary.shared.add(script: MusicExtensionLibrary.download(url), origin: url) }
+    }
+
+    func add(script: String) {
+        run { try await MusicExtensionLibrary.shared.add(script: script, origin: nil) }
     }
 
     func add(file: URL) {
