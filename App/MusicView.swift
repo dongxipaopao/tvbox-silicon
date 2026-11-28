@@ -152,7 +152,7 @@ struct MusicView: View {
                     await Self.qaReport(url, "added name=\(item.name) functions=\(item.functions.joined(separator: ",")) enabled=\(item.enabled)")
                     await store.musicBrowse.reload(.ext)
                     let shelves = store.musicBrowse.sections.map(\.title).joined(separator: "|")
-                    await Self.qaReport(url, "reloaded shelves=\(shelves)")
+                    await Self.qaReport(url, "reloaded shelves=\(shelves) libraryItems=\(MusicExtensionLibrary.shared.extensions.count) enabled=\(MusicExtensionLibrary.shared.enabled.count)")
                 } catch {
                     Diagnostics.shared.record(.warning, "qa", "music extension not added: \(error.localizedDescription)")
                     await Self.qaReport(url, "failed \(error.localizedDescription)")
