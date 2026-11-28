@@ -578,6 +578,14 @@ import TVCore
         importing = true; importError = nil; notice = nil
         defer { importing = false }
         await fetch([entry])
+        #if DEBUG
+        // QA only: tells the QA server what the page holds after a refresh, so a UI test can read it.
+        if let address = UserDefaults.standard.string(forKey: "qaSubscription"), var parts = URLComponents(string: address) {
+            parts.path = "/qa-report"
+            parts.queryItems = [URLQueryItem(name: "text", value: "refresh done: sites=\(documents[entry.address]?.sites.count ?? -1) error=\(subscriptionErrors[entry.address] ?? "-") listed=\(subscriptions.contains { $0.address == entry.address })")]
+            if let url = parts.url { Task.detached { _ = try? await URLSession.shared.data(from: url) } }
+        }
+        #endif
     }
     func setSubscription(_ entry: SubscriptionEntry, enabled: Bool) async {
         guard let index = subscriptions.firstIndex(where: { $0.address == entry.address }) else { return }

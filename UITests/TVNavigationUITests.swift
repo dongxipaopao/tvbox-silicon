@@ -714,7 +714,7 @@ final class TVNavigationUITests: XCTestCase {
         sleep(2)
         snap(app, "refresh-fail-after")
         let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }.filter { $0.contains("Sources:") || $0.contains("refresh") }
-        note("requests before=\(before) after=\(after); page texts=\(labels)")
+        note("requests before=\(before) after=\(after); page texts=\(labels); reports=\(serverReports())")
         XCTAssertGreaterThan(after, before, "Refresh did not ask the subscription's address again")
         XCTAssertTrue(labels.contains { $0.contains("Couldn't refresh") }, "The page did not say the refresh failed: \(labels)")
         XCTAssertTrue(labels.contains { $0.contains("Sources: 1") }, "The failed refresh dropped the Sources the subscription held: \(labels)")
