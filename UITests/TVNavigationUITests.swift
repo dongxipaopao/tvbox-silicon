@@ -669,6 +669,47 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertFalse(reports().contains("play l1-3") && reports().contains("play l2-3"), "More than one step was taken: \(reports())")
     }
 
+    /// Holding Right for 3 s while the full-screen player plays goes to the video's next line once: no second step, no info
+    /// panel; Down double-click still goes to the next episode afterwards.
+    func testRemoteRightHoldSwitchesLineOnce() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-rc", "-qaIsolatedData", "1",
+                               "-qaSubscription", "http://127.0.0.1:8776/rc-config.json", "-autoPlayNextEpisode", "NO",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let remote = XCUIRemote.shared
+        func waitFor(_ text: String, _ seconds: Int = 25) -> Bool {
+            for _ in 0..<seconds { if serverReports().contains(text) { return true }; sleep(1) }
+            return serverReports().contains(text)
+        }
+        let panel = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "线路乙")).firstMatch
+        XCTAssertTrue(waitFor("play l1-1", 40), "The first episode never started: \(serverReports())")
+        sleep(14)
+        snap(app, "hold-before")
+        // A short Right click first: it must not switch the line (the hold is the gesture).
+        remote.press(.right); sleep(3)
+        let afterClick = serverReports()
+        remote.press(.right, forDuration: 3.5)
+        let line = waitFor("play l2-1")
+        sleep(4)
+        snap(app, "hold-after")
+        let afterHold = serverReports()
+        let panelAfterHold = panel.exists
+        // Down double-click is unchanged.
+        remote.press(.up); sleep(1)
+        remote.press(.down); remote.press(.down)
+        let episode = waitFor("play l2-2")
+        sleep(2)
+        snap(app, "hold-after-down")
+        note("afterClick=\(afterClick) afterHold=\(afterHold) all=\(serverReports()) line=\(line) episode=\(episode) panelAfterHold=\(panelAfterHold)")
+        XCTAssertEqual(afterClick, ["play l1-1"], "A short Right click asked for another stream: \(afterClick)")
+        XCTAssertTrue(line, "Holding Right did not go to the next line: \(serverReports())")
+        XCTAssertEqual(afterHold.filter { $0 == "play l2-1" }.count, 1, "The hold switched more than once: \(afterHold)")
+        XCTAssertEqual(afterHold, ["play l1-1", "play l2-1"], "Something else was asked for during the hold: \(afterHold)")
+        XCTAssertFalse(panelAfterHold, "The info panel opened on the hold")
+        XCTAssertTrue(episode, "Double Down no longer goes to the next episode: \(serverReports())")
+    }
+
     /// One episode on one line: double Right and double Down must do nothing (no request, the picture stays).
     func testRemoteDoubleClicksOnSingleEpisodeDoNothing() throws {
         let app = XCUIApplication()
