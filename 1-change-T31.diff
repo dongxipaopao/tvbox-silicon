@@ -1,0 +1,59 @@
+diff --git a/App/MusicView.swift b/App/MusicView.swift
+index 12cfe6d6..4b074c53 100644
+--- a/App/MusicView.swift
++++ b/App/MusicView.swift
+@@ -152,7 +152,7 @@ struct MusicView: View {
+                     await Self.qaReport(url, "added name=\(item.name) functions=\(item.functions.joined(separator: ",")) enabled=\(item.enabled)")
+                     await store.musicBrowse.reload(.ext)
+                     let shelves = store.musicBrowse.sections.map(\.title).joined(separator: "|")
+-                    await Self.qaReport(url, "reloaded shelves=\(shelves)")
++                    await Self.qaReport(url, "reloaded shelves=\(shelves) libraryItems=\(MusicExtensionLibrary.shared.extensions.count) enabled=\(MusicExtensionLibrary.shared.enabled.count)")
+                 } catch {
+                     Diagnostics.shared.record(.warning, "qa", "music extension not added: \(error.localizedDescription)")
+                     await Self.qaReport(url, "failed \(error.localizedDescription)")
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index a0d42a8b..dd9ed458 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -805,6 +805,41 @@ final class TVNavigationUITests: XCTestCase {
+         XCTAssertGreaterThan(counts["/clip.mp4"] ?? 0, 0, "The extension's stream was never asked for: \(counts)")
+     }
+ 
++    /// The same search, but the song is chosen with the remote like a listener would (no auto play, no renamed shortcut):
++    /// focus lands on the row of the extension's song (identified by its artist "QA Singer"), Select plays it, and the
++    /// player's clock moves between two shots a few seconds apart.
++    func testMusicExtensionSearchRemoteSelectPlays() throws {
++        continueAfterFailure = true
++        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js",
++                          "-qaQuery", "ext晴天", "-qaMusicKind", "songs"])
++        let remote = XCUIRemote.shared
++        let row = shown("QA Singer", in: app)
++        _ = row.waitForExistence(timeout: 60)
++        sleep(2)
++        let focusedRow = app.descendants(matching: .any).matching(NSPredicate(format: "hasFocus == true AND label CONTAINS %@", "QA Singer")).firstMatch
++        snap(app, "remote-search-before-moves")
++        var moves = 0
++        remote.press(.right); sleep(1)
++        while !focusedRow.exists && moves < 30 { remote.press(.down); moves += 1; sleep(1) }
++        let focusedLabel = focusedRow.exists ? focusedRow.label : "none"
++        snap(app, "remote-search-row-focused")
++        let before = serverCounts()["/clip.mp4"] ?? 0
++        remote.press(.select)
++        var waited = 0
++        while (serverCounts()["/clip.mp4"] ?? 0) <= before && waited < 40 { sleep(1); waited += 1 }
++        func clocks() -> [String] {
++            app.staticTexts.allElementsBoundByIndex.map { $0.label }.filter { $0.range(of: "^[0-9]+:[0-9][0-9]$", options: .regularExpression) != nil }
++        }
++        sleep(3)
++        let first = clocks(); snap(app, "remote-search-play-1")
++        sleep(6)
++        let second = clocks(); snap(app, "remote-search-play-2")
++        note("focused row=\(focusedLabel) after \(moves) down presses; clip requests before=\(before) after=\(serverCounts()["/clip.mp4"] ?? 0) (\(waited)s); clocks first=\(first) second=\(second); reports=\(serverReports())")
++        XCTAssertTrue(focusedRow.exists, "The extension's row never took focus")
++        XCTAssertGreaterThan(serverCounts()["/clip.mp4"] ?? 0, before, "Selecting the extension's song did not ask for its stream")
++        XCTAssertNotEqual(first, second, "The player's clock did not move: \(first) then \(second)")
++    }
++
+     // MARK: Apple TV parity checks (T1 to T3). They record what is on screen and where focus is, as screenshots and
+     // attachments, and report each mismatch without stopping at the first one.
+ 
