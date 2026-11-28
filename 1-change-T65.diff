@@ -1,0 +1,150 @@
+diff --git a/App/MusicView.swift b/App/MusicView.swift
+index 71a02c08..ffcb0afa 100644
+--- a/App/MusicView.swift
++++ b/App/MusicView.swift
+@@ -134,6 +134,14 @@ struct MusicView: View {
+         #else
+         .sheet(isPresented: $showsSettings) { MusicSettingsView() }
+         #endif
++        #if DEBUG
++        // `-qaQueryAfterSettings <text>` searches songs for that text when Music Settings closes, the way typing it would.
++        .onChange(of: showsSettings) { _, open in
++            guard !open, let text = UserDefaults.standard.string(forKey: "qaQueryAfterSettings") else { return }
++            query = text
++            search.search(text, kind: .songs, immediately: true)
++        }
++        #endif
+         .task {
+             if query.isEmpty, !search.query.isEmpty { query = search.query }
+             if let kind = Self.searchKind, search.kind != kind { search.search(search.query, kind: kind) }
+diff --git a/Scripts/qa-server.py b/Scripts/qa-server.py
+index 879ba0c9..f8bb0830 100644
+--- a/Scripts/qa-server.py
++++ b/Scripts/qa-server.py
+@@ -132,7 +132,9 @@ class Spider(Spider):
+  * @author qa
+  */
+ const appConfig = { ver: 1, name: 'qafm', tabLibrary: { name: '探索', groups: [
+-  { name: '测试榜单', type: 'playlist', ui: 1, ext: { gid: 'charts' } } ] } }
++  { name: '测试榜单', type: 'playlist', ui: 1, ext: { gid: 'charts' } },
++  { name: '测试专辑', type: 'album', ui: 1, ext: { gid: 'albums' } },
++  { name: '测试歌手', type: 'artist', ui: 1, ext: { gid: 'artists' } } ] } }
+ function song(id, name) { return { id: 's' + id, name: name, duration: 180, artist: { id: 'a', name: 'QA Singer' }, ext: { songmid: 'm' + id } } }
+ async function getConfig() { return jsonify(appConfig) }
+ async function getPlaylists(ext) {
+@@ -140,11 +142,21 @@ async function getPlaylists(ext) {
+   if (gid !== 'charts') return jsonify({ list: [] })
+   return jsonify({ list: [{ id: 'c1', name: 'Chart One', artist: { name: 'qa' }, ext: { gid: 'chart-songs' } }] })
+ }
+-async function getAlbums(ext) { return jsonify({ list: [] }) }
+-async function getArtists(ext) { return jsonify({ list: [] }) }
++async function getAlbums(ext) {
++  const { gid } = argsify(ext)
++  if (gid !== 'albums') return jsonify({ list: [] })
++  return jsonify({ list: [{ id: 'al1', name: 'QA Album One', artist: { name: 'qa' }, ext: { gid: 'album-songs' } }] })
++}
++async function getArtists(ext) {
++  const { gid } = argsify(ext)
++  if (gid !== 'artists') return jsonify({ list: [] })
++  return jsonify({ list: [{ id: 'ar1', name: 'QA Artist One', ext: { gid: 'artist-songs' } }] })
++}
+ async function getSongs(ext) {
+   const { gid, page } = argsify(ext)
+   if (gid === 'chart-songs' && (!page || page <= 1)) return jsonify({ list: [song(1, 'Chart Song One')] })
++  if (gid === 'album-songs' && (!page || page <= 1)) return jsonify({ list: [song(2, 'Album Song One')] })
++  if (gid === 'artist-songs' && (!page || page <= 1)) return jsonify({ list: [song(3, 'Artist Song One')] })
+   return jsonify({ list: [] })
+ }
+ async function search(ext) {
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index ede735ab..1a622f48 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -1413,6 +1413,87 @@ final class TVNavigationUITests: XCTestCase {
+         XCTAssertFalse(shown("测试榜单", in: app).exists, "The extension's shelf is still on the Music page after removing it")
+     }
+ 
++    /// The extension's album shelf opens an album and its artist shelf opens a playlist (an artist maps to the playlist kind in the
++    /// shared catalog code, the same on iOS), each listing the extension's own song.
++    func testMusicExtensionAlbumAndArtistShelvesOpenDetail() throws {
++        continueAfterFailure = true
++        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js"])
++        let remote = XCUIRemote.shared
++        let album = shown("QA Album One", in: app)
++        XCTAssertTrue(album.waitForExistence(timeout: 60), "The extension's album card is not on the Music page")
++        remote.press(.right); sleep(1)
++        focusRow(album, remote, limit: 30)
++        XCTAssertTrue(album.hasFocus, "The album card never took focus: \(focusInfo(app))")
++        snap(app, "ext-album-card-focus")
++        remote.press(.select); sleep(4)
++        snap(app, "ext-album-detail")
++        XCTAssertTrue(shown("Album Song One", in: app).waitForExistence(timeout: 20), "The album's page does not list the extension's song")
++        remote.press(.menu); sleep(4)
++        let artist = shown("QA Artist One", in: app)
++        XCTAssertTrue(artist.waitForExistence(timeout: 20), "The artist card is gone after Back")
++        focusRow(artist, remote, limit: 30)
++        XCTAssertTrue(artist.hasFocus, "The artist card never took focus: \(focusInfo(app))")
++        snap(app, "ext-artist-card-focus")
++        remote.press(.select); sleep(4)
++        snap(app, "ext-artist-detail")
++        XCTAssertTrue(shown("Artist Song One", in: app).waitForExistence(timeout: 20), "The artist's page does not list the extension's song")
++    }
++
++    /// Search with the extension on (the control for the two checks after it): the extension's song for the query is listed beside the built-in channels' results.
++    func testMusicExtensionSearchListsItsSongWhenEnabled() throws {
++        continueAfterFailure = true
++        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "晴天"])
++        XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
++        sleep(3)
++        XCUIRemote.shared.press(.menu); sleep(4)
++        let builtIn = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '晴天' AND NOT label CONTAINS 'QA Singer'")).firstMatch
++        XCTAssertTrue(builtIn.waitForExistence(timeout: 60), "The built-in channels listed nothing for the query")
++        sleep(3)
++        snap(app, "search-enabled")
++        XCTAssertTrue(shown("QA Singer", in: app).exists, "The extension's song is not in the search results")
++    }
++
++    /// Turning the extension off, then searching: its song is not listed, while the built-in results are.
++    func testMusicExtensionSearchWithoutItsSongAfterToggleOff() throws {
++        continueAfterFailure = true
++        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "晴天"])
++        XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
++        let remote = XCUIRemote.shared
++        sleep(3)
++        let row = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'QA Fake FM' AND NOT label BEGINSWITH 'Remove'")).firstMatch
++        XCTAssertTrue(row.waitForExistence(timeout: 20), "The extension is not listed in Music Settings")
++        focusRow(row, remote)
++        XCTAssertTrue(row.hasFocus, "The extension row never took focus: \(focusInfo(app))")
++        remote.press(.select); sleep(2)
++        note("row after toggle: \(row.label)")
++        remote.press(.menu); sleep(4)
++        let builtIn = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '晴天' AND NOT label CONTAINS 'QA Singer'")).firstMatch
++        XCTAssertTrue(builtIn.waitForExistence(timeout: 60), "The built-in channels listed nothing, so a missing extension song proves nothing")
++        sleep(3)
++        snap(app, "search-after-toggle-off")
++        XCTAssertFalse(shown("QA Singer", in: app).exists, "The extension's song is still in the search results after turning it off")
++    }
++
++    /// Removing the extension, then searching: its song is not listed, while the built-in results are.
++    func testMusicExtensionSearchWithoutItsSongAfterRemove() throws {
++        continueAfterFailure = true
++        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "晴天"])
++        XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
++        let remote = XCUIRemote.shared
++        sleep(3)
++        let remove = shown("Remove “QA Fake FM”", in: app)
++        XCTAssertTrue(remove.waitForExistence(timeout: 20), "No Remove row for the extension")
++        focusRow(remove, remote)
++        XCTAssertTrue(remove.hasFocus, "The Remove row never took focus: \(focusInfo(app))")
++        remote.press(.select); sleep(2)
++        remote.press(.menu); sleep(4)
++        let builtIn = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '晴天' AND NOT label CONTAINS 'QA Singer'")).firstMatch
++        XCTAssertTrue(builtIn.waitForExistence(timeout: 60), "The built-in channels listed nothing, so a missing extension song proves nothing")
++        sleep(3)
++        snap(app, "search-after-remove")
++        XCTAssertFalse(shown("QA Singer", in: app).exists, "The extension's song is still in the search results after removing it")
++    }
++
+     /// Poster titles are part of their card's label, so look for the text anywhere in a label.
+     private func shown(_ text: String, in app: XCUIApplication) -> XCUIElement {
+         app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
