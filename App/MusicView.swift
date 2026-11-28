@@ -55,6 +55,7 @@ struct MusicView: View {
             }
             .glassRowInsets()
             .pageContainer()
+            .tvFocusSection()
         }
         #if os(tvOS)
         .focusScope(focusScope)
