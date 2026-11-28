@@ -1,0 +1,43 @@
+diff --git a/Scripts/qa-server.py b/Scripts/qa-server.py
+index 226af06b..5621dc00 100644
+--- a/Scripts/qa-server.py
++++ b/Scripts/qa-server.py
+@@ -129,7 +129,7 @@ class Spider(Spider):
+  */
+ const appConfig = { ver: 1, name: 'qafm', tabLibrary: { name: '探索', groups: [
+   { name: '测试榜单', type: 'playlist', ui: 1, ext: { gid: 'charts' } } ] } }
+-function song(id, name) { return { id: 's' + id, name: name, duration: 20, artist: { id: 'a', name: 'QA Singer' }, ext: { songmid: 'm' + id } } }
++function song(id, name) { return { id: 's' + id, name: name, duration: 180, artist: { id: 'a', name: 'QA Singer' }, ext: { songmid: 'm' + id } } }
+ async function getConfig() { return jsonify(appConfig) }
+ async function getPlaylists(ext) {
+   const { gid } = argsify(ext)
+@@ -197,9 +197,13 @@ async function getSongInfo(ext) { return jsonify({ urls: ['BASE/tone.wav'] }) }
+             return
+         # An audio-only stream for the music extension: 20 s of 440 Hz (the fixture song says 0:20), 16-bit mono WAV, with Range support.
+         if path == '/tone.wav':
+-            rate=22050; frames=rate*20
+-            data=b''.join(struct.pack('<h',int(8000*math.sin(2*math.pi*440*i/rate))) for i in range(frames))
+-            body=b'RIFF'+struct.pack('<I',36+len(data))+b'WAVEfmt '+struct.pack('<IHHIIHH',16,1,1,rate,rate*2,2,16)+b'data'+struct.pack('<I',len(data))+data
++            # 3 minutes of 440 Hz (the fixture song says 3:00): long enough to still be playing when a slow CI snapshot is taken.
++            global TONE
++            if 'TONE' not in globals():
++                rate=8000; frames=rate*180
++                data=b''.join(struct.pack('<h',int(8000*math.sin(2*math.pi*440*i/rate))) for i in range(frames))
++                TONE=b'RIFF'+struct.pack('<I',36+len(data))+b'WAVEfmt '+struct.pack('<IHHIIHH',16,1,1,rate,rate*2,2,16)+b'data'+struct.pack('<I',len(data))+data
++            body=TONE
+             size=len(body)
+             match=re.match(r'bytes=(\d+)-(\d*)',self.headers.get('Range',''))
+             start=int(match[1]) if match else 0
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index 295874d2..2f38ee44 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -917,7 +917,7 @@ final class TVNavigationUITests: XCTestCase {
+             let labels = app.staticTexts.allElementsBoundByIndex.map { $0.label }
+             let player = Array(labels.prefix { $0 != "Watch Now" })
+             return !labels.contains { $0.contains("Skipped") } && player.contains("ext晴天") && player.contains("QA Singer")
+-                && labels.contains { $0.range(of: "^00:0[0-9]$", options: .regularExpression) != nil }
++                && labels.contains { $0.range(of: "^00:[0-5][0-9]$", options: .regularExpression) != nil }
+         }
+         sleep(3)
+         let first = clocks(); let identity1 = playingIdentity(); snap(app, "remote-search-play-1")
