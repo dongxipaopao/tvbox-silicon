@@ -1,0 +1,166 @@
+diff --git a/App/PlayerView.swift b/App/PlayerView.swift
+index 90002d48..8c30fb40 100644
+--- a/App/PlayerView.swift
++++ b/App/PlayerView.swift
+@@ -84,7 +84,10 @@ struct PlaybackView: View {
+                                  chapters: session.chapters,
+                                  exitWhileWaiting: session.showsPicture ? nil : { dismiss() }, episodes: episodeChoices, channels: channelChoices,
+                                  lines: session.lines.indices.map { L10n.text("Line %@", "\($0 + 1)") }, line: session.line,
+-                                 chooseLine: { session.choose(line: $0) }, transportBar: transportBar,
++                                 chooseLine: { session.choose(line: $0) },
++                                 doubleDown: store.step(back: false, from: channel, session: session).map { step in { step.go() } },
++                                 doubleRight: store.catalog(for: channel).map { _ in { [channel] in store.switchToNextLine(from: channel) } },
++                                 transportBar: transportBar,
+                                  titleRow: AnyView(TVPlayerTitleRow(channel: channel, session: session, transportBar: transportBar).environment(store))).ignoresSafeArea()
+                     .onAppear { playbackSpeed = session.player.defaultRate }
+             }
+@@ -787,6 +790,9 @@ private struct NativePlayerView: UIViewControllerRepresentable {
+     var lines: [String] = []
+     var line = 0
+     var chooseLine: @MainActor (Int) -> Void = { _ in }
++    /// Double-click Down and Right on the remote: the next episode, and the video's next line.
++    var doubleDown: (@MainActor () -> Void)? = nil
++    var doubleRight: (@MainActor () -> Void)? = nil
+     /// Told when AVKit shows or hides the transport bar, for `titleRow`.
+     var transportBar: TransportBarVisibility? = nil
+     /// The title's logo and the video's tags, over the transport bar while it shows (#758).
+@@ -804,8 +810,18 @@ private struct NativePlayerView: UIViewControllerRepresentable {
+         func playerViewControllerWillStartPictureInPicture(_ controller: AVPlayerViewController) { subtitles?.native = true }
+         func playerViewControllerDidStopPictureInPicture(_ controller: AVPlayerViewController) { subtitles?.native = false }
+         let back = UITapGestureRecognizer()
++        let down = UITapGestureRecognizer(), right = UITapGestureRecognizer()
++        var onDoubleDown: (@MainActor () -> Void)?, onDoubleRight: (@MainActor () -> Void)?
++        @objc private func pressedDoubleDown() { onDoubleDown?() }
++        @objc private func pressedDoubleRight() { onDoubleRight?() }
+         override init() {
+             super.init()
++            for (recognizer, type, action) in [(down, UIPress.PressType.downArrow, #selector(pressedDoubleDown)), (right, .rightArrow, #selector(pressedDoubleRight))] {
++                recognizer.allowedPressTypes = [NSNumber(value: type.rawValue)]
++                recognizer.numberOfTapsRequired = 2
++                recognizer.delegate = self
++                recognizer.addTarget(self, action: action)
++            }
+             back.allowedPressTypes = [NSNumber(value: UIPress.PressType.menu.rawValue)]
+             back.delegate = self
+             back.addTarget(self, action: #selector(pressedBack))
+@@ -837,6 +853,8 @@ private struct NativePlayerView: UIViewControllerRepresentable {
+         }
+         context.coordinator.host = host
+         controller.view.addGestureRecognizer(context.coordinator.back)
++        controller.view.addGestureRecognizer(context.coordinator.down)
++        controller.view.addGestureRecognizer(context.coordinator.right)
+         return controller
+     }
+     func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {
+@@ -847,6 +865,8 @@ private struct NativePlayerView: UIViewControllerRepresentable {
+         if controller.videoGravity != gravity { controller.videoGravity = gravity }
+         context.coordinator.host?.rootView = overlay
+         context.coordinator.exit = exitWhileWaiting
++        context.coordinator.onDoubleDown = doubleDown; context.coordinator.onDoubleRight = doubleRight
++        context.coordinator.down.isEnabled = doubleDown != nil; context.coordinator.right.isEnabled = doubleRight != nil
+         context.coordinator.back.isEnabled = exitWhileWaiting != nil
+         // The episodes and the chapters are tabs in the info panel (swipe down), beside the video's own info.
+         let listed = "\(chapters.map(\.start)):\(episodes?.key ?? ""):\(channels?.key ?? "")"
+diff --git a/App/Store.swift b/App/Store.swift
+index 45d1886c..e4aacdfb 100644
+--- a/App/Store.swift
++++ b/App/Store.swift
+@@ -106,6 +106,25 @@ import TVCore
+         }
+         return true
+     }
++    /// The viewer's own switch to the video's next line (double-click Right on Apple TV): the same episode on the next
++    /// line that has it for sure (`SourceFailover.place`), wrapping round to the first. False when there is no other line.
++    @discardableResult func switchToNextLine(from channel: Channel) -> Bool {
++        guard playing == channel, resolvingEpisode == nil, let context = channel.historyContext, let catalog = catalog(for: channel),
++              let episode = catalog.video.episodes.first(where: { $0.id == context.episodeID }) else { return false }
++        var flags: [String] = []
++        for other in catalog.video.episodes where !flags.contains(other.flag) { flags.append(other.flag) }
++        guard let at = flags.firstIndex(of: episode.flag), flags.count > 1 else { return false }
++        let current = catalog.video.episodes.filter { $0.flag == episode.flag }
++        for step in 1..<flags.count {
++            let flag = flags[(at + step) % flags.count]
++            let list = catalog.video.episodes.filter { $0.flag == flag }
++            guard let place = SourceFailover.place(current: episode.name, currentCount: current.count, other: list.map(\.name)) else { continue }
++            Diagnostics.shared.record(.info, "catalog", "line by remote: \(episode.flag) -> \(flag)")
++            selectEpisode(list[place], from: channel)
++            return true
++        }
++        return false
++    }
+     /// Lines (flags) of a video already tried for an episode by an automatic line switch, with when: a later,
+     /// unrelated failure of the same episode starts over after a few minutes.
+     @ObservationIgnored private var triedLines: [String: (flags: Set<String>, last: String, at: Date)] = [:]
+diff --git a/Scripts/qa-server.py b/Scripts/qa-server.py
+index aa515f7b..1b2edd23 100644
+--- a/Scripts/qa-server.py
++++ b/Scripts/qa-server.py
+@@ -81,6 +81,16 @@ class Spider(Spider):
+     def playerContent(self, flag, id, vipFlags):
+         return {'parse': 0, 'url': id}
+ """,mime='text/x-python')
++        # Remote double-click: two lines of three episodes; line one plays clip.mp4, line two slow.mp4. Each play is reported.
++        if path == '/rc-config.json': return self.send({'sites': [{'key':'qa-rc','name':'遥控切换 / Remote','type':4,'api':base+'/rc'}], 'lives': []})
++        if path == '/rc':
++            if 'play' in q:
++                reports.append('play ' + q['play'])
++                return self.send({'parse':0,'url':base+('/slow.mp4' if q['play'].startswith('l2') else '/clip.mp4')+'?ep='+q['play']})
++            if 'ids' in q:
++                return self.send({'list':[{'vod_id':q['ids'],'vod_name':'遥控测试影片','vod_pic':base+'/poster.png','vod_play_from':'线路甲$$$线路乙',
++                    'vod_play_url':'#'.join(f'第{i}集$l1-{i}' for i in (1,2,3))+'$$$'+'#'.join(f'第{i}集$l2-{i}' for i in (1,2,3))}]})
++            return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'rc1','vod_name':'遥控测试影片','vod_pic':base+'/poster.png'}]})
+         # Same-source line failover: line one's only episode points at a dead address, line two's plays.
+         if path == '/fo-config.json': return self.send({'sites': [{'key':'qa-fo','name':'线路切换 / Lines','type':4,'api':base+'/fo'}], 'lives': []})
+         # Line two has two entries of episode 1: the same episode can't be told for sure, so nothing may switch.
+diff --git a/UITests/TVNavigationUITests.swift b/UITests/TVNavigationUITests.swift
+index a8c8aa75..980f75ac 100644
+--- a/UITests/TVNavigationUITests.swift
++++ b/UITests/TVNavigationUITests.swift
+@@ -592,6 +592,36 @@ final class TVNavigationUITests: XCTestCase {
+         XCTAssertFalse(panel.exists, "The Episodes tab stayed open after choosing an episode")
+     }
+ 
++    /// Double-click on the remote while the full-screen player plays: Right goes to the video's next line (same episode),
++    /// Down to the next episode. The server's reports name each stream asked for.
++    func testRemoteDoubleClicks() throws {
++        let app = XCUIApplication()
++        app.launchArguments = ["-qaSection", "sites", "-qaPage", "play-source:qa-rc", "-qaIsolatedData", "1",
++                               "-qaSubscription", "http://127.0.0.1:8776/rc-config.json", "-autoPlayNextEpisode", "NO",
++                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
++        app.launch()
++        let remote = XCUIRemote.shared
++        func reports() -> [String] { serverReports() }
++        func waitFor(_ text: String, _ seconds: Int = 25) -> Bool {
++            for _ in 0..<seconds { if reports().contains(text) { return true }; sleep(1) }
++            return reports().contains(text)
++        }
++        XCTAssertTrue(waitFor("play l1-1", 40), "The first episode never started: \(reports())")
++        sleep(6)
++        snap(app, "remote-before")
++        remote.press(.right); remote.press(.right)
++        let line = waitFor("play l2-1")
++        sleep(4)
++        snap(app, "remote-after-double-right")
++        remote.press(.down); remote.press(.down)
++        let episode = waitFor("play l2-2")
++        sleep(4)
++        snap(app, "remote-after-double-down")
++        note("reports=\(reports()) nextLine=\(line) nextEpisode=\(episode)")
++        XCTAssertTrue(line, "Double Right did not go to the next line: \(reports())")
++        XCTAssertTrue(episode, "Double Down did not go to the next episode (on the line playing): \(reports())")
++    }
++
+     /// A dead first line falls through to the second line of the same source on its own: the fixture's first line
+     /// points at a 404, so the server must see that address asked for and then the working clip, and a picture must show.
+     func testDeadFirstLineSwitchesToSecondLine() throws {
+@@ -675,6 +705,10 @@ final class TVNavigationUITests: XCTestCase {
+         var presses = 0
+         _ = shelf.waitForExistence(timeout: 45)
+         while !shelf.exists && presses < 14 { remote.press(.down); presses += 1; sleep(1) }
++        // The shelf can exist below the fold: bring it into view for the pixel.
++        var scrolls = 0
++        while shelf.exists && !(shelf.frame.minY >= 0 && shelf.frame.maxY <= app.frame.maxY) && scrolls < 20 { remote.press(.down); scrolls += 1; sleep(1) }
++        snap(app, "music-extension-shelf-visible")
+         snap(app, "music-extension-shelf-after-down")
+         var ups = 0
+         while !shelf.exists && ups < 16 { remote.press(.up); ups += 1; sleep(1) }
