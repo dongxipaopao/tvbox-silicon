@@ -667,6 +667,15 @@ typealias MusicTrack = TVCore.MusicTrack
     /// What the Sleep Timer's "end" is here: a song, or a source's episode.
     var sleepItem: SleepTimerItem { track?.source == nil ? .song : .episode }
 
+    #if DEBUG
+    /// QA only: tells the QA server (the `-qaMusicExtension` address) what happened, so a UI test can read it.
+    static func qaReport(_ text: String) {
+        guard let address = UserDefaults.standard.string(forKey: "qaMusicExtension"), var parts = URLComponents(string: address) else { return }
+        parts.path = "/qa-report"; parts.queryItems = [URLQueryItem(name: "text", value: String(text.prefix(300)))]
+        if let url = parts.url { Task.detached { _ = try? await URLSession.shared.data(from: url) } }
+    }
+    #endif
+
     /// No channel could play the song: skip it while a queue goes on, otherwise stop and say why.
     private func songFailed(_ error: MusicProviderError, run: UUID, message: String? = nil, channelsAsked: Bool = true) {
         // Channels out of requests answer again within a minute or so: ask again for this song then, rather than
@@ -686,6 +695,9 @@ typealias MusicTrack = TVCore.MusicTrack
                 return
             }
         }
+        #if DEBUG
+        Self.qaReport("songFailed: \(error.detail) message=\(message ?? "-")")
+        #endif
         consecutiveFailures += 1
         // With no channel at all, the next song fails the same way: stop and say so. LX Music sources that had nothing
         // for this song may have the next one (#1206).
@@ -719,6 +731,9 @@ typealias MusicTrack = TVCore.MusicTrack
         }
         guard generation == run, let selection, let track else { return }
         Diagnostics.shared.record(.warning, "music", "playback failed \(selection.candidate.provider.rawValue): \(reason)")
+        #if DEBUG
+        Self.qaReport("playback failed \(selection.candidate.provider.rawValue): \(reason)")
+        #endif
         let at = currentSeconds, previous = selection.probe
         startWatch?.cancel()
         let step = recovery.next(failed: selection.candidate, untried: alternatives)

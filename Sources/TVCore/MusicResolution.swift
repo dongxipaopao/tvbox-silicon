@@ -408,7 +408,8 @@ public struct MusicResolver: Sendable {
             // A channel that only ran out of requests answers again soon: say so, so the player waits rather than
             // skipping, here or in the other catalog's channels (#1309).
             if let limited = Self.soonestLimit(failures + [widerFailure].compactMap { $0 }) { throw limited }
-            if !channelsListed { throw MusicProviderError.noChannels }
+            // A channel that was asked and failed has the real reason; "no channels" only when none was asked.
+            if !channelsListed && failures.isEmpty { throw MusicProviderError.noChannels }
             throw Self.summary(failures, budgetSpent: !queue.isEmpty)
         }
         return selection(track, best, degraded: preference.wantsLossless && !best.probe.format.isLossless, attempts: attempts, untried: queue)
