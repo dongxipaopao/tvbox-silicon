@@ -1182,6 +1182,68 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertFalse(entry.hasFocus, "Down did not leave the magnifier")
     }
 
+    /// Apple TV's stand-in for "Add from File": the TV serves a page while its screen is open; a phone posts the script;
+    /// nothing is added until Add is pressed on the TV. Uses the real HTTP path (no debug injection).
+    func testMusicExtensionAddFromPhoneUpload() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "music", "-qaMusicSettings", "1"])
+        XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
+        let remote = XCUIRemote.shared
+        sleep(2)
+        let row = shown("Add from Phone", in: app)
+        var presses = 0
+        while !(row.exists && row.hasFocus) && presses < 14 { remote.press(.down); presses += 1; sleep(1) }
+        snap(app, "phone-add-row")
+        XCTAssertTrue(row.hasFocus, "Add from Phone row never took focus")
+        XCTAssertFalse(shown("QA Fake FM", in: app).exists, "The fixture extension was already present")
+        remote.press(.select); sleep(2)
+        let addressLabel = app.descendants(matching: .any)["ext.receiver.address"]
+        XCTAssertTrue(addressLabel.waitForExistence(timeout: 20), "The receiver screen showed no address")
+        sleep(2)
+        snap(app, "phone-add-screen")
+        let text = addressLabel.label
+        let parts = text.replacingOccurrences(of: "http://", with: "").split(separator: "/").map(String.init)
+        let hostPort = parts.first?.split(separator: ":").map(String.init) ?? []
+        XCTAssertEqual(hostPort.count, 2, "Address not host:port: \(text)")
+        let port = hostPort.last ?? "0", token = parts.count > 1 ? parts[1] : ""
+        XCTAssertGreaterThanOrEqual(token.count, 32, "Token too short")
+        let base = "http://127.0.0.1:\(port)"
+        func http(_ url: String, method: String = "GET", body: Data? = nil) -> (Int, String) {
+            var request = URLRequest(url: URL(string: url)!); request.httpMethod = method; request.httpBody = body; request.timeoutInterval = 20
+            var out = (-1, "")
+            let done = DispatchSemaphore(value: 0)
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                out = ((response as? HTTPURLResponse)?.statusCode ?? -1, data.flatMap { String(data: $0, encoding: .utf8) } ?? (error?.localizedDescription ?? "")); done.signal()
+            }.resume()
+            _ = done.wait(timeout: .now() + 25)
+            return out
+        }
+        let page = http("\(base)/\(token)")
+        note("page status=\(page.0) hasForm=\(page.1.contains("type=\"file\""))")
+        XCTAssertEqual(page.0, 200); XCTAssertTrue(page.1.contains("type=\"file\""), "The page has no file picker")
+        XCTAssertEqual(http("\(base)/wrong-token").0, 404, "A wrong token was not refused")
+        XCTAssertEqual(http("\(base)/\(token)", method: "POST", body: Data(count: 5_100_000)).0, 413, "An oversized upload was not refused")
+        let script = http("http://127.0.0.1:8776/music-ext.js")
+        XCTAssertEqual(script.0, 200, "Fixture script not served")
+        XCTAssertFalse(shown("QA Fake FM", in: app).exists, "Added before any confirmation")
+        let sent = http("\(base)/\(token)", method: "POST", body: Data(script.1.utf8))
+        XCTAssertEqual(sent.0, 200, "Upload refused: \(sent.1)")
+        XCTAssertTrue(app.descendants(matching: .any)["ext.receiver.pending"].waitForExistence(timeout: 15), "The TV did not ask to confirm")
+        XCTAssertTrue(app.descendants(matching: .any)["ext.receiver.pending"].label.contains("QA Fake FM"), "Pending name is not the uploaded script's")
+        snap(app, "phone-add-pending")
+        XCTAssertEqual(http("\(base)/\(token)", method: "POST", body: Data(script.1.utf8)).0, 409, "A second upload was accepted while waiting")
+        let accept = app.descendants(matching: .any)["ext.receiver.accept"]
+        XCTAssertTrue(accept.exists, "No Add button")
+        var tries = 0
+        while !accept.hasFocus && tries < 4 { remote.press(.up); tries += 1; sleep(1) }
+        remote.press(.select); sleep(4)
+        snap(app, "phone-add-after-accept")
+        XCTAssertTrue(shown("QA Fake FM", in: app).waitForExistence(timeout: 20), "The accepted extension is not listed in Music Extensions")
+        let closed = http("\(base)/\(token)")
+        note("after close status=\(closed.0) \(closed.1)")
+        XCTAssertEqual(closed.0, -1, "The receiver still answers after its screen closed")
+    }
+
     /// Music Settings lists Music Extensions, with the address row (Apple TV adds by address, there is no file picker).
     func testMusicSettingsHasMusicExtensions() throws {
         continueAfterFailure = true

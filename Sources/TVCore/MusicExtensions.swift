@@ -33,7 +33,7 @@ public struct MusicExtension: Codable, Identifiable, Hashable, Sendable {
     public func has(_ function: String) -> Bool { functions.contains(function) }
 
     /// `@name`, `@description`, `@version` and `@author` from the comment that opens the script.
-    static func header(_ script: String) -> [String: String] {
+    public static func header(_ script: String) -> [String: String] {
         var fields: [String: String] = [:]
         let text = script.drop { $0 == "\u{FEFF}" || $0.isWhitespace }
         guard text.hasPrefix("/*"), let end = text.range(of: "*/") else { return fields }

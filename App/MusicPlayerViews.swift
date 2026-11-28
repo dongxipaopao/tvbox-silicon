@@ -666,6 +666,10 @@ struct MusicScrubber: View {
         run { try await LXSourceLibrary.shared.add(script: LXSourceLibrary.download(url), origin: url) }
     }
 
+    func add(script: String) {
+        run { try await MusicExtensionLibrary.shared.add(script: script, origin: nil) }
+    }
+
     func add(file: URL) {
         run {
             let scoped = file.startAccessingSecurityScopedResource()
@@ -895,13 +899,15 @@ struct MusicExtensionsSection: View {
     @Environment(Store.self) private var store
     @State private var model = MusicExtensionsModel()
     @State private var address = ""
+    @State private var receiving = false
     var body: some View {
         TVSettingsSection(title: L10n.text("Music Extensions"), footer: [model.message, MusicExtensionsModel.note].compactMap { $0 }.joined(separator: "\n\n")) {
             ForEach(model.items) { item in
                 TVSettingsToggle(title: item.name, detail: MusicExtensionsModel.detail(item), isOn: model.enabled(item))
                 TVSettingsAction(title: L10n.text("Remove “%@”", item.name), destructive: true) { model.remove(item) }
             }
-            // Apple TV has no files to pick: extensions come from an address.
+            // Apple TV has no files to pick: extensions come from an address or from a phone on the same network.
+            TVSettingsAction(title: L10n.text("Add from Phone")) { receiving = true }
             TVSettingsField(title: L10n.text("Add from Address"), text: $address)
                 .disabled(model.busy)
                 .onChange(of: address) { _, text in
@@ -911,6 +917,7 @@ struct MusicExtensionsSection: View {
                 }
         }
         .onAppear { model.changed = { [store] in Task { await store.musicBrowse.reload(.ext) } } }
+        .fullScreenCover(isPresented: $receiving) { MusicExtensionReceiveScreen(model: model) }
     }
 }
 #else
