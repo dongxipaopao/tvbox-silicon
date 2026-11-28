@@ -2,6 +2,25 @@
   "releases": [
     {
       "version": "1.8.32",
+      "build": 82,
+      "date": "2026-11-28",
+      "links": {},
+      "features": [
+        {
+          "symbol": "iphone.and.arrow.forward",
+          "title": {
+            "en": "Apple TV: add a music extension from your phone",
+            "zh-Hans": "Apple TV：用手机上传添加音乐扩展"
+          },
+          "detail": {
+            "en": "In Music Settings, Add from Phone shows an address. Open it in a browser on the same network, pick the extension file, and confirm on the TV. The page is only open while that screen is.",
+            "zh-Hans": "在音乐设置里选择“从手机添加”，电视会显示一个地址。用同一网络下的手机或电脑浏览器打开，选择扩展文件，再在电视上确认添加。该页面只在这个界面打开时可用。"
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.8.32",
       "build": 81,
       "date": "2026-11-28",
       "links": {},
