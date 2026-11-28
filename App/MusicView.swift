@@ -6,6 +6,15 @@ import TVCore
 /// charts, playlists and new albums as Discover has for video, then what played recently.
 struct MusicView: View {
     @Environment(Store.self) private var store
+    #if DEBUG
+    /// Tells the QA server what a `-qaMusicExtension` step did, so the UI test can read it (the app's own log can't be).
+    private static func qaReport(_ address: URL, _ text: String) async {
+        var parts = URLComponents()
+        parts.scheme = address.scheme; parts.host = address.host(); parts.port = address.port; parts.path = "/qa-report"
+        parts.queryItems = [URLQueryItem(name: "text", value: String(text.prefix(400)))]
+        if let url = parts.url { _ = try? await URLSession.shared.data(from: url) }
+    }
+    #endif
     @State private var query = ""
     /// The query Return was pressed for: its direct hit plays once the search knows it. Typing
     /// something else clears it.
@@ -140,9 +149,13 @@ struct MusicView: View {
                 do {
                     let item = try await MusicExtensionLibrary.shared.add(script: MusicExtensionLibrary.download(url), origin: url)
                     Diagnostics.shared.record(.info, "qa", "music extension \(item.name) functions=\(item.functions.joined(separator: ","))")
+                    await Self.qaReport(url, "added name=\(item.name) functions=\(item.functions.joined(separator: ",")) enabled=\(item.enabled)")
                     await store.musicBrowse.reload(.ext)
+                    let shelves = store.musicBrowse.sections.map(\.title).joined(separator: "|")
+                    await Self.qaReport(url, "reloaded shelves=\(shelves)")
                 } catch {
                     Diagnostics.shared.record(.warning, "qa", "music extension not added: \(error.localizedDescription)")
+                    await Self.qaReport(url, "failed \(error.localizedDescription)")
                 }
             }
             // `-qaSection music -qaQuery <text> [-qaMusicKind albums] [-qaMusicPlay 1]` searches, and plays the direct hit.

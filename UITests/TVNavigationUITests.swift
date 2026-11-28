@@ -655,6 +655,17 @@ final class TVNavigationUITests: XCTestCase {
         return counts
     }
 
+    private func serverReports() -> [String] {
+        var reports: [String] = []
+        let semaphore = DispatchSemaphore(value: 0)
+        URLSession.shared.dataTask(with: URL(string: "http://127.0.0.1:8776/reports")!) { data, _, _ in
+            if let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String] { reports = json }
+            semaphore.signal()
+        }.resume()
+        _ = semaphore.wait(timeout: .now() + 10)
+        return reports
+    }
+
     /// A music extension added from an address (its download, start and check) shows its chart shelf on the Music page.
     func testMusicExtensionShelfShowsOnMusicPage() throws {
         continueAfterFailure = true
@@ -664,8 +675,11 @@ final class TVNavigationUITests: XCTestCase {
         var presses = 0
         _ = shelf.waitForExistence(timeout: 45)
         while !shelf.exists && presses < 14 { remote.press(.down); presses += 1; sleep(1) }
-        snap(app, "music-extension-shelf")
-        note("extension script requests=\(serverCounts()["/music-ext.js"] ?? 0) shelf exists=\(shelf.exists) after \(presses) presses")
+        snap(app, "music-extension-shelf-after-down")
+        var ups = 0
+        while !shelf.exists && ups < 16 { remote.press(.up); ups += 1; sleep(1) }
+        snap(app, "music-extension-shelf-after-up")
+        note("extension script requests=\(serverCounts()["/music-ext.js"] ?? 0) shelf exists=\(shelf.exists) after \(presses) down and \(ups) up presses; app reports: \(serverReports())")
         XCTAssertGreaterThan(serverCounts()["/music-ext.js"] ?? 0, 0, "The extension was never downloaded")
         XCTAssertTrue(shelf.exists, "The extension's shelf is not on the Music page")
     }

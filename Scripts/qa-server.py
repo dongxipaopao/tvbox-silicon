@@ -17,6 +17,7 @@ args = parser.parse_args()
 base = f'http://127.0.0.1:{args.port}'
 lock = threading.Lock()
 counts = {}
+reports = []
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *values):
@@ -97,6 +98,10 @@ class Spider(Spider):
                     'vod_play_from':'坏线路$$$好线路','vod_play_url':'第1集$dead-1$$$第1集$episode-1'}]})
             return self.send({'class':[{'type_id':'movies','type_name':'电影'}],'pagecount':1,'list':[{'vod_id':'fo1','vod_name':'线路测试影片','vod_pic':base+'/poster.png'}]})
         # A Listenify-style music extension: one chart shelf, a search that echoes its text, and a song that plays the QA clip.
+        if path == '/qa-report':
+            reports.append(q.get('text',''))
+            return self.send({'ok':1})
+        if path == '/reports': return self.send(reports)
         if path == '/music-ext.js':
             return self.send("""/*!
  * @name QA Fake FM
