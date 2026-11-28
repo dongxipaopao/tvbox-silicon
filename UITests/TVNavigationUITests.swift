@@ -1413,6 +1413,87 @@ final class TVNavigationUITests: XCTestCase {
         XCTAssertFalse(shown("测试榜单", in: app).exists, "The extension's shelf is still on the Music page after removing it")
     }
 
+    /// The extension's album shelf opens an album and its artist shelf opens a playlist (an artist maps to the playlist kind in the
+    /// shared catalog code, the same on iOS), each listing the extension's own song.
+    func testMusicExtensionAlbumAndArtistShelvesOpenDetail() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js"])
+        let remote = XCUIRemote.shared
+        let album = shown("QA Album One", in: app)
+        XCTAssertTrue(album.waitForExistence(timeout: 60), "The extension's album card is not on the Music page")
+        remote.press(.right); sleep(1)
+        focusRow(album, remote, limit: 30)
+        XCTAssertTrue(album.hasFocus, "The album card never took focus: \(focusInfo(app))")
+        snap(app, "ext-album-card-focus")
+        remote.press(.select); sleep(4)
+        snap(app, "ext-album-detail")
+        XCTAssertTrue(shown("Album Song One", in: app).waitForExistence(timeout: 20), "The album's page does not list the extension's song")
+        remote.press(.menu); sleep(4)
+        let artist = shown("QA Artist One", in: app)
+        XCTAssertTrue(artist.waitForExistence(timeout: 20), "The artist card is gone after Back")
+        focusRow(artist, remote, limit: 30)
+        XCTAssertTrue(artist.hasFocus, "The artist card never took focus: \(focusInfo(app))")
+        snap(app, "ext-artist-card-focus")
+        remote.press(.select); sleep(4)
+        snap(app, "ext-artist-detail")
+        XCTAssertTrue(shown("Artist Song One", in: app).waitForExistence(timeout: 20), "The artist's page does not list the extension's song")
+    }
+
+    /// Search with the extension on (the control for the two checks after it): the extension's song for the query is listed beside the built-in channels' results.
+    func testMusicExtensionSearchListsItsSongWhenEnabled() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "晴天"])
+        XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
+        sleep(3)
+        XCUIRemote.shared.press(.menu); sleep(4)
+        let builtIn = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '晴天' AND NOT label CONTAINS 'QA Singer'")).firstMatch
+        XCTAssertTrue(builtIn.waitForExistence(timeout: 60), "The built-in channels listed nothing for the query")
+        sleep(3)
+        snap(app, "search-enabled")
+        XCTAssertTrue(shown("QA Singer", in: app).exists, "The extension's song is not in the search results")
+    }
+
+    /// Turning the extension off, then searching: its song is not listed, while the built-in results are.
+    func testMusicExtensionSearchWithoutItsSongAfterToggleOff() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "晴天"])
+        XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
+        let remote = XCUIRemote.shared
+        sleep(3)
+        let row = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'QA Fake FM' AND NOT label BEGINSWITH 'Remove'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 20), "The extension is not listed in Music Settings")
+        focusRow(row, remote)
+        XCTAssertTrue(row.hasFocus, "The extension row never took focus: \(focusInfo(app))")
+        remote.press(.select); sleep(2)
+        note("row after toggle: \(row.label)")
+        remote.press(.menu); sleep(4)
+        let builtIn = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '晴天' AND NOT label CONTAINS 'QA Singer'")).firstMatch
+        XCTAssertTrue(builtIn.waitForExistence(timeout: 60), "The built-in channels listed nothing, so a missing extension song proves nothing")
+        sleep(3)
+        snap(app, "search-after-toggle-off")
+        XCTAssertFalse(shown("QA Singer", in: app).exists, "The extension's song is still in the search results after turning it off")
+    }
+
+    /// Removing the extension, then searching: its song is not listed, while the built-in results are.
+    func testMusicExtensionSearchWithoutItsSongAfterRemove() throws {
+        continueAfterFailure = true
+        let app = launch(["-qaSection", "music", "-qaMusicExtension", "http://127.0.0.1:8776/music-ext.js", "-qaMusicSettings", "1", "-qaQueryAfterSettings", "晴天"])
+        XCTAssertTrue(shown("Music Settings", in: app).waitForExistence(timeout: 60), "Music Settings did not open")
+        let remote = XCUIRemote.shared
+        sleep(3)
+        let remove = shown("Remove “QA Fake FM”", in: app)
+        XCTAssertTrue(remove.waitForExistence(timeout: 20), "No Remove row for the extension")
+        focusRow(remove, remote)
+        XCTAssertTrue(remove.hasFocus, "The Remove row never took focus: \(focusInfo(app))")
+        remote.press(.select); sleep(2)
+        remote.press(.menu); sleep(4)
+        let builtIn = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS '晴天' AND NOT label CONTAINS 'QA Singer'")).firstMatch
+        XCTAssertTrue(builtIn.waitForExistence(timeout: 60), "The built-in channels listed nothing, so a missing extension song proves nothing")
+        sleep(3)
+        snap(app, "search-after-remove")
+        XCTAssertFalse(shown("QA Singer", in: app).exists, "The extension's song is still in the search results after removing it")
+    }
+
     /// Poster titles are part of their card's label, so look for the text anywhere in a label.
     private func shown(_ text: String, in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch

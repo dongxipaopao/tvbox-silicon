@@ -132,7 +132,9 @@ class Spider(Spider):
  * @author qa
  */
 const appConfig = { ver: 1, name: 'qafm', tabLibrary: { name: '探索', groups: [
-  { name: '测试榜单', type: 'playlist', ui: 1, ext: { gid: 'charts' } } ] } }
+  { name: '测试榜单', type: 'playlist', ui: 1, ext: { gid: 'charts' } },
+  { name: '测试专辑', type: 'album', ui: 1, ext: { gid: 'albums' } },
+  { name: '测试歌手', type: 'artist', ui: 1, ext: { gid: 'artists' } } ] } }
 function song(id, name) { return { id: 's' + id, name: name, duration: 180, artist: { id: 'a', name: 'QA Singer' }, ext: { songmid: 'm' + id } } }
 async function getConfig() { return jsonify(appConfig) }
 async function getPlaylists(ext) {
@@ -140,11 +142,21 @@ async function getPlaylists(ext) {
   if (gid !== 'charts') return jsonify({ list: [] })
   return jsonify({ list: [{ id: 'c1', name: 'Chart One', artist: { name: 'qa' }, ext: { gid: 'chart-songs' } }] })
 }
-async function getAlbums(ext) { return jsonify({ list: [] }) }
-async function getArtists(ext) { return jsonify({ list: [] }) }
+async function getAlbums(ext) {
+  const { gid } = argsify(ext)
+  if (gid !== 'albums') return jsonify({ list: [] })
+  return jsonify({ list: [{ id: 'al1', name: 'QA Album One', artist: { name: 'qa' }, ext: { gid: 'album-songs' } }] })
+}
+async function getArtists(ext) {
+  const { gid } = argsify(ext)
+  if (gid !== 'artists') return jsonify({ list: [] })
+  return jsonify({ list: [{ id: 'ar1', name: 'QA Artist One', ext: { gid: 'artist-songs' } }] })
+}
 async function getSongs(ext) {
   const { gid, page } = argsify(ext)
   if (gid === 'chart-songs' && (!page || page <= 1)) return jsonify({ list: [song(1, 'Chart Song One')] })
+  if (gid === 'album-songs' && (!page || page <= 1)) return jsonify({ list: [song(2, 'Album Song One')] })
+  if (gid === 'artist-songs' && (!page || page <= 1)) return jsonify({ list: [song(3, 'Artist Song One')] })
   return jsonify({ list: [] })
 }
 async function search(ext) {

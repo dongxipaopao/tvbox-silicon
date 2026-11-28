@@ -134,6 +134,14 @@ struct MusicView: View {
         #else
         .sheet(isPresented: $showsSettings) { MusicSettingsView() }
         #endif
+        #if DEBUG
+        // `-qaQueryAfterSettings <text>` searches songs for that text when Music Settings closes, the way typing it would.
+        .onChange(of: showsSettings) { _, open in
+            guard !open, let text = UserDefaults.standard.string(forKey: "qaQueryAfterSettings") else { return }
+            query = text
+            search.search(text, kind: .songs, immediately: true)
+        }
+        #endif
         .task {
             if query.isEmpty, !search.query.isEmpty { query = search.query }
             if let kind = Self.searchKind, search.kind != kind { search.search(search.query, kind: kind) }
